@@ -1,0 +1,47 @@
+# ============================================================
+#  Sabi Intelligence Suite — Render Deployment Config
+#  A product of Cerebre Media Africa
+#
+#  Deploy: Push this repo to GitHub, then connect it on Render.
+#  Render will auto-detect this file and configure the service.
+# ============================================================
+
+services:
+  - type: web
+    name: sabi-backend
+    runtime: node
+    region: oregon
+    plan: free                # ← upgrade to starter ($7/mo) to eliminate cold starts
+
+    rootDir: backend
+    buildCommand: npm install
+    startCommand: npm start
+
+    # ── Health Check ────────────────────────────────────────
+    healthCheckPath: /health
+
+    # ── Auto-Deploy ─────────────────────────────────────────
+    autoDeploy: true
+
+    # ── Environment Variables ───────────────────────────────
+    # Set these in the Render dashboard → service → environment
+    # Never put secrets in this file.
+    envVars:
+      - key: NODE_ENV
+        value: production
+
+      - key: PORT
+        value: 4000
+
+      - key: ALLOWED_ORIGINS
+        value: https://sabi.cerebre.media,https://sabi-intelligence-suite.vercel.app
+
+      # The following MUST be set in Render dashboard (not here):
+      # SUPABASE_URL
+      # SUPABASE_SERVICE_ROLE_KEY
+      # JWT_SECRET
+      # JWT_CLIENT_SECRET
+      # JWT_SA_SECRET
+      # ANTHROPIC_API_KEY
+      # ARIA_MODEL             (default: claude-sonnet-4-6)
+      # ARIA_MAX_TOKENS        (default: 2048)

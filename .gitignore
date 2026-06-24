@@ -1,0 +1,38 @@
+# ── Environment Files (NEVER commit these) ───────────────────
+.env
+.env.local
+.env.production
+.env.development
+
+# ── Node ─────────────────────────────────────────────────────
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# ── Next.js ──────────────────────────────────────────────────
+frontend/.next/
+frontend/out/
+frontend/.vercel/
+
+# ── Build outputs ────────────────────────────────────────────
+dist/
+build/
+
+# ── OS ───────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+
+# ── IDE ──────────────────────────────────────────────────────
+.vscode/settings.json
+.idea/
+*.swp
+*.swo
+
+# ── Logs ─────────────────────────────────────────────────────
+logs/
+*.log
+
+# ── Misc ─────────────────────────────────────────────────────
+coverage/
+.nyc_output/
