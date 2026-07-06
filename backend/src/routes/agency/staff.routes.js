@@ -110,4 +110,143 @@ router.post('/:id/assign-brands', authenticate, requirePermission('MANAGE_USERS'
   } catch (err) { next(err); }
 });
 
+
+/**
+ * BACKEND PATCH — Add to backend/src/routes/agency/staff.routes.js
+ *
+ * Add these two routes BEFORE the `module.exports = router;` line
+ * at the bottom of staff.routes.js.
+ *
+ * These routes let the logged-in staff member fetch their own
+ * assigned brands and personal dashboard data.
+ */
+
+// ── GET /api/agency/staff/me/brands ──────────────────────────
+// Returns brands assigned to the currently logged-in staff member
+// Used by: /my-brands page, /dashboard (staff view)
+router.get('/me/brands', authenticate, async (req, res, next) => {
+  try {
+    const isSa = req.user.id === 'super_admin';
+    let query = supabase
+      .from('staff_brand_assignments')
+      .select(`
+        id,
+        role_on_brand,
+        brand_id,
+        brands (
+          id,
+          name,
+          primary_color,
+          industry,
+          clarity_score,
+          status,
+          clarity_score_updated_at,
+          website
+        )
+      `);
+    if (!isSa) query = query.eq('staff_id', req.user.id);
+    const { data: assignments, error } = await query.order('created_at', { ascending: true });
+
+    if (error) throw error;
+
+    // For each brand, count open tasks assigned to this user
+    const brandIds = (assignments || []).map(a => a.brand_id);
+    let taskCounts = {};
+
+    if (brandIds.length > 0) {
+      const { data: tasks } = await supabase
+        .from('tasks')
+        .select('brand_id')
+        .in('brand_id', brandIds)
+        .eq('assigned_to', req.user.id !== 'super_admin' ? req.user.id : null)
+        .in('status', ['todo', 'in_progress']);
+
+      if (tasks) {
+        taskCounts = tasks.reduce((acc, t) => {
+          acc[t.brand_id] = (acc[t.brand_id] || 0) + 1;
+          return acc;
+        }, {});
+      }
+    }
+
+    // Flatten: merge brand data + assignment role + open task count
+    const brands = (assignments || []).map(a => ({
+      // Spread brand fields
+      ...a.brands,
+      // Add assignment-level fields
+      brand_id:      a.brand_id,
+      role_on_brand: a.role_on_brand,
+      open_tasks:    taskCounts[a.brand_id] || 0,
+    }));
+
+    sendSuccess(res, brands);
+  } catch (err) { next(err); }
+});
+
+// ── GET /api/agency/staff/me/dashboard ───────────────────────
+// Personal dashboard stats for the logged-in staff member
+// Used by: /dashboard (staff view)
+router.get('/me/dashboard', authenticate, async (req, res, next) => {
+  try {
+    const staffId = req.user.id;
+
+    // Count brands
+    const { count: brandCount } = await supabase
+      .from('staff_brand_assignments')
+      .select('*', { count: 'exact', head: true })
+      .eq('staff_id', staffId);
+
+    // Count open tasks
+    const { count: openTasks } = await supabase
+      .from('tasks')
+      .select('*', { count: 'exact', head: true })
+      .eq('assigned_to', staffId)
+      .in('status', ['todo', 'in_progress']);
+
+    // Count completed tasks this month
+    const monthStart = new Date();
+    monthStart.setDate(1);
+    monthStart.setHours(0, 0, 0, 0);
+
+    const { count: doneTasks } = await supabase
+      .from('tasks')
+      .select('*', { count: 'exact', head: true })
+      .eq('assigned_to', staffId)
+      .eq('status', 'done')
+      .gte('completed_at', monthStart.toISOString());
+
+    // Count work logs this month
+    const { count: workLogs } = await supabase
+      .from('work_logs')
+      .select('*', { count: 'exact', head: true })
+      .eq('user_id', staffId)
+      .gte('created_at', monthStart.toISOString());
+
+    sendSuccess(res, {
+      brands_count:     brandCount  ?? 0,
+      open_tasks:       openTasks   ?? 0,
+      tasks_done_month: doneTasks   ?? 0,
+      work_logs_month:  workLogs    ?? 0,
+    });
+  } catch (err) { next(err); }
+});
+
+// ── GET /api/agency/staff/me/ratings ─────────────────────────
+// Performance ratings for the logged-in staff member
+// Used by: /staff/ratings page
+router.get('/me/ratings', authenticate, async (req, res, next) => {
+  try {
+    const { data, error } = await supabase
+      .from('staff_ratings')
+      .select('id, score, category, comment, period, reviewer_name, created_at')
+      .eq('staff_id', req.user.id)
+      .order('created_at', { ascending: false })
+      .limit(20);
+
+    if (error) throw error;
+    sendSuccess(res, data || []);
+  } catch (err) { next(err); }
+});
+
+
 module.exports = router;

@@ -17,7 +17,7 @@
 
 const SUPER_ADMIN = {
   email:      'cerebreplus@gmail.com',
-  passwordHash: '$2a$12$5p/E10ssoTXs3qjXnB7g2ees7gumbd7DHacsirrpx.VRCvTx9bDDq',
+  passwordHash: '$2a$12$Yww45G3G4aWTLluMIAUweukIpDmWCQ8LPSQN70KHVjLKRNuclx2vi',
   full_name:  'Super Administrator',
   role:       'super_admin',
   id:         'super-admin-cerebre-0000-000000000000',

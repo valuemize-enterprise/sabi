@@ -57,7 +57,7 @@ interface AgencyAuthState {
   isAuthenticated: boolean;
   setAuth:      (token: string, user: AgencyUser) => void;
   clearAuth:    () => void;
-  _setHydrated: (v: boolean) => void;
+  _finishHydration: (token: string | null) => void;
 }
 
 export const useAgencyStore = create<AgencyAuthState>()(
@@ -74,16 +74,28 @@ export const useAgencyStore = create<AgencyAuthState>()(
         }
         set({ token: null, user: null, isAuthenticated: false });
       },
-      _setHydrated: (v) => set({ isHydrated: v }),
+      _finishHydration: (token) => {
+        if (typeof window !== 'undefined') {
+          const realToken = localStorage.getItem('sabi_token');
+          if (token && !realToken) {
+            set({ token: null, user: null, isHydrated: true, isAuthenticated: false });
+            try { localStorage.removeItem('sabi-auth'); } catch {}
+            return;
+          }
+        }
+        set({ isHydrated: true, isAuthenticated: !!token });
+        if (token && typeof window !== 'undefined') {
+          localStorage.setItem('sabi_token', token);
+        }
+      },
     }),
     {
-      name:    'sabi-auth',                          // BUG-014 FIX
+      name:    'sabi-auth',
       storage: createJSONStorage(() => localStorage),
       partialize: (state) => ({ token: state.token, user: state.user }),
-      onRehydrateStorage: () => (state) => {         // BUG-005 FIX
+      onRehydrateStorage: () => (state) => {
         if (state) {
-          state._setHydrated(true);
-          state.isAuthenticated = !!state.token;
+          state._finishHydration(state.token);
         }
       },
     }
@@ -98,7 +110,7 @@ interface ClientAuthState {
   isAuthenticated: boolean;
   setClient:    (token: string, client: ClientUser) => void;
   clearClient:  () => void;
-  _setHydrated: (v: boolean) => void;
+  _finishHydration: (token: string | null) => void;
 }
 
 export const useClientStore = create<ClientAuthState>()(
@@ -116,20 +128,28 @@ export const useClientStore = create<ClientAuthState>()(
         }
         set({ token: null, client: null, isAuthenticated: false });
       },
-      _setHydrated: (v) => set({ isHydrated: v }),
+      _finishHydration: (token) => {
+        if (typeof window !== 'undefined') {
+          const realToken = localStorage.getItem('sabi_client_token');
+          if (token && !realToken) {
+            set({ token: null, client: null, isHydrated: true, isAuthenticated: false });
+            try { localStorage.removeItem('sabi-client-auth'); } catch {}
+            return;
+          }
+        }
+        set({ isHydrated: true, isAuthenticated: !!token });
+        if (token && typeof window !== 'undefined') {
+          localStorage.setItem('sabi_client_token', token);
+        }
+      },
     }),
     {
-      name:    'sabi-client-auth',                   // BUG-014 FIX: unique key
+      name:    'sabi-client-auth',
       storage: createJSONStorage(() => localStorage),
       partialize: (state) => ({ token: state.token, client: state.client }),
       onRehydrateStorage: () => (state) => {
         if (state) {
-          state._setHydrated(true);
-          state.isAuthenticated = !!state.token;
-          // Keep localStorage in sync with store for api.ts fetch wrapper
-          if (state.token && typeof window !== 'undefined') {
-            localStorage.setItem('sabi_client_token', state.token);
-          }
+          state._finishHydration(state.token);
         }
       },
     }
@@ -144,7 +164,7 @@ interface SuperAdminAuthState {
   isAuthenticated: boolean;
   setAdmin:     (token: string, admin: SuperAdmin) => void;
   clearAdmin:   () => void;
-  _setHydrated: (v: boolean) => void;
+  _finishHydration: (token: string | null) => void;
 }
 
 export const useSuperAdminStore = create<SuperAdminAuthState>()(
@@ -161,19 +181,28 @@ export const useSuperAdminStore = create<SuperAdminAuthState>()(
         }
         set({ token: null, admin: null, isAuthenticated: false });
       },
-      _setHydrated: (v) => set({ isHydrated: v }),
+      _finishHydration: (token) => {
+        if (typeof window !== 'undefined') {
+          const realToken = localStorage.getItem('sabi_sa_token');
+          if (token && !realToken) {
+            set({ token: null, admin: null, isHydrated: true, isAuthenticated: false });
+            try { localStorage.removeItem('sabi-sa-auth'); } catch {}
+            return;
+          }
+        }
+        set({ isHydrated: true, isAuthenticated: !!token });
+        if (token && typeof window !== 'undefined') {
+          localStorage.setItem('sabi_sa_token', token);
+        }
+      },
     }),
     {
-      name:    'sabi-sa-auth',                       // BUG-014 FIX: unique key
+      name:    'sabi-sa-auth',
       storage: createJSONStorage(() => localStorage),
       partialize: (state) => ({ token: state.token, admin: state.admin }),
       onRehydrateStorage: () => (state) => {
         if (state) {
-          state._setHydrated(true);
-          state.isAuthenticated = !!state.token;
-          if (state.token && typeof window !== 'undefined') {
-            localStorage.setItem('sabi_sa_token', state.token);
-          }
+          state._finishHydration(state.token);
         }
       },
     }

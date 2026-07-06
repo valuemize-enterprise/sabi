@@ -47,7 +47,7 @@ router.post('/', authenticate, requirePermission('CREATE_REPORT'), async (req, r
     const { data, error } = await supabase.from('reports').insert({
       brand_id, title, type: type || 'weekly', period_start, period_end,
       content: content || {}, metrics: metrics || {},
-      created_by: req.user.id,
+      created_by: req.user.id !== 'super_admin' ? req.user.id : null,
     }).select().single();
 
     if (error) throw error;

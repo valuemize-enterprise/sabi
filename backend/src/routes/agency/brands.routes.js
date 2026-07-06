@@ -55,12 +55,18 @@ router.post('/', authenticate, requirePermission('CREATE_BRAND'), async (req, re
     const { name, industry, description, logo_url, website, social_handles, primary_color, account_manager_id } = req.body;
     if (!name || !industry) return sendError(res, 400, 'Name and industry are required');
 
-    const { data, error } = await supabase.from('brands').insert({
-      name, industry, description, logo_url, website,
+    const payload = {
+      name,
+      industry,
+      description: description || null,
+      website:     website || null,
       social_handles: social_handles || {},
       primary_color:  primary_color || '#6d28d9',
-      account_manager_id: account_manager_id || req.user.id,
-    }).select().single();
+      account_manager_id: account_manager_id || (req.user.id !== 'super_admin' ? req.user.id : null),
+    };
+    if (logo_url) payload.logo_url = logo_url;
+
+    const { data, error } = await supabase.from('brands').insert(payload).select().single();
 
     if (error) throw error;
 

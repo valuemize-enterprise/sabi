@@ -84,6 +84,13 @@ router.post('/:id/deactivate', authenticate, async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
+router.post('/:id/activate', authenticate, async (req, res, next) => {
+  try {
+    await supabase.from('clients').update({ is_active: true }).eq('id', req.params.id);
+    sendSuccess(res, null, 'Client activated');
+  } catch (err) { next(err); }
+});
+
 router.post('/:id/reset-password', authenticate, async (req, res, next) => {
   try {
     const tempPassword = `Client${Math.random().toString(36).slice(2, 8)}!`;

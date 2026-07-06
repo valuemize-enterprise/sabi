@@ -338,5 +338,52 @@ ALTER TABLE audience_profiles ENABLE ROW LEVEL SECURITY;
 ALTER TABLE audit_logs       ENABLE ROW LEVEL SECURITY;
 ALTER TABLE platform_settings ENABLE ROW LEVEL SECURITY;
 
+-- ── RLS Policies ──────────────────────────────────────────────
+-- The backend uses the service_role key exclusively, so we grant full access
+-- to the service_role on all tables.
+
+CREATE POLICY "service_role_all" ON users
+  FOR ALL TO service_role USING (true) WITH CHECK (true);
+
+CREATE POLICY "service_role_all" ON brands
+  FOR ALL TO service_role USING (true) WITH CHECK (true);
+
+CREATE POLICY "service_role_all" ON clients
+  FOR ALL TO service_role USING (true) WITH CHECK (true);
+
+CREATE POLICY "service_role_all" ON reports
+  FOR ALL TO service_role USING (true) WITH CHECK (true);
+
+CREATE POLICY "service_role_all" ON goals
+  FOR ALL TO service_role USING (true) WITH CHECK (true);
+
+CREATE POLICY "service_role_all" ON competitors
+  FOR ALL TO service_role USING (true) WITH CHECK (true);
+
+CREATE POLICY "service_role_all" ON calendar_events
+  FOR ALL TO service_role USING (true) WITH CHECK (true);
+
+CREATE POLICY "service_role_all" ON tasks
+  FOR ALL TO service_role USING (true) WITH CHECK (true);
+
+CREATE POLICY "service_role_all" ON aria_sessions
+  FOR ALL TO service_role USING (true) WITH CHECK (true);
+
+CREATE POLICY "service_role_all" ON clarity_score_history
+  FOR ALL TO service_role USING (true) WITH CHECK (true);
+
+CREATE POLICY "service_role_all" ON audience_profiles
+  FOR ALL TO service_role USING (true) WITH CHECK (true);
+
+CREATE POLICY "service_role_all" ON audit_logs
+  FOR ALL TO service_role USING (true) WITH CHECK (true);
+
+CREATE POLICY "service_role_all" ON platform_settings
+  FOR ALL TO service_role USING (true) WITH CHECK (true);
+
+-- Additionally, grant explicit table-level privileges to the service_role
+-- in case BYPASSRLS is not set on the project's service_role.
+GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO service_role;
+
 -- Backend service role bypasses RLS (used by Express backend with service_role key)
 -- All access goes through our authenticated Express backend, not direct Supabase SDK from client

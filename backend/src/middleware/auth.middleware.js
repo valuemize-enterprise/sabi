@@ -23,7 +23,22 @@ async function authenticate(req, res, next) {
     if (!header?.startsWith('Bearer ')) return sendError(res, 401, 'No token provided');
 
     const token = header.split(' ')[1];
-    const decoded = jwt.verify(token, JWT_SECRET);
+    let decoded;
+
+    // Try agency JWT_SECRET first, fall back to SA secret for super admins
+    try {
+      decoded = jwt.verify(token, JWT_SECRET);
+    } catch (err) {
+      if (err.name === 'TokenExpiredError') return sendError(res, 401, 'Token expired');
+      try {
+        decoded = jwt.verify(token, JWT_SA_SECRET);
+        if (decoded.role !== 'super_admin') return sendError(res, 401, 'Invalid token');
+        req.user = { id: 'super_admin', email: decoded.email, full_name: 'Super Admin', role: 'super_admin', department: 'admin', is_active: true };
+        return next();
+      } catch {
+        return sendError(res, 401, 'Invalid token');
+      }
+    }
 
     const { data: user, error } = await supabase
       .from('users')

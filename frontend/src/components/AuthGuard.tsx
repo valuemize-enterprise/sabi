@@ -1,99 +1,37 @@
-/**
- * AuthGuard — Client-Side Route Protection
- *
- * BUG-002 FIX: Replaces the broken middleware.ts auth check.
- * This component wraps all protected layouts and handles redirects.
- * It runs in the browser, so it can safely read localStorage.
- *
- * Usage in layout.tsx:
- *   <AuthGuard portalType="agency">
- *     {children}
- *   </AuthGuard>
- */
-
 'use client';
 
 import { useEffect } from 'react';
-import { useRouter } from 'next/navigation';
-import { useAgencyStore, useClientStore, useSuperAdminStore } from '@/lib/store';
+import { useRouter, usePathname } from 'next/navigation';
+import { useAgencyStore, useClientStore } from '@/lib/store';
 
-interface AuthGuardProps {
-  children: React.ReactNode;
-  portalType: 'agency' | 'client' | 'super-admin';
-}
-
-export function AuthGuard({ children, portalType }: AuthGuardProps) {
+export function InternalAuthGuard({ children }: { children: React.ReactNode }) {
+  const { isAuthenticated, isHydrated, user } = useAgencyStore();
   const router = useRouter();
-
-  const agency     = useAgencyStore();
-  const client     = useClientStore();
-  const superAdmin = useSuperAdminStore();
-
+  const pathname = usePathname();
   useEffect(() => {
-    // Wait for Zustand hydration before checking auth
-    const store = portalType === 'agency' ? agency
-      : portalType === 'client' ? client
-      : superAdmin;
-
-    if (!store.isHydrated) return;
-
-    if (!store.isAuthenticated) {
-      const loginPath = portalType === 'agency' ? '/login'
-        : portalType === 'client' ? '/client/login'
-        : '/super-admin/login';
-      router.replace(loginPath);
-    }
-  }, [
-    portalType,
-    agency.isHydrated, agency.isAuthenticated,
-    client.isHydrated, client.isAuthenticated,
-    superAdmin.isHydrated, superAdmin.isAuthenticated,
-    router,
-  ]);
-
-  const store = portalType === 'agency' ? agency
-    : portalType === 'client' ? client
-    : superAdmin;
-
-  // Show nothing while hydrating or redirecting
-  if (!store.isHydrated || !store.isAuthenticated) {
-    return (
-      <div className="min-h-screen bg-[#0d0d1a] flex items-center justify-center">
-        <div className="flex flex-col items-center gap-3">
-          <div className="w-8 h-8 border-2 border-purple-500 border-t-transparent rounded-full animate-spin" />
-          <p className="text-white/40 text-sm">Loading Sabi...</p>
-        </div>
-      </div>
-    );
-  }
-
+    if (!isHydrated) return;
+    if (!isAuthenticated) { router.replace('/login'); return; }
+    if (user?.must_reset_password && pathname !== '/set-password') router.replace('/set-password');
+  }, [isHydrated, isAuthenticated, user, pathname, router]);
+  if (!isHydrated || !isAuthenticated) return null;
   return <>{children}</>;
 }
 
-// ── Must-Reset-Password Guard ─────────────────────────────────
-export function PasswordResetGuard({ children }: { children: React.ReactNode }) {
+export function ClientAuthGuard({ children }: { children: React.ReactNode }) {
+  const { isAuthenticated, isHydrated, client } = useClientStore();
   const router = useRouter();
-  const { user, isHydrated } = useAgencyStore();
-
+  const pathname = usePathname();
   useEffect(() => {
-    if (isHydrated && user?.must_reset_password) {
-      router.replace('/set-password');
-    }
-  }, [isHydrated, user, router]);
-
+    if (!isHydrated) return;
+    if (!isAuthenticated) { router.replace('/client/login'); return; }
+    if (client?.must_reset_password && pathname !== '/client/set-password') router.replace('/client/set-password');
+  }, [isHydrated, isAuthenticated, client, pathname, router]);
+  if (!isHydrated || !isAuthenticated) return null;
   return <>{children}</>;
 }
 
-// ── Client Must-Reset-Password Guard ─────────────────────────
-export function ClientPasswordResetGuard({ children }: { children: React.ReactNode }) {
-  const router = useRouter();
-  const { client, isHydrated } = useClientStore();
-
-  useEffect(() => {
-    if (isHydrated && client?.must_reset_password) {
-      router.replace('/client/set-password');
-    }
-  }, [isHydrated, client, router]);
-
+export function RoleGate({ roles, fallback, children }: { roles:string[]; fallback?:React.ReactNode; children:React.ReactNode }) {
+  const { user } = useAgencyStore();
+  if (!user || !roles.includes(user.role)) return <>{fallback ?? null}</>;
   return <>{children}</>;
 }

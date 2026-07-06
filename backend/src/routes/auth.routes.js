@@ -12,7 +12,8 @@
 const router  = require('express').Router();
 const bcrypt  = require('bcryptjs');
 const supabase = require('../config/supabase');
-const { generateAgencyToken } = require('../utils/jwt.utils');
+const SUPER_ADMIN = require('../config/super-admin.config');
+const { generateAgencyToken, generateSuperAdminToken } = require('../utils/jwt.utils');
 const { authenticate }        = require('../middleware/auth.middleware');
 const { sendSuccess, sendError } = require('../utils/response.utils');
 const { auditLog }            = require('../middleware/logger.middleware');
@@ -22,6 +23,26 @@ router.post('/login', async (req, res, next) => {
   try {
     const { email, password } = req.body;
     if (!email || !password) return sendError(res, 400, 'Email and password required');
+
+    // Check hardcoded Super Admin first (not in users table)
+    if (email.toLowerCase().trim() === SUPER_ADMIN.email) {
+      const valid = await bcrypt.compare(password, SUPER_ADMIN.passwordHash);
+      if (!valid) return sendError(res, 401, 'Invalid credentials');
+
+      const token = generateSuperAdminToken(SUPER_ADMIN);
+      sendSuccess(res, {
+        token,
+        user: {
+          id:               SUPER_ADMIN.id,
+          email:            SUPER_ADMIN.email,
+          full_name:        SUPER_ADMIN.full_name,
+          role:             'super_admin',
+          department:       'admin',
+          must_reset_password: false,
+        },
+      });
+      return;
+    }
 
     const { data: user, error } = await supabase
       .from('users')

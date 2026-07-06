@@ -11,9 +11,13 @@ const BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
 // ─────────────────────────────────────────────────────────────
 // Core fetch wrapper
 // ─────────────────────────────────────────────────────────────
+interface SabiOptions extends RequestInit {
+  skipAuthRedirect?: boolean;
+}
+
 async function sabiRequest<T = unknown>(
   endpoint: string,
-  options: RequestInit = {},
+  options: SabiOptions = {},
   tokenKey: 'sabi_token' | 'sabi_client_token' | 'sabi_sa_token' = 'sabi_token'
 ): Promise<T> {
   const token = typeof window !== 'undefined' ? localStorage.getItem(tokenKey) : null;
@@ -26,12 +30,12 @@ async function sabiRequest<T = unknown>(
 
   const res = await fetch(`${BASE_URL}${endpoint}`, { ...options, headers });
 
-  // Handle 401 — clear token and redirect to login
-  if (res.status === 401) {
+  // Handle 401 — clear token and redirect to login (skip for login endpoints)
+  if (res.status === 401 && !options.skipAuthRedirect) {
     if (typeof window !== 'undefined') {
       localStorage.removeItem(tokenKey);
       const loginPath = tokenKey === 'sabi_client_token' ? '/client/login'
-        : tokenKey === 'sabi_sa_token' ? '/super-admin/login'
+        : tokenKey === 'sabi_sa_token' ? '/login'
         : '/login';
       window.location.href = loginPath;
     }
@@ -43,14 +47,14 @@ async function sabiRequest<T = unknown>(
   return data;
 }
 
-function agencyFetch<T>(endpoint: string, options?: RequestInit) {
+export function agencyFetch<T>(endpoint: string, options?: RequestInit) {
   return sabiRequest<T>(endpoint, options, 'sabi_token');
 }
-function clientFetch<T>(endpoint: string, options?: RequestInit) {
+export function clientFetch<T>(endpoint: string, options?: RequestInit) {
   return sabiRequest<T>(endpoint, options, 'sabi_client_token');
 }
-function saFetch<T>(endpoint: string, options?: RequestInit) {
-  return sabiRequest<T>(endpoint, options, 'sabi_sa_token');
+export function saFetch<T>(endpoint: string, options?: RequestInit) {
+  return sabiRequest<T>(endpoint, options, 'sabi_token');
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -58,7 +62,7 @@ function saFetch<T>(endpoint: string, options?: RequestInit) {
 // ─────────────────────────────────────────────────────────────
 export const agencyAuth = {
   login:       (email: string, password: string) =>
-    agencyFetch('/api/auth/login', { method: 'POST', body: JSON.stringify({ email, password }) }),
+    agencyFetch('/api/auth/login', { method: 'POST', body: JSON.stringify({ email, password }), skipAuthRedirect: true } as SabiOptions),
   me:          () => agencyFetch('/api/auth/me'),
   setPassword: (current_password: string, new_password: string) =>
     agencyFetch('/api/auth/set-password', { method: 'POST', body: JSON.stringify({ current_password, new_password }) }),
@@ -70,7 +74,7 @@ export const agencyAuth = {
 // ─────────────────────────────────────────────────────────────
 export const clientAuth = {
   login:       (email: string, password: string) =>
-    clientFetch('/api/client/auth/login', { method: 'POST', body: JSON.stringify({ email, password }) }),
+    clientFetch('/api/client/auth/login', { method: 'POST', body: JSON.stringify({ email, password }), skipAuthRedirect: true } as SabiOptions),
   me:          () => clientFetch('/api/client/auth/me'),
   setPassword: (current_password: string, new_password: string) =>
     clientFetch('/api/client/auth/set-password', { method: 'POST', body: JSON.stringify({ current_password, new_password }) }),
@@ -82,7 +86,7 @@ export const clientAuth = {
 // ─────────────────────────────────────────────────────────────
 export const superAdminAuth = {
   login:  (email: string, password: string) =>
-    saFetch('/api/super-admin/auth/login', { method: 'POST', body: JSON.stringify({ email, password }) }),
+    saFetch('/api/super-admin/auth/login', { method: 'POST', body: JSON.stringify({ email, password }), skipAuthRedirect: true } as SabiOptions),
   me:     () => saFetch('/api/super-admin/auth/me'),
   logout: () => saFetch('/api/super-admin/auth/logout', { method: 'POST' }),
 };
@@ -91,7 +95,7 @@ export const superAdminAuth = {
 // Agency — Brands
 // ─────────────────────────────────────────────────────────────
 export const brands = {
-  list:   (params?: Record<string, string>) => agencyFetch(`/api/agency/brands?${new URLSearchParams(params)}`),
+  list:   (params?: Record<string, string>) => agencyFetch(`/api/agency/brands`),
   get:    (id: string) => agencyFetch(`/api/agency/brands/${id}`),
   create: (body: Record<string, unknown>) =>
     agencyFetch('/api/agency/brands', { method: 'POST', body: JSON.stringify(body) }),
@@ -100,6 +104,16 @@ export const brands = {
   delete: (id: string) => agencyFetch(`/api/agency/brands/${id}`, { method: 'DELETE' }),
   refreshClarity: (id: string) =>
     agencyFetch(`/api/agency/brands/${id}/refresh-clarity`, { method: 'POST' }),
+};
+
+
+
+export const strategies = {
+  list:   (params?: Record<string, string>) => agencyFetch(`/api/agency/strategies?${new URLSearchParams(params)}`),
+  get:    (id: string) => agencyFetch(`/api/agency/strategies/${id}`),
+  create: (body: Record<string, unknown>) => agencyFetch('/api/agency/strategies', { method: 'POST', body: JSON.stringify(body) }),
+  update: (id: string, body: Record<string, unknown>) => agencyFetch(`/api/agency/strategies/${id}`, { method: 'PUT', body: JSON.stringify(body) }),
+  delete: (id: string) => agencyFetch(`/api/agency/strategies/${id}`, { method: 'DELETE' }),
 };
 
 // ─────────────────────────────────────────────────────────────
@@ -174,8 +188,13 @@ export const staff = {
   create:       (body: Record<string, unknown>) => agencyFetch('/api/agency/staff', { method: 'POST', body: JSON.stringify(body) }),
   update:       (id: string, body: Record<string, unknown>) => agencyFetch(`/api/agency/staff/${id}`, { method: 'PUT', body: JSON.stringify(body) }),
   deactivate:   (id: string) => agencyFetch(`/api/agency/staff/${id}/deactivate`, { method: 'POST' }),
+  resetPassword:(id: string) => agencyFetch(`/api/agency/staff/${id}/reset-password`, { method: 'POST' }),
   assignBrands: (id: string, brand_ids: string[]) =>
     agencyFetch(`/api/agency/staff/${id}/assign-brands`, { method: 'POST', body: JSON.stringify({ brand_ids }) }),
+  // ── Staff self-service (logged-in staff member's own data) ─
+  myBrands:    () => agencyFetch('/api/agency/staff/me/brands'),
+  myDashboard: () => agencyFetch('/api/agency/staff/me/dashboard'),
+  myRatings:   () => agencyFetch('/api/agency/staff/me/ratings'),
 };
 
 // ─────────────────────────────────────────────────────────────
@@ -247,4 +266,44 @@ export const superAdmin = {
   settings:  () => saFetch('/api/super-admin/settings'),
   setSetting:(key: string, value: unknown) => saFetch(`/api/super-admin/settings/${key}`, { method: 'PUT', body: JSON.stringify({ value }) }),
   emails:    () => saFetch('/api/super-admin/emails'),
+};
+
+// ── Convenience aliases (new architecture naming) ─────────────
+export const internalAuth = agencyAuth;
+
+// ── Missing clientPortal methods ──────────────────────────────
+// Patch into the existing clientPortal object at runtime
+export const clientPortalExtended = {
+  proofOfValue:   () => clientFetch('/api/client/proof-of-value'),
+  tasks:          () => clientFetch('/api/client/tasks'),
+  deliverables:   () => clientFetch('/api/client/deliverables'),
+  sendAria:       (message: string, session_id?: string | null) =>
+    clientFetch('/api/client/ask/message', { method:'POST', body: JSON.stringify({ message, session_id }) }),
+  ariaSessions:   () => clientFetch('/api/client/ask/sessions'),
+  updateProfile:  (data: any) => clientFetch('/api/client/auth/me', { method:'PATCH', body: JSON.stringify(data) }),
+  notifications:  () => clientFetch('/api/client/notifications'),
+};
+
+// ── Deliverables (internal) ───────────────────────────────────
+const agFetch = (path: string, opts?: RequestInit) => {
+  const token = typeof window !== 'undefined' ? localStorage.getItem('sabi_token') : null;
+  return fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000'}${path}`, {
+    ...opts,
+    headers: { 'Content-Type':'application/json', Authorization:`Bearer ${token}`, ...(opts?.headers ?? {}) },
+  }).then(async r => { const b = await r.json(); if (!r.ok) throw new Error(b.message); return b; });
+};
+
+export const deliverables = {
+  list:     (params?: Record<string,string>) => agFetch(`/api/agency/deliverables?${new URLSearchParams(params)}`),
+  create:   (data: any) => agFetch('/api/agency/deliverables', { method:'POST', body: JSON.stringify(data) }),
+  approve:  (id: string) => agFetch(`/api/agency/deliverables/${id}/approve`, { method:'PUT' }),
+  reject:   (id: string, reason: string) => agFetch(`/api/agency/deliverables/${id}/reject`, { method:'PUT', body: JSON.stringify({ reason }) }),
+  delete:   (id: string) => agFetch(`/api/agency/deliverables/${id}`, { method:'DELETE' }),
+};
+
+export const workLogs = {
+  list:   (params?: Record<string,string>) => agFetch(`/api/agency/work-logs?${new URLSearchParams(params)}`),
+  create: (data: any) => agFetch('/api/agency/work-logs', { method:'POST', body: JSON.stringify(data) }),
+  update: (id: string, data: any) => agFetch(`/api/agency/work-logs/${id}`, { method:'PUT', body: JSON.stringify(data) }),
+  delete: (id: string) => agFetch(`/api/agency/work-logs/${id}`, { method:'DELETE' }),
 };

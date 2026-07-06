@@ -1,13 +1,23 @@
-import { AuthGuard, ClientPasswordResetGuard } from '@/components/AuthGuard';
+'use client';
+
+import { usePathname } from 'next/navigation';
+import { ClientAuthGuard } from '@/components/AuthGuard';
+import { ClientSidebar }   from '@/components/ClientSidebar';
 
 export default function ClientLayout({ children }: { children: React.ReactNode }) {
+  const pathname = usePathname();
+  const isAuthPage = pathname === '/client/login' || pathname === '/client/set-password';
+
+  if (isAuthPage) return <>{children}</>;
+
   return (
-    <AuthGuard portalType="client">
-      <ClientPasswordResetGuard>
-        <div className="min-h-screen bg-[#0d0d1a]">
+    <ClientAuthGuard>
+      <div className="flex min-h-screen bg-[#0d0d1a]">
+        <ClientSidebar />
+        <main className="flex-1 ml-60 min-h-screen overflow-x-hidden">
           {children}
-        </div>
-      </ClientPasswordResetGuard>
-    </AuthGuard>
+        </main>
+      </div>
+    </ClientAuthGuard>
   );
 }
