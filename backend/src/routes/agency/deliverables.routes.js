@@ -16,6 +16,7 @@ const supabase        = require('../../config/supabase');
 const { authenticate, requirePermission } = require('../../middleware/auth.middleware');
 const { sendSuccess, sendError, sendPaginated } = require('../../utils/response.utils');
 const { auditLog }    = require('../../middleware/logger.middleware');
+const emailService    = require('../../services/email.service');
 
 const VALID_FILE_TYPES = ['copy','design','video','report','strategy','photo','other'];
 const ADMIN_ROLES = [
@@ -123,6 +124,21 @@ router.put('/:id/approve', authenticate, async (req, res, next) => {
       actorId: req.user.id, actorEmail: req.user.email, actorRole: req.user.role,
       action: 'APPROVE_DELIVERABLE', resourceType: 'deliverable', resourceId: req.params.id, req,
     });
+
+    const { data: del } = await supabase
+      .from('deliverables')
+      .select('title, brand_id, users!user_id(full_name, email), brands(name)')
+      .eq('id', req.params.id)
+      .single();
+
+    if (del) {
+      emailService.sendDeliverableApproved({
+        staffName:        del.users?.full_name || 'Staff',
+        staffEmail:       del.users?.email || '',
+        brandName:        del.brands?.name || '',
+        deliverableTitle: del.title,
+      }).catch(() => {});
+    }
 
     sendSuccess(res, data, 'Deliverable approved — now visible to client');
   } catch (err) { next(err); }

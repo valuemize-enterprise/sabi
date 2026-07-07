@@ -17,6 +17,7 @@ const { authenticate, requirePermission } = require('../../middleware/auth.middl
 const { sendSuccess, sendError, sendPaginated } = require('../../utils/response.utils');
 const { auditLog }     = require('../../middleware/logger.middleware');
 const narrativeService = require('../../services/aria/narrative.service');
+const emailService = require('../../services/email.service');
 
 // GET /api/agency/reports
 router.get('/', authenticate, async (req, res, next) => {
@@ -124,6 +125,25 @@ router.post('/:id/publish', authenticate, requirePermission('PUBLISH_REPORT'), a
     if (error) throw error;
     await auditLog({ actorId: req.user.id, actorEmail: req.user.email, actorRole: req.user.role,
       action: 'PUBLISH_REPORT', resourceType: 'report', resourceId: req.params.id, req });
+
+    const { data: brand } = await supabase
+      .from('brands')
+      .select('name, clients(email, full_name)')
+      .eq('id', data.brand_id)
+      .single();
+
+    for (const client of (brand?.clients || [])) {
+      emailService.sendReportPublished({
+        clientName:  client.full_name,
+        clientEmail: client.email,
+        brandName:   brand.name,
+        reportTitle: data.title,
+        reportUrl:   `${process.env.NEXT_PUBLIC_APP_URL}/client/reports/${data.id}`,
+        period:      data.period_start
+                       ? `Period: ${data.period_start} to ${data.period_end}`
+                       : '',
+      }).catch(() => {});
+    }
 
     sendSuccess(res, { report: data }, 'Report published');
   } catch (err) { next(err); }

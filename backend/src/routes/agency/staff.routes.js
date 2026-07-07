@@ -18,6 +18,7 @@ const { authenticate, requirePermission } = require('../../middleware/auth.middl
 const { sendSuccess, sendError, sendPaginated } = require('../../utils/response.utils');
 const { auditLog } = require('../../middleware/logger.middleware');
 const { canManage } = require('../../config/roles.config');
+const emailService = require('../../services/email.service');
 
 router.get('/', authenticate, requirePermission('VIEW_ALL_STAFF'), async (req, res, next) => {
   try {
@@ -56,6 +57,13 @@ router.post('/', authenticate, requirePermission('CREATE_STAFF'), async (req, re
 
     await auditLog({ actorId: req.user.id, actorEmail: req.user.email, actorRole: req.user.role,
       action: 'CREATE_STAFF', resourceType: 'user', resourceId: data.id, details: { email, role }, req });
+
+    emailService.sendWelcomeStaff({
+      name: data.full_name,
+      email: data.email,
+      role: data.role,
+      tempPassword,
+    }).catch(() => {});
 
     sendSuccess(res, { user: data, temp_password: tempPassword }, 'Staff member created', 201);
   } catch (err) { next(err); }
@@ -248,5 +256,29 @@ router.get('/me/ratings', authenticate, async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
+
+// ── POST /api/agency/staff/:id/reset-password ──────────────────
+router.post('/:id/reset-password', authenticate, async (req, res, next) => {
+  try {
+    const temp = `Sabi${Math.random().toString(36).slice(2, 8)}!`;
+    const hash = await bcrypt.hash(temp, 12);
+    await supabase.from('users').update({ password_hash: hash, must_reset_password: true }).eq('id', req.params.id);
+
+    const { data: user } = await supabase
+      .from('users').select('full_name, email').eq('id', req.params.id).single();
+
+    await auditLog({ actorId: req.user.id, actorEmail: req.user.email, actorRole: req.user.role,
+      action: 'RESET_STAFF_PASSWORD', resourceType: 'user', resourceId: req.params.id, req });
+
+    emailService.sendPasswordReset({
+      name:        user?.full_name || 'Staff',
+      email:       user?.email || req.params.id,
+      tempPassword: temp,
+      isClient:    false,
+    }).catch(() => {});
+
+    sendSuccess(res, { temp_password: temp }, 'Password reset. Share this with the staff member securely.');
+  } catch (err) { next(err); }
+});
 
 module.exports = router;

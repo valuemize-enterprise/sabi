@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Welcome to Sabi Intelligence Suite</title>
+</head>
+<body style="margin:0;padding:0;background-color:#0d0d1a;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background-color:#0d0d1a;padding:40px 20px;">
+    <tr>
+      <td align="center">
+        <table width="580" cellpadding="0" cellspacing="0" style="max-width:580px;width:100%;">
+
+          <!-- Logo -->
+          <tr>
+            <td align="center" style="padding-bottom:32px;">
+              <table cellpadding="0" cellspacing="0">
+                <tr>
+                  <td style="background-color:#1a1040;border:1px solid #3b2d6e;border-radius:12px;padding:12px 24px;">
+                    <span style="color:#a78bfa;font-size:18px;font-weight:800;letter-spacing:1px;">SABI</span>
+                    <span style="color:#4a3880;font-size:18px;font-weight:400;"> Intelligence Suite</span>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <!-- Card -->
+          <tr>
+            <td style="background-color:#12122a;border:1px solid #1e1550;border-radius:16px;padding:40px 40px 32px;">
+
+              <!-- Greeting -->
+              <p style="color:#a78bfa;font-size:12px;font-weight:600;letter-spacing:3px;text-transform:uppercase;margin:0 0 8px;">Welcome aboard</p>
+              <h1 style="color:#ffffff;font-size:26px;font-weight:700;margin:0 0 12px;line-height:1.3;">
+                Hi {{name}},<br>your account is ready.
+              </h1>
+              <p style="color:#94a3b8;font-size:15px;line-height:1.6;margin:0 0 32px;">
+                You've been added to Sabi Intelligence Suite as a
+                <strong style="color:#ffffff;text-transform:capitalize;">{{role}}</strong>
+                at Cerebre Media Africa. Use the credentials below to sign in for the first time.
+              </p>
+
+              <!-- Credentials box -->
+              <table width="100%" cellpadding="0" cellspacing="0" style="background-color:#1a1040;border:1px solid #f59e0b30;border-radius:12px;margin-bottom:28px;">
+                <tr>
+                  <td style="padding:20px 24px;">
+                    <p style="color:#f59e0b;font-size:11px;font-weight:700;letter-spacing:2px;text-transform:uppercase;margin:0 0 16px;">
+                      ⚠ Your Login Credentials
+                    </p>
+                    <table width="100%" cellpadding="0" cellspacing="0">
+                      <tr>
+                        <td style="padding:8px 0;border-bottom:1px solid #ffffff08;">
+                          <span style="color:#64748b;font-size:12px;display:block;">Email Address</span>
+                          <span style="color:#ffffff;font-size:14px;font-family:monospace;">{{email}}</span>
+                        </td>
+                      </tr>
+                      <tr>
+                        <td style="padding:8px 0;">
+                          <span style="color:#64748b;font-size:12px;display:block;">Temporary Password</span>
+                          <span style="color:#ffffff;font-size:18px;font-weight:700;font-family:monospace;letter-spacing:2px;">{{tempPassword}}</span>
+                        </td>
+                      </tr>
+                    </table>
+                    <p style="color:#f59e0b;font-size:12px;margin:16px 0 0;">
+                      You will be asked to change this password on your first login.
+                    </p>
+                  </td>
+                </tr>
+              </table>
+
+              <!-- CTA button -->
+              <table width="100%" cellpadding="0" cellspacing="0">
+                <tr>
+                  <td align="center">
+                    <a href="{{loginUrl}}" style="display:inline-block;background-color:#6d28d9;color:#ffffff;font-size:15px;font-weight:600;text-decoration:none;padding:14px 40px;border-radius:10px;">
+                      Sign In to Sabi →
+                    </a>
+                  </td>
+                </tr>
+              </table>
+
+            </td>
+          </tr>
+
+          <!-- Footer -->
+          <tr>
+            <td align="center" style="padding:24px 0 0;">
+              <p style="color:#2d2d4e;font-size:12px;margin:0;">
+                Cerebre Media Africa · Lagos, Nigeria<br>
+                If you didn't expect this email, please ignore it.
+              </p>
+            </td>
+          </tr>
+
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>

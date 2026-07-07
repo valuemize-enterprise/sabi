@@ -17,6 +17,7 @@ const supabase = require('../../config/supabase');
 const { authenticateSuperAdmin } = require('../../middleware/auth.middleware');
 const { sendSuccess, sendError, sendPaginated } = require('../../utils/response.utils');
 const { auditLog } = require('../../middleware/logger.middleware');
+const emailService = require('../../services/email.service');
 
 // ── GET /api/super-admin/clients ─────────────────────────────
 router.get('/', authenticateSuperAdmin, async (req, res, next) => {
@@ -88,6 +89,13 @@ router.post('/', authenticateSuperAdmin, async (req, res, next) => {
       details: { email, brand_id, brand_name: brand.name }, req,
     });
 
+    emailService.sendWelcomeClient({
+      name:        data.full_name,
+      email:       data.email,
+      brandName:   brand.name,
+      tempPassword: temp,
+    }).catch(() => {});
+
     sendSuccess(res, { client: data, brand_name: brand.name, temp_password: temp }, 'Client account created', 201);
   } catch (err) { next(err); }
 });
@@ -117,6 +125,17 @@ router.put('/:id/reset-password', authenticateSuperAdmin, async (req, res, next)
       .from('clients')
       .update({ password_hash: hash, must_reset_password: true })
       .eq('id', req.params.id);
+
+    const { data: client } = await supabase
+      .from('clients').select('full_name, email').eq('id', req.params.id).single();
+
+    emailService.sendPasswordReset({
+      name:        client?.full_name || 'Client',
+      email:       client?.email || req.params.id,
+      tempPassword: temp,
+      isClient:    true,
+    }).catch(() => {});
+
     sendSuccess(res, { temp_password: temp }, 'Password reset');
   } catch (err) { next(err); }
 });

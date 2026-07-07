@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { ArrowLeft, Settings, Loader2, Trash2, AlertTriangle } from 'lucide-react';
+import toast from 'react-hot-toast';
 import { brands as brandsApi } from '@/lib/api';
 import { AgencyTopNav } from '@/components/internal/AgencyTopNav';
 import { LoadingPage } from '@/components/ui';
@@ -31,7 +32,8 @@ export default function BrandSettingsPage() {
   const deleteBrand = async () => {
     if (!confirm(`Permanently delete "${brand?.name}"? This cannot be undone.`)) return;
     await brandsApi.delete(brandId);
-    router.push('/clients');
+    toast.success(`"${brand?.name}" has been permanently deleted.`);
+    router.push('/dashboard');
   };
 
   if (loading) return <LoadingPage />;

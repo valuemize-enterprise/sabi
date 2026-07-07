@@ -16,6 +16,7 @@ const supabase = require('../../config/supabase');
 const { authenticate } = require('../../middleware/auth.middleware');
 const { sendSuccess, sendError, sendPaginated } = require('../../utils/response.utils');
 const { auditLog } = require('../../middleware/logger.middleware');
+const emailService = require('../../services/email.service');
 
 router.get('/', authenticate, async (req, res, next) => {
   try {
@@ -50,6 +51,16 @@ router.post('/', authenticate, async (req, res, next) => {
 
     await auditLog({ actorId: req.user.id, actorEmail: req.user.email, actorRole: req.user.role,
       action: 'CREATE_CLIENT', resourceType: 'client', resourceId: data.id, details: { email, brand_id }, req });
+
+    const { data: brand } = await supabase
+      .from('brands').select('name').eq('id', brand_id).single();
+
+    emailService.sendWelcomeClient({
+      name:        data.full_name,
+      email:       data.email,
+      brandName:   brand?.name || '',
+      tempPassword,
+    }).catch(() => {});
 
     sendSuccess(res, { client: data, temp_password: tempPassword }, 'Client created', 201);
   } catch (err) { next(err); }
@@ -97,8 +108,18 @@ router.post('/:id/reset-password', authenticate, async (req, res, next) => {
     const hash = await bcrypt.hash(tempPassword, 12);
     await supabase.from('clients').update({ password_hash: hash, must_reset_password: true }).eq('id', req.params.id);
 
+    const { data: client } = await supabase
+      .from('clients').select('full_name, email').eq('id', req.params.id).single();
+
     await auditLog({ actorId: req.user.id, actorEmail: req.user.email, actorRole: req.user.role,
       action: 'RESET_CLIENT_PASSWORD', resourceType: 'client', resourceId: req.params.id, req });
+
+    emailService.sendPasswordReset({
+      name:        client?.full_name || 'Client',
+      email:       client?.email || req.params.id,
+      tempPassword,
+      isClient:    true,
+    }).catch(() => {});
 
     sendSuccess(res, { temp_password: tempPassword }, 'Password reset. Share this with the client securely.');
   } catch (err) { next(err); }

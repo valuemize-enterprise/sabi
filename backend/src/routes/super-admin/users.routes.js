@@ -5,6 +5,7 @@ const supabase = require('../../config/supabase');
 const { authenticateSuperAdmin } = require('../../middleware/auth.middleware');
 const { sendSuccess, sendError, sendPaginated } = require('../../utils/response.utils');
 const { auditLog } = require('../../middleware/logger.middleware');
+const emailService = require('../../services/email.service');
 
 // All staff + clients
 router.get('/', authenticateSuperAdmin, async (req, res, next) => {
@@ -30,6 +31,14 @@ router.post('/', authenticateSuperAdmin, async (req, res, next) => {
     const hash = await bcrypt.hash(temp, 12);
     const { data, error } = await supabase.from('users').insert({ email: email.toLowerCase(), full_name, role, department, password_hash: hash, must_reset_password: true }).select('id, email, full_name, role').single();
     if (error) throw error;
+
+    emailService.sendWelcomeStaff({
+      name:        data.full_name,
+      email:       data.email,
+      role:        data.role,
+      tempPassword: temp,
+    }).catch(() => {});
+
     await auditLog({ actorId: 'super_admin', actorEmail: 'cerebreplus@gmail.com', actorRole: 'super_admin', action: 'SA_CREATE_USER', resourceType: 'user', resourceId: data.id, req });
     sendSuccess(res, { user: data, temp_password: temp }, 'User created', 201);
   } catch (err) { next(err); }
@@ -55,6 +64,17 @@ router.put('/:id/reset-password', authenticateSuperAdmin, async (req, res, next)
     const temp = `Sabi${Math.random().toString(36).slice(2, 8)}!`;
     const hash = await bcrypt.hash(temp, 12);
     await supabase.from('users').update({ password_hash: hash, must_reset_password: true }).eq('id', req.params.id);
+
+    const { data: user } = await supabase
+      .from('users').select('full_name, email').eq('id', req.params.id).single();
+
+    emailService.sendPasswordReset({
+      name:        user?.full_name || 'User',
+      email:       user?.email || req.params.id,
+      tempPassword: temp,
+      isClient:    false,
+    }).catch(() => {});
+
     sendSuccess(res, { temp_password: temp });
   } catch (err) { next(err); }
 });
