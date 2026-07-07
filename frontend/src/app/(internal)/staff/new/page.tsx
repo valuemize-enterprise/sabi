@@ -89,7 +89,8 @@ export default function NewStaffPage() {
     if (!form.email || !form.full_name || !form.role) { setError('Email, full name, and role are required'); return; }
     setSaving(true); setError('');
     try {
-      const res: any = await staffApi.create(form);
+      const payload = { ...form, role: form.role.toLowerCase().replace(/\s+/g, '_') };
+      const res: any = await staffApi.create(payload);
       setResult(res.data);
     } catch (err: any) {
       setError(err.message || 'Failed to create staff account');

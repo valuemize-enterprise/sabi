@@ -51,7 +51,7 @@ export function Badge({ label, color = 'purple' }: { label: string; color?: stri
     gray:   'bg-white/5 text-white/40 border-white/10',
   };
   return (
-    <span className={`inline-flex items-center text-xs px-2 py-0.5 rounded-full border font-medium ${colors[color] ?? colors.gray}`}>
+    <span className={`inline-flex capitalize items-center text-xs px-2 py-0.5 rounded-full border font-medium ${colors[color] ?? colors.gray}`}>
       {label}
     </span>
   );
