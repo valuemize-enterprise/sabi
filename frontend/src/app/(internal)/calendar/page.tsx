@@ -20,6 +20,7 @@ export default function CalendarPage() {
   const [recommending, setRecommending] = useState(false);
   const [recommendations, setRecommendations] = useState<any>(null);
   const [showNew, setShowNew] = useState(false);
+  const [error, setError] = useState('');
   const [newEvt, setNewEvt]  = useState({ title:'', event_date:'', event_type:'cultural', is_global: true });
 
   const loadEvents = () => {
@@ -33,7 +34,8 @@ export default function CalendarPage() {
   useEffect(() => { brandsApi.list({ limit:'50' }).then((r:any) => setBrands(r.data??[])); }, []);
 
   const recommend = async () => {
-    if (!selBrand) return alert('Select a brand first');
+    setError('');
+    if (!selBrand) { setError('Select a brand first'); return; }
     setRecommending(true);
     try {
       const res: any = await calendar.recommend(selBrand, month, year);
@@ -81,6 +83,15 @@ export default function CalendarPage() {
           {brands.map((b:any)=><option className='bg-black' key={b.id} value={b.id}>{b.name}</option>)}
         </select>
       </div>
+
+      {error && (
+        <div className="flex items-center gap-3 p-4 mb-5 rounded-xl bg-red-500/8 border border-red-500/20">
+          <span className="text-sm text-red-300">{error}</span>
+          <button onClick={() => setError('')} className="ml-auto text-red-400/50 hover:text-red-400 transition-colors">
+            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12"/></svg>
+          </button>
+        </div>
+      )}
 
       {/* ARIA Recommendations */}
       {recommendations && (

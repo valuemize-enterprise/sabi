@@ -7,9 +7,23 @@ import { staff as staffApi } from '@/lib/api';
 import { AgencyTopNav } from '@/components/internal/AgencyTopNav';
 
 const ROLES = [
-  'ceo','managing_director','account_director','account_manager',
-  'senior_strategist','strategist','copywriter','social_media_manager',
-  'analytics_specialist','creative_lead',
+  'CEO','Managing Director','Account Director','Account Manager',
+  'Senior Strategist','Strategist','Copywriter','Social Media Manager',
+  'Analytics Specialist','Creative Lead',
+  'Art Director',
+  'Senior Art Director',
+  'Business Director',
+  'Brand Manager',
+  'Senior Brand Manager',
+  'Economist',
+  'Website Developer',
+  'Video Editor',
+  'Cinematographer',
+  'Intern',
+  'Researcher',
+  'Webmaster',
+  'Influencer Marketing Expert',
+  'Other'
 ];
 
 function CredentialCard({ result, onDone }: { result: any; onDone: () => void }) {
@@ -87,7 +101,7 @@ export default function NewStaffPage() {
       <div className="p-6 max-w-lg mx-auto">
         <AgencyTopNav title="Staff" subtitle="New member" />
         <div className="sabi-card p-6">
-          <CredentialCard result={result} onDone={() => router.push('/internal/staff')} />
+          <CredentialCard result={result} onDone={() => router.push('/staff')} />
         </div>
       </div>
     );
@@ -96,7 +110,7 @@ export default function NewStaffPage() {
   return (
     <div className="p-6 max-w-lg mx-auto">
       <AgencyTopNav title="Staff" subtitle="New member" />
-      <Link href="/internal/staff" className="flex items-center gap-2 text-xs text-white/30 hover:text-white mb-5 transition-colors w-fit">
+      <Link href="/staff" className="flex items-center gap-2 text-xs text-white/30 hover:text-white mb-5 transition-colors w-fit">
         <ArrowLeft className="w-3.5 h-3.5" />Back to Staff
       </Link>
 
@@ -137,7 +151,7 @@ export default function NewStaffPage() {
               className="flex-1 flex items-center justify-center gap-2 py-2.5 text-sm sabi-btn-primary disabled:opacity-50">
               {saving ? <><Loader2 className="w-4 h-4 animate-spin" />Creating…</> : 'Create Staff Account'}
             </button>
-            <button type="button" onClick={() => router.push('/internal/staff')}
+            <button type="button" onClick={() => router.push('/staff')}
               className="px-4 py-2.5 text-sm text-white/40 hover:text-white transition-colors">Cancel</button>
           </div>
         </form>

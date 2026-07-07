@@ -41,9 +41,13 @@ export default function BrandSettingsPage() {
   return (
     <div className="p-6 max-w-2xl mx-auto">
       <AgencyTopNav />
-      <Link href={`/brands/${brandId}`} className="flex items-center gap-2 text-xs text-white/30 hover:text-white mb-5 transition-colors w-fit">
-        <ArrowLeft className="w-3.5 h-3.5" /> Back to Brand
-      </Link>
+      <button
+  type="button"
+  onClick={() => router.back()}
+  className="flex items-center gap-2 text-xs text-white/30 hover:text-white mb-5 transition-colors w-fit"
+>
+  <ArrowLeft className="w-3.5 h-3.5" /> Back
+</button>
       <div className="flex items-center gap-3 mb-8">
         <div className="w-10 h-10 rounded-xl bg-purple-500/20 border border-purple-500/30 flex items-center justify-center">
           <Settings className="w-5 h-5 text-purple-400" />

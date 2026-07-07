@@ -114,6 +114,7 @@ export default function NewBrandPage() {
 
   // ── Step 2: Assign a staff member ────────────────────────
   const assignMember = async () => {
+    setError('');
     if (!selectedStaff || !createdBrandId) return;
     // Check not already assigned
     if (assigned.some(a => a.staff_id === selectedStaff.id)) {
@@ -130,7 +131,7 @@ export default function NewBrandPage() {
       setSelectedStaff(null);
       setSelectedRole('account_manager');
       setPickerSearch('');
-    } catch (err: any) { alert(err.message); }
+    } catch (err: any) { setError(err.message); }
     finally { setAssigning(false); }
   };
 
@@ -298,7 +299,7 @@ export default function NewBrandPage() {
                 <Users2 className="w-8 h-8 text-white/10 mx-auto mb-2" />
                 <p className="text-sm text-white/30">No team members yet</p>
                 <p className="text-xs text-white/20 mt-1">Add at least an Account Manager</p>
-                <button onClick={() => setShowPicker(true)}
+              <button onClick={() => { setError(''); setShowPicker(true); }}
                   className="mt-4 sabi-btn-primary px-4 py-2 text-sm flex items-center gap-1.5 mx-auto">
                   <Plus className="w-3.5 h-3.5" /> Add First Member
                 </button>
@@ -377,6 +378,9 @@ export default function NewBrandPage() {
                   )}
                 </div>
 
+                {error && (
+                  <div className="bg-red-500/10 border border-red-500/20 rounded-lg p-3 text-red-400 text-xs mb-3">{error}</div>
+                )}
                 {/* Role picker — shown once staff is selected */}
                 {selectedStaff && (
                   <div className="border-t border-white/5 pt-4">

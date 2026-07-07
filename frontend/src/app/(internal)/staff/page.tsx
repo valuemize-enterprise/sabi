@@ -62,7 +62,7 @@ export default function StaffListPage() {
                 <Badge label={u.role.replace(/_/g,' ')} color={ROLE_COLORS[u.role]??'gray'}/>
                 <div className="flex items-center gap-2">
                   {u.is_active&&<button onClick={()=>deactivate(u.id)} className="text-xs text-white/20 hover:text-red-400 transition-colors"><UserX className="w-4 h-4"/></button>}
-                  <Link href={`/internal/staff/${u.id}`} className="text-white/20 hover:text-purple-400 transition-colors"><ChevronRight className="w-4 h-4"/></Link>
+                  <Link href={`/staff/${u.id}`} className="text-white/20 hover:text-purple-400 transition-colors"><ChevronRight className="w-4 h-4"/></Link>
                 </div>
               </div>
               {u.last_login&&<p className="text-xs text-white/20 mt-3">Last login: {new Date(u.last_login).toLocaleDateString()}</p>}

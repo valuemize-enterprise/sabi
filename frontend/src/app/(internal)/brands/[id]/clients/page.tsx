@@ -81,6 +81,8 @@ export default function BrandClientsPage() {
   const [createResult, setCreateResult] = useState<{ client: any; temp: string } | null>(null);
   const [form, setForm] = useState({ email:'', full_name:'', job_title:'', phone:'' });
   const [actionLoading, setActionLoading] = useState<string | null>(null);
+  const [error, setError] = useState('');
+  const [resetResult, setResetResult] = useState<string | null>(null);
 
   const load = () => {
     setLoading(true);
@@ -104,7 +106,7 @@ export default function BrandClientsPage() {
       setCreateResult({ client: res.data.client, temp: res.data.temp_password });
       setClients(p => [res.data.client, ...p]);
       setForm({ email:'', full_name:'', job_title:'', phone:'' });
-    } catch (err: any) { alert(err.message || 'Failed to create client'); }
+    } catch (err: any) { setError(err.message || 'Failed to create client'); }
     finally { setCreating(false); }
   };
 
@@ -113,8 +115,8 @@ export default function BrandClientsPage() {
     setActionLoading(`${id}_reset`);
     try {
       const res: any =       await agFetch(`/api/agency/clients/${id}/reset-password`, { method: 'POST' });
-      alert(`✓ Temp password: ${res.data.temp_password}\n\nSend to the client securely.`);
-    } catch (err: any) { alert(err.message); }
+      setResetResult(res.data.temp_password);
+    } catch (err: any) { setError(err.message); }
     finally { setActionLoading(null); }
   };
 
@@ -165,6 +167,28 @@ export default function BrandClientsPage() {
           <p className="text-xs text-white/40 mt-0.5">They can view reports, goals, ClarityScore™, Ask ARIA, and more — but cannot edit anything.</p>
         </div>
       </div>
+
+      {error && (
+        <div className="flex items-center gap-3 p-4 mb-5 rounded-xl bg-red-500/8 border border-red-500/20">
+          <span className="text-sm text-red-300">{error}</span>
+          <button onClick={() => setError('')} className="ml-auto text-red-400/50 hover:text-red-400 transition-colors">
+            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12"/></svg>
+          </button>
+        </div>
+      )}
+
+      {resetResult && (
+        <div className="flex items-start gap-3 p-4 mb-5 rounded-xl bg-amber-500/8 border border-amber-500/20">
+          <div className="flex-1">
+            <p className="text-sm font-medium text-amber-300 mb-1">Password reset successful</p>
+            <p className="text-xs text-white/50 mb-2">Temporary password: <code className="text-amber-300 font-mono bg-amber-500/10 px-1.5 py-0.5 rounded">{resetResult}</code></p>
+            <p className="text-xs text-white/30">Send this to the client securely. They must change it on first login.</p>
+          </div>
+          <button onClick={() => setResetResult(null)} className="text-amber-400/50 hover:text-amber-400 transition-colors flex-shrink-0">
+            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12"/></svg>
+          </button>
+        </div>
+      )}
 
       {/* Create modal */}
       {showCreate && (

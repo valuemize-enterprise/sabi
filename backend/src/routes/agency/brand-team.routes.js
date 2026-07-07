@@ -21,10 +21,19 @@ const { sendSuccess, sendError } = require('../../utils/response.utils');
 const { auditLog } = require('../../middleware/logger.middleware');
 
 const BRAND_ROLES = [
-  'account_manager', 'brand_manager', 'creative_director',
-  'senior_strategist', 'strategist', 'copywriter',
-  'social_media_manager', 'analytics_specialist', 'content_creator',
-  'graphic_designer', 'community_manager', 'contributor',
+  'account_manager',
+  'brand_manager',
+  'creative_director',
+  'senior_strategist',
+  'strategist',
+  'copywriter',
+  'social_media_manager',
+  'analytics_specialist',
+  'content_creator',
+  'graphic_designer',
+  'community_manager',
+  'contributor',
+  'brand_admin',
 ];
 
 const ADMIN_ROLES = [

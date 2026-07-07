@@ -77,10 +77,10 @@ export default function SuperAdminAnalyticsPage() {
         <>
           {/* KPIs */}
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-            <StatCard label="Total Brands"   value={data?.brands       ?? 0} icon={Building2} color="purple" />
-            <StatCard label="Active Staff"   value={data?.activeStaff  ?? 0} icon={Users}     color="blue"   />
-            <StatCard label="Active Clients" value={data?.activeClients ?? 0} icon={Users}     color="green"  />
-            <StatCard label="Total Reports"  value={data?.totalReports ?? 0} icon={FileText}  color="amber"  />
+            <StatCard label="Total Brands"   value={data?.stats.totalBrands       ?? 0} icon={Building2} color="purple" />
+            <StatCard label="Active Staff"   value={data?.stats.totalStaff  ?? 0} icon={Users}     color="blue"   />
+            <StatCard label="Active Clients" value={data?.stats.activeClients ?? 0} icon={Users}     color="green"  />
+            <StatCard label="Total Reports"  value={data?.stats.totalReports ?? 0} icon={FileText}  color="amber"  />
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">

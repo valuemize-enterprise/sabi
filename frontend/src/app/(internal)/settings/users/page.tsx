@@ -10,7 +10,7 @@ import { brands as brandsApi } from '@/lib/api';
 
 // ── Shared helpers ────────────────────────────────────────────
 const SA_TOKEN = () =>
-  typeof window !== 'undefined' ? localStorage.getItem('sabi_sa_token') : null;
+  typeof window !== 'undefined' ? localStorage.getItem('sabi_token') : null;
 
 const saFetch = async (path: string, opts?: RequestInit) => {
   const base = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
@@ -28,9 +28,23 @@ const saFetch = async (path: string, opts?: RequestInit) => {
 };
 
 const ROLES = [
-  'ceo','managing_director','account_director','account_manager',
-  'senior_strategist','strategist','copywriter','social_media_manager',
-  'analytics_specialist','creative_lead',
+ 'CEO','Managing Director','Account Director','Account Manager',
+  'Senior Strategist','Strategist','Copywriter','Social Media Manager',
+  'Analytics Specialist','Creative Lead',
+  'Art Director',
+  'Senior Art Director',
+  'Business Director',
+  'Brand Manager',
+  'Senior Brand Manager',
+  'Economist',
+  'Website Developer',
+  'Video Editor',
+  'Cinematographer',
+  'Intern',
+  'Researcher',
+  'Webmaster',
+  'Influencer Marketing Expert',
+  'Other'
 ];
 
 const ROLE_COLOR: Record<string, string> = {
@@ -130,6 +144,8 @@ export default function SuperAdminUsersPage() {
   const [clientForm, setClientForm] = useState({ email:'', full_name:'', brand_id:'', job_title:'', phone:'', company_name:'' });
 
   const [actionLoading, setActionLoading] = useState<string | null>(null);
+  const [error, setError] = useState('');
+  const [pwResetResult, setPwResetResult] = useState<{ name: string; temp: string } | null>(null);
 
   // Load brands for client creation dropdown
   useEffect(() => {
@@ -173,7 +189,7 @@ export default function SuperAdminUsersPage() {
       setCreateResult({ ...res.data, isClient: false });
       setItems(p => [res.data.user, ...p]);
       setStaffForm({ email:'', full_name:'', role:'', department:'' });
-    } catch (err: any) { alert(err.message || 'Failed to create staff account'); }
+    } catch (err: any) { setError(err.message || 'Failed to create staff account'); }
     finally { setCreating(false); }
   };
 
@@ -190,7 +206,7 @@ export default function SuperAdminUsersPage() {
       setCreateResult({ ...res.data, isClient: true });
       setItems(p => [res.data.client, ...p]);
       setClientForm({ email:'', full_name:'', brand_id:'', job_title:'', phone:'', company_name:'' });
-    } catch (err: any) { alert(err.message || 'Failed to create client account'); }
+    } catch (err: any) { setError(err.message || 'Failed to create client account'); }
     finally { setCreating(false); }
   };
 
@@ -207,9 +223,10 @@ export default function SuperAdminUsersPage() {
         setItems(p => p.map(u => u.id === id ? { ...u, is_active: true } : u));
       } else {
         const res: any = await saFetch(`/api/super-admin/${table}/${id}/reset-password`, { method: 'PUT' });
-        alert(`✓ Temporary password: ${res.data.temp_password}\n\nShare this with the user securely — they must change it on first login.`);
+        const u = items.find(i => i.id === id);
+        setPwResetResult({ name: u?.full_name || u?.email || 'User', temp: res.data.temp_password });
       }
-    } catch (err: any) { alert(err.message); }
+    } catch (err: any) { setError(err.message); }
     finally { setActionLoading(null); }
   };
 
@@ -264,6 +281,28 @@ export default function SuperAdminUsersPage() {
           </select>
         )}
       </div>
+
+      {error && (
+        <div className="flex items-center gap-3 p-4 mb-5 rounded-xl bg-red-500/8 border border-red-500/20">
+          <span className="text-sm text-red-300">{error}</span>
+          <button onClick={() => setError('')} className="ml-auto text-red-400/50 hover:text-red-400 transition-colors">
+            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12"/></svg>
+          </button>
+        </div>
+      )}
+
+      {pwResetResult && (
+        <div className="flex items-start gap-3 p-4 mb-5 rounded-xl bg-amber-500/8 border border-amber-500/20">
+          <div className="flex-1">
+            <p className="text-sm font-medium text-amber-300 mb-1">Password reset for <strong>{pwResetResult.name}</strong></p>
+            <p className="text-xs text-white/50 mb-2">Temporary password: <code className="text-amber-300 font-mono bg-amber-500/10 px-1.5 py-0.5 rounded">{pwResetResult.temp}</code></p>
+            <p className="text-xs text-white/30">Share this with the user securely — they must change it on first login.</p>
+          </div>
+          <button onClick={() => setPwResetResult(null)} className="text-amber-400/50 hover:text-amber-400 transition-colors flex-shrink-0">
+            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12"/></svg>
+          </button>
+        </div>
+      )}
 
       {/* Create modal */}
       {showCreate && (
@@ -347,8 +386,8 @@ export default function SuperAdminUsersPage() {
                   <label className="text-xs text-white/50 mb-1.5 block">Role *</label>
                   <select className="sabi-input" required value={staffForm.role}
                     onChange={e => setStaffForm(f => ({ ...f, role: e.target.value }))}>
-                    <option value="">Select role…</option>
-                    {ROLES.map(r => <option key={r} value={r}>{r.replace(/_/g, ' ')}</option>)}
+                    <option className='bg-black' value="">Select role…</option>
+                    {ROLES.map(r => <option key={r} className='bg-black' value={r}>{r.replace(/_/g, ' ')}</option>)}
                   </select>
                 </div>
                 <div className="flex gap-3 pt-1">

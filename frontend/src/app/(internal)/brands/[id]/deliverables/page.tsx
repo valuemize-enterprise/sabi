@@ -40,6 +40,7 @@ export default function BrandDeliverablesPage() {
   const [uploading, setUploading] = useState(false);
   const [actioning, setActioning] = useState<string|null>(null);
   const [filter, setFilter]     = useState<'all'|'pending'|'approved'>('all');
+  const [error, setError] = useState('');
 
   const setF = (k: string, v: any) => setForm(p=>({...p,[k]:v}));
 
@@ -61,7 +62,7 @@ export default function BrandDeliverablesPage() {
       setItems(p=>[res.data,...p]);
       setForm({ title:'', file_type:'copy', description:'', client_visible:false });
       setFiles([]); setShowUpload(false);
-    } catch (err:any) { alert(err.message); }
+    } catch (err:any) { setError(err.message); }
     finally { setUploading(false); }
   };
 
@@ -109,6 +110,15 @@ export default function BrandDeliverablesPage() {
             <p className="text-xs text-white/40">Approve before the client can see them in their portal</p>
           </div>
           <button onClick={()=>setFilter('pending')} className="text-xs text-amber-400 hover:text-amber-300 transition-colors flex-shrink-0">Review →</button>
+        </div>
+      )}
+
+      {error && (
+        <div className="flex items-center gap-3 p-4 mb-5 rounded-xl bg-red-500/8 border border-red-500/20">
+          <span className="text-sm text-red-300">{error}</span>
+          <button onClick={() => setError('')} className="ml-auto text-red-400/50 hover:text-red-400 transition-colors">
+            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12"/></svg>
+          </button>
         </div>
       )}
 

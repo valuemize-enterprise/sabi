@@ -20,7 +20,7 @@ export default function StaffDetailPage() {
   return (
     <div className="p-6 max-w-3xl mx-auto">
       <AgencyTopNav/>
-      <Link href="/internal/staff" className="flex items-center gap-2 text-xs text-white/30 hover:text-white mb-5 transition-colors w-fit"><ArrowLeft className="w-3.5 h-3.5"/>Back to Staff</Link>
+      <Link href="/staff" className="flex items-center gap-2 text-xs text-white/30 hover:text-white mb-5 transition-colors w-fit"><ArrowLeft className="w-3.5 h-3.5"/>Back to Staff</Link>
 
       <div className="sabi-card p-6 mb-6">
         <div className="flex items-center gap-5">

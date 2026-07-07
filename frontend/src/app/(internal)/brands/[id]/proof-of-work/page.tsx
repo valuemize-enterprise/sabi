@@ -11,6 +11,7 @@ import {
 import { workLogs, deliverables as delivsApi } from '@/lib/api';
 import { AgencyTopNav } from '@/components/internal/AgencyTopNav';
 import { LoadingPage, EmptyState, Badge, StatCard } from '@/components/ui';
+import { useBrandPermissions } from '@/lib/permissions';
 
 const CATEGORIES: Record<string, { label: string; icon: string }> = {
   strategy:     { label: 'Strategy',       icon: '📊' },
@@ -48,6 +49,7 @@ export default function BrandProofOfWorkPage() {
   const [search, setSearch]     = useState('');
   const [catFilter, setCatFilter] = useState('');
   const [period, setPeriod]     = useState<'all' | 'month' | 'week'>('month');
+    const perms           = useBrandPermissions(brandId);
 
   useEffect(() => {
     setLoading(true);
@@ -101,11 +103,11 @@ export default function BrandProofOfWorkPage() {
 
   return (
     <div className="p-6 max-w-5xl mx-auto">
-      <AgencyTopNav
+      {perms.canAssignStaff && (<AgencyTopNav
         title="Proof of Work"
         subtitle="Everything the team has done for this brand"
         breadcrumb={[{ label: 'Brands', href: '/brands' }, { label: 'Brand', href: `/brands/${brandId}` }]}
-      />
+      />)}
 
       <Link href={`/brands/${brandId}`}
         className="flex items-center gap-2 text-xs text-white/30 hover:text-white mb-5 transition-colors w-fit">

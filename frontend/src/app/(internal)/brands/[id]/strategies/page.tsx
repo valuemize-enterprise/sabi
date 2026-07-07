@@ -10,6 +10,7 @@ import {
 import { strategies as strategiesApi, goals as goalsApi } from '@/lib/api';
 import { AgencyTopNav } from '@/components/internal/AgencyTopNav';
 import { LoadingPage, EmptyState, Badge } from '@/components/ui';
+import { useBrandPermissions } from '@/lib/permissions';
 
 // ── Constants ─────────────────────────────────────────────────
 const STRATEGY_TYPES = [
@@ -51,6 +52,7 @@ export default function BrandStrategiesPage() {
     const [error, setError] = useState('');
     const [deleting, setDeleting] = useState<string | null>(null);
     const [statusChanging, setStatusChanging] = useState<string | null>(null);
+      const perms           = useBrandPermissions(brandId);
 
     const setF = (k: string, v: string) => setForm(p => ({ ...p, [k]: v }));
 
@@ -128,7 +130,7 @@ export default function BrandStrategiesPage() {
             await strategiesApi.update(id, { status });
             setItems(p => p.map(s => s.id === id ? { ...s, status } : s));
         } catch (err: any) {
-            alert(err.message);
+            setError(err.message);
         } finally {
             setStatusChanging(null);
         }
@@ -141,7 +143,7 @@ export default function BrandStrategiesPage() {
             await strategiesApi.delete(id);
             setItems(p => p.filter(s => s.id !== id));
         } catch (err: any) {
-            alert(err.message);
+            setError(err.message);
         } finally {
             setDeleting(null);
         }
@@ -149,11 +151,11 @@ export default function BrandStrategiesPage() {
 
     return (
         <div className="p-6 max-w-4xl mx-auto">
-            <AgencyTopNav
+           {perms.canAssignStaff && ( <AgencyTopNav
                 title="Strategies"
                 subtitle="Campaign and marketing strategies"
                 breadcrumb={[{ label: 'Brands', href: '/brands' }, { label: 'Brand', href: `/brands/${brandId}` }]}
-            />
+            />)}
 
             <Link href={`/brands/${brandId}`}
                 className="flex items-center gap-2 text-xs text-white/30 hover:text-white mb-5 transition-colors w-fit">
@@ -181,6 +183,15 @@ export default function BrandStrategiesPage() {
                         <span className="text-white font-medium">{goals.length} active goal{goals.length !== 1 ? 's' : ''}</span> for this brand —
                         you can link strategies to these goals when editing
                     </p>
+                </div>
+            )}
+
+            {error && !showModal && (
+                <div className="flex items-center gap-3 p-4 mb-5 rounded-xl bg-red-500/8 border border-red-500/20">
+                    <span className="text-sm text-red-300">{error}</span>
+                    <button onClick={() => setError('')} className="ml-auto text-red-400/50 hover:text-red-400 transition-colors">
+                        <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12"/></svg>
+                    </button>
                 </div>
             )}
 

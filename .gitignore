@@ -18,6 +18,7 @@ frontend/.vercel/
 # ── Build outputs ────────────────────────────────────────────
 dist/
 build/
+deployment_guide.md
 
 # ── OS ───────────────────────────────────────────────────────
 .DS_Store
