@@ -33,11 +33,20 @@ router.patch('/me/profile', authenticate, upload.single('avatar'), async (req, r
       linkedin_url, is_profile_public,
     } = req.body;
 
+    const parseMaybeJson = (v) => {
+      if (typeof v === 'string') { try { return JSON.parse(v); } catch { return v; } }
+      return v;
+    };
+
     const updates = {};
     const allowed = {
-      display_title, bio, skills,
-      experience_years, certifications, portfolio_links,
-      linkedin_url, is_profile_public,
+      display_title, bio,
+      skills:            parseMaybeJson(skills),
+      certifications:    parseMaybeJson(certifications),
+      portfolio_links:   parseMaybeJson(portfolio_links),
+      experience_years:  experience_years !== undefined && experience_years !== '' ? Number(experience_years) : undefined,
+      linkedin_url,
+      is_profile_public: is_profile_public !== undefined ? is_profile_public === 'true' || is_profile_public === true : undefined,
     };
     Object.entries(allowed).forEach(([k, v]) => {
       if (v !== undefined) updates[k] = v;
@@ -96,7 +105,7 @@ router.get('/:id/profile', authenticate, async (req, res, next) => {
         certifications, portfolio_links, linkedin_url,
         is_profile_public, created_at
       `)
-      .eq('id', req.params.id)
+      .eq('id', req.user.id)
       .single();
 
     if (error || !data) return sendError(res, 404, 'Staff member not found');

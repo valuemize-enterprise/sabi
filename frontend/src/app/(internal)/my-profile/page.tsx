@@ -45,6 +45,7 @@ export default function MyProfilePage() {
   const [newCert, setNewCert]         = useState('');
   const [newLink, setNewLink]         = useState({ url:'', label:'', platform:'website' });
   const [avatarUrl, setAvatarUrl]     = useState('');
+  const [avatarFile, setAvatarFile]   = useState<File | null>(null);
   const [saving, setSaving]           = useState(false);
   const [saved, setSaved]             = useState(false);
   const [error, setError]             = useState('');
@@ -88,17 +89,40 @@ export default function MyProfilePage() {
   const save = async () => {
     setSaving(true); setError(''); setSaved(false);
     try {
-      await api('/api/agency/staff/me/profile', {
-        method: 'PATCH',
-        body: JSON.stringify({
-          ...form,
-          avatar_url:     avatarUrl || null,
-          skills,
-          certifications,
-          portfolio_links: portfolioLinks,
-          experience_years: form.experience_years ? parseInt(form.experience_years) : null,
-        }),
-      });
+      if (avatarFile) {
+        const fd = new FormData();
+        fd.append('avatar', avatarFile);
+        fd.append('display_title', form.display_title);
+        fd.append('bio', form.bio);
+        fd.append('skills', JSON.stringify(skills));
+        fd.append('certifications', JSON.stringify(certifications));
+        fd.append('portfolio_links', JSON.stringify(portfolioLinks));
+        fd.append('experience_years', form.experience_years ? String(parseInt(form.experience_years)) : '');
+        fd.append('linkedin_url', form.linkedin_url);
+        fd.append('is_profile_public', String(form.is_profile_public));
+
+        const r = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000'}/api/agency/staff/me/profile`, {
+          method: 'PATCH',
+          headers: { Authorization: `Bearer ${tok()}` },
+          body: fd,
+        });
+        const b = await r.json();
+        if (!r.ok) throw new Error(b.error || b.message);
+        setAvatarFile(null);
+        if (b.data?.profile?.avatar_url) setAvatarUrl(b.data.profile.avatar_url);
+      } else {
+        await api('/api/agency/staff/me/profile', {
+          method: 'PATCH',
+          body: JSON.stringify({
+            ...form,
+            avatar_url:     avatarUrl || null,
+            skills,
+            certifications,
+            portfolio_links: portfolioLinks,
+            experience_years: form.experience_years ? parseInt(form.experience_years) : null,
+          }),
+        });
+      }
       setSaved(true);
       setTimeout(() => setSaved(false), 2500);
     } catch (err: any) { setError(err.message); }
@@ -163,8 +187,7 @@ export default function MyProfilePage() {
               onChange={async e => {
                 const file = e.target.files?.[0];
                 if (!file) return;
-                // In production: upload to Supabase Storage, get URL
-                // For now: create object URL as preview
+                setAvatarFile(file);
                 setAvatarUrl(URL.createObjectURL(file));
               }}/>
           </div>
