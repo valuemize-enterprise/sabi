@@ -57,6 +57,7 @@ const clientNotifications = require('./routes/client/notifications.routes'); // 
 const clientSatisfaction  = require('./routes/client/satisfaction.routes');  // NEW
 const clientMoments       = require('./routes/client/moments.routes');       // NEW
 const clientProofOfValue  = require('./routes/client/proof-of-value.routes');// NEW
+const clientBrandIdentity = require('./routes/client/brand-identity.routes');// NEW
 
 // ── Super Admin Routes ────────────────────────────────────────
 const saAuth       = require('./routes/super-admin/auth.routes');
@@ -69,6 +70,10 @@ const saAudit      = require('./routes/super-admin/audit.routes');
 const saClients    = require('./routes/super-admin/clients.routes');         // NEW
 const saSettings   = require('./routes/super-admin/settings.routes');
 
+const agencyProfileRoutes      = require('./routes/agency/profile.routes');
+const agencyBrandIdentityRoutes= require('./routes/agency/brand-identity.routes');
+
+
 // ── Middleware ────────────────────────────────────────────────
 const { errorHandler }  = require('./middleware/error.middleware');
 const { requestLogger } = require('./middleware/logger.middleware');
@@ -78,6 +83,7 @@ const PORT = process.env.PORT || 4000;
 
 // ── Core Middleware ───────────────────────────────────────────
 app.use(helmet({ crossOriginResourcePolicy: { policy: 'cross-origin' } }));
+
 
 app.use(cors({
   origin: (origin, cb) => {
@@ -148,6 +154,7 @@ app.use('/api/client/notifications',clientNotifications); // NEW
 app.use('/api/client/satisfaction', clientSatisfaction);  // NEW
 app.use('/api/client/moments',      clientMoments);       // NEW
 app.use('/api/client/proof-of-value',clientProofOfValue); // NEW
+app.use('/api/client/brand/identity', clientBrandIdentity);// NEW
 
 // ── Super Admin Routes ────────────────────────────────────────
 app.use('/api/super-admin/dashboard', saDashboard);
@@ -163,6 +170,8 @@ app.use('/api/super-admin/settings',  saSettings);
 app.use('/api/agency/briefs',           agencyBriefs);
 app.use('/api/agency/tasks',            agencyTasksV2);      // replaces old agencyTasks
 app.use('/api/agency/social-reports',   agencySocialRpts);
+app.use('/api/agency/staff',                    agencyProfileRoutes);
+app.use('/api/agency/brands/:id/identity',      agencyBrandIdentityRoutes);
 
 // Client
 app.use('/api/client/briefs',           clientBriefs);

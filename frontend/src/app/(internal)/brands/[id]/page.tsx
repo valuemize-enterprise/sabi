@@ -11,7 +11,8 @@ import {
   ClipboardList,
   BarChart2,
   PieChart,
-  Package
+  Package,
+  Palette
 } from 'lucide-react';
 import { AgencyTopNav } from '@/components/internal/AgencyTopNav';
 import { Badge, LoadingPage, StatCard } from '@/components/ui';
@@ -30,6 +31,7 @@ const SUB_PAGES = [
   { href: 'competitors', label: 'Competitors', icon: Swords, desc: 'Market rivals', color: 'rose' },
   { href: 'deliverables', label: 'Deliverables', icon: Package, desc: 'Project outputs', color: 'violet' },
   { href: 'goals', label: 'Goals', icon: Target, desc: 'KPIs & targets', color: 'emerald' },
+  { href: 'identity', label: 'Brand Identity', icon: Palette, desc: 'Brand Guidelines', color: 'red' },
 ];
 
 const ICON_COLORS: Record<string, string> = {
@@ -38,13 +40,11 @@ const ICON_COLORS: Record<string, string> = {
   purple: 'text-purple-400 bg-purple-500/10 border-purple-500/15 group-hover:bg-purple-500/20',
   amber: 'text-amber-400 bg-amber-500/10 border-amber-500/15 group-hover:bg-amber-500/20',
   green: 'text-green-400 bg-green-500/10 border-green-500/15 group-hover:bg-green-500/20',
-  pink: 'text-pink-400 bg-pink-500/10 border-pink-500/15 group-hover:bg-pink-500/20',
-  teal: 'text-teal-400 bg-teal-500/10 border-teal-500/15 group-hover:bg-teal-500/20',
   cyan: 'text-cyan-400 bg-cyan-500/10 border-cyan-500/15 group-hover:bg-cyan-500/20',
   red: 'text-red-400 bg-red-500/10 border-red-500/15 group-hover:bg-red-500/20',
   orange: 'text-orange-400 bg-orange-500/10 border-orange-500/15 group-hover:bg-orange-500/20',
   rose: 'text-rose-400 bg-rose-500/10 border-rose-500/15 group-hover:bg-rose-500/20',
-  violet: 'text-violet-400 bg-violet-500/10 border-violet-500/15 group-hover:bg-violet-500/20',
+  violet: 'text-violet-400 bg-violet-500/10 border-violet-50/15 group-hover:bg-violet-50/20',
   emerald: 'text-emerald-400 bg-emerald-500/10 border-emerald-500/15 group-hover:bg-emerald-500/20',
 };
 

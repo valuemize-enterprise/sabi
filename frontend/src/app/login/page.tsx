@@ -3,7 +3,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAgencyStore } from '@/lib/store';
 import { agencyAuth } from '@/lib/api';
-import { Eye, EyeOff, Loader2, Shield } from 'lucide-react';
+import { ChevronRight, Eye, EyeOff, Loader2, Shield } from 'lucide-react';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -59,8 +59,8 @@ export default function LoginPage() {
               {loading ? <><Loader2 className="w-4 h-4 animate-spin"/>Signing in…</> : 'Sign In'}
             </button>
           </form>
-          <div className="mt-5 pt-5 border-t border-white/5 text-center">
-            <p className="text-xs text-white/25">Client? <a href="/client/login" className="text-purple-400 hover:text-purple-300">Client Portal →</a></p>
+          <div className="mt-5 pt-5 border-t border-white/5  text-center ">
+            <p className="text-xs text-white/25 flex items-center justify-center gap-2">Client? <a href="/client/login" className="text-purple-400 hover:text-purple-300 flex justify-center items-center gap-1">Client Portal <ChevronRight className="w-3 h-3"/></a></p>
           </div>
         </div>
       </div>

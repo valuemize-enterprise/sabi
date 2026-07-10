@@ -38,6 +38,7 @@ const SA_NAV = [
 const STAFF_NAV = [
   { href:'/my-brands', label:'My Brands', icon:Building2 },
   { href:'/my-work',   label:'My Work',   icon:PenLine   },
+   { href:'/my-profile',   label:'My Profile',   icon:Mail   },
 ];
 
 const SETTINGS_SUB = [
@@ -46,6 +47,7 @@ const SETTINGS_SUB = [
   { href:'/settings/emails',   label:'Email Templates',saOnly:true  },
   { href:'/settings/api-keys', label:'API Keys',       saOnly:false },
   { href:'/settings/export',   label:'Export Data',    saOnly:false },
+  { href:'/my-profile',   label:'My Profile',    saOnly:false },
 ];
 
 export function InternalSidebar() {

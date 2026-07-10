@@ -9,7 +9,8 @@ import {
   Swords, Lightbulb, Star, LogOut, Smartphone,
   Paperclip,
   CheckSquare,
-  ClipboardList
+  ClipboardList,
+  Palette
 } from 'lucide-react';
 
 const nav = [
@@ -20,6 +21,7 @@ const nav = [
   { href: '/client/goals',         label: 'Goals',           icon: Target },
   { href: '/client/strategies',    label: 'Strategies',      icon: Lightbulb },
   { href: '/client/competitors',   label: 'Competitors',     icon: Swords },
+  { href: '/client/identity',      label: 'Brand Identity',  icon: Palette },
   { href: '/client/platforms',     label: 'Platforms',       icon: Smartphone },
   { href: '/client/deliverables', label: 'Deliverables', icon: Paperclip },
   { href: '/client/moments',       label: 'MomentMap™',      icon: Calendar },

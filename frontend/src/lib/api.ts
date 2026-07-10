@@ -236,12 +236,13 @@ export const analytics = {
 // Client Portal
 // ─────────────────────────────────────────────────────────────
 export const clientPortal = {
-  dashboard:   () => clientFetch('/api/client/dashboard'),
-  reports:     (params?: Record<string, string>) => clientFetch(`/api/client/reports?${new URLSearchParams(params)}`),
-  report:      (id: string) => clientFetch(`/api/client/reports/${id}`),
-  goals:       () => clientFetch('/api/client/goals'),
-  goal:        (id: string) => clientFetch(`/api/client/goals/${id}`),
-  competitors: () => clientFetch('/api/client/competitors'),
+  dashboard:    () => clientFetch('/api/client/dashboard'),
+  reports:      (params?: Record<string, string>) => clientFetch(`/api/client/reports?${new URLSearchParams(params)}`),
+  report:       (id: string) => clientFetch(`/api/client/reports/${id}`),
+  goals:        () => clientFetch('/api/client/goals'),
+  goal:         (id: string) => clientFetch(`/api/client/goals/${id}`),
+  competitors:  () => clientFetch('/api/client/competitors'),
+  brandIdentity:() => clientFetch('/api/client/brand/identity'),
   askAria: {
     send:        (message: string, session_id?: string) =>
       clientFetch('/api/client/ask/message', { method: 'POST', body: JSON.stringify({ message, session_id }) }),

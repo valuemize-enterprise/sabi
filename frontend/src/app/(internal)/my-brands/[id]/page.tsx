@@ -1,13 +1,14 @@
 'use client';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { ArrowLeft, PenLine, Target, FileText, CheckSquare } from 'lucide-react';
+import { ArrowLeft, PenLine, Target, FileText, CheckSquare, Palette } from 'lucide-react';
 
 const NAV = [
   { href: 'tasks', label: 'My Tasks', icon: CheckSquare, desc: 'Tasks assigned to me' },
   { href: 'work', label: 'Log Work', icon: PenLine, desc: 'Log my contributions' },
   { href: 'goals', label: 'Goals', icon: Target, desc: 'Brand KPIs' },
   { href: 'reports', label: 'Reports', icon: FileText, desc: 'Published reports' },
+  { href: 'identity', label: 'Brand Identity', icon: Palette, desc: 'Brand Guidelines', color: 'red' },
 ];
 
 export default function MyBrandDetailPage() {
