@@ -190,8 +190,8 @@ export default function BrandWorkPage() {
                     Linked Goal <span className="text-white/20">(optional)</span>
                   </label>
                   <select className="sabi-input text-sm" value={form.goal_id} onChange={e => setF('goal_id', e.target.value)}>
-                    <option value="">No goal</option>
-                    {goals.map((g: any) => <option key={g.id} value={g.id}>{g.title}</option>)}
+                    <option className="bg-black" value="">No goal</option>
+                    {goals.map((g: any) => <option className="bg-black" key={g.id} value={g.id}>{g.title}</option>)}
                   </select>
                 </div>
                 <div>

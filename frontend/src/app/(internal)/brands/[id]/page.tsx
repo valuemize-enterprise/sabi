@@ -6,19 +6,24 @@ import Link from 'next/link';
 import { brands as brandsApi, analytics } from '@/lib/api';
 import {
   Target, FileText, Users2, CheckSquare, Swords, Lightbulb,
-  Brain, RefreshCw, Trophy, Loader2, TrendingUp, ArrowLeft, UserPlus, PenLine
+  Brain, RefreshCw, Trophy, Loader2, TrendingUp, ArrowLeft, UserPlus, PenLine,
+  ScrollText,
+  ClipboardList,
+  BarChart2
 } from 'lucide-react';
 import { AgencyTopNav } from '@/components/internal/AgencyTopNav';
 import { Badge, LoadingPage, StatCard } from '@/components/ui';
 
 const SUB_PAGES = [
-  { href: 'clients', label: 'Portal Accounts', icon: UserPlus, desc: 'Client logins', color: 'blue' },
-  { href: 'team', label: 'Team', icon: Users2, desc: 'Assigned staff', color: 'purple' },
-  { href: 'tasks', label: 'Tasks', icon: CheckSquare, desc: 'Ongoing work', color: 'amber' },
-  { href: 'strategies', label: 'Strategies', icon: Lightbulb, desc: 'Campaign plans', color: 'green' },
-  { href: 'proof-of-work', label: 'Proof of Work', icon: Trophy, desc: 'Value delivered', color: 'teal' },
-  { href: 'work', label: 'Work Log', icon: PenLine, desc: 'Logged activities', color: 'cyan' },
-  { href: 'settings', label: 'Settings', icon: Brain, desc: 'Brand config', color: 'red' },
+  { href: 'clients',        label: 'Portal Accounts', icon: UserPlus,      desc: 'Client logins',    color: 'blue'   },
+  { href: 'briefs',         label: 'Briefs',          icon: ClipboardList, desc: 'Client requests',  color: 'indigo' },
+  { href: 'team',           label: 'Team',            icon: Users2,        desc: 'Assigned staff',   color: 'purple' },
+  { href: 'tasks',          label: 'Tasks',           icon: CheckSquare,   desc: 'Ongoing work',     color: 'amber'  },
+  { href: 'strategies',     label: 'Strategies',      icon: Lightbulb,     desc: 'Campaign plans',   color: 'green'  },
+  { href: 'social-reports', label: 'Social Reports',  icon: BarChart2,     desc: 'Platform reports', color: 'pink'   },
+  { href: 'proof-of-work',  label: 'Proof of Work',   icon: Trophy,        desc: 'Value delivered',  color: 'teal'   },
+  { href: 'work',           label: 'Work Log',        icon: PenLine,       desc: 'Logged activities',color: 'cyan'   },
+  { href: 'settings',       label: 'Settings',        icon: Brain,         desc: 'Brand config',     color: 'red'    },
 ];
 
 const ICON_COLORS: Record<string, string> = {

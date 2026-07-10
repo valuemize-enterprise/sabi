@@ -8,11 +8,13 @@ import {
   Calendar, Trophy, MessageCircle, Bell, Settings, HelpCircle,
   Swords, Lightbulb, Star, LogOut, Smartphone,
   Paperclip,
-  CheckSquare
+  CheckSquare,
+  ClipboardList
 } from 'lucide-react';
 
 const nav = [
   { href: '/client/dashboard',     label: 'Dashboard',      icon: LayoutDashboard },
+    { href: '/client/briefs',          label: 'Briefs',            icon: ClipboardList },
   { href: '/client/ask',           label: 'Ask ARIA',        icon: Brain, badge: 'AI' },
   { href: '/client/reports',       label: 'Reports',         icon: FileText },
   { href: '/client/goals',         label: 'Goals',           icon: Target },

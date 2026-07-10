@@ -35,7 +35,14 @@ const agencyWorkLogs      = require('./routes/agency/work-logs.routes');     // 
 const agencyDeliverables  = require('./routes/agency/deliverables.routes');  // NEW
 const agencyNotifications = require('./routes/agency/notifications.routes'); // NEW
 const agencyBrandTeam     = require('./routes/agency/brand-team.routes');    // NEW
-const agencyAsk           = require('./routes/agency/ask.routes');           // NEW
+const agencyAsk           = require('./routes/agency/ask.routes');    
+
+const agencyBriefs      = require('./routes/agency/briefs.routes');
+const agencyTasksV2     = require('./routes/agency/tasks-v2.routes');     // replaces old tasks
+const agencySocialRpts  = require('./routes/agency/social-reports.routes');
+const clientBriefs      = require('./routes/client/briefs.routes');
+const inviteRoutes      = require('./routes/auth/invite.routes');
+const ariaService       = require('./services/aria/aria-strategy.service'); // NEW
 
 // ── Client Portal Routes ──────────────────────────────────────
 const clientDashboard     = require('./routes/client/dashboard.routes');
@@ -151,6 +158,17 @@ app.use('/api/super-admin/emails',    saEmails);
 app.use('/api/super-admin/audit',     saAudit);
 app.use('/api/super-admin/clients',   saClients);         // NEW
 app.use('/api/super-admin/settings',  saSettings);
+
+
+app.use('/api/agency/briefs',           agencyBriefs);
+app.use('/api/agency/tasks',            agencyTasksV2);      // replaces old agencyTasks
+app.use('/api/agency/social-reports',   agencySocialRpts);
+
+// Client
+app.use('/api/client/briefs',           clientBriefs);
+
+// Invitations (public routes — no auth middleware)
+app.use('/api/auth/invite',             inviteRoutes);
 
 // ── 404 Handler ───────────────────────────────────────────────
 app.use('*', (req, res) => {

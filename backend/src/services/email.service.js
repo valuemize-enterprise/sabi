@@ -15,7 +15,7 @@ const fs          = require('fs');
 const path        = require('path');
 
 const resend      = new Resend(process.env.RESEND_API_KEY);
-const FROM        = process.env.EMAIL_FROM    || 'Sabi Intelligence <noreply@cerebre.media>';
+const FROM        = process.env.EMAIL_REPLY_TO    || 'Sabi Intelligence <noreply@cerebre.media>';
 const REPLY_TO    = process.env.EMAIL_REPLY_TO|| 'hello@cerebre.media';
 const TEMPLATES   = path.join(__dirname, '../emails');
 const APP_URL     = process.env.NEXT_PUBLIC_APP_URL || 'https://sabi.cerebre.media';

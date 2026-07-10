@@ -246,8 +246,8 @@ export default function MyWorkPage() {
                 <div>
                   <label className="text-xs text-white/50 mb-1.5 block">Linked Goal</label>
                   <select className="sabi-input text-sm" value={form.goal_id} onChange={e => setF('goal_id', e.target.value)}>
-                    <option value="">No goal</option>
-                    {brandGoals.map((g: any) => <option key={g.id} value={g.id}>{g.title}</option>)}
+                    <option className="bg-black" value="">No goal</option>
+                    {brandGoals.map((g: any) => <option className="bg-black" key={g.id} value={g.id}>{g.title}</option>)}
                   </select>
                 </div>
                 <div>
