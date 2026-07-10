@@ -27,10 +27,23 @@ router.get('/', authenticate, async (req, res, next) => {
       brandIds = data?.map(a => a.brand_id) || [];
     }
 
+    let activeStaffQuery = supabase.from('users').select('id', { count: 'exact', head: true }).eq('is_active', true).neq('role', 'super_admin');
+
+    if (!wideBoys.includes(role) && brandIds.length) {
+      const { data: staffIds } = await supabase.from('staff_brand_assignments').select('staff_id').in('brand_id', brandIds);
+      const uniqueStaffIds = [...new Set(staffIds?.map(s => s.staff_id) || [])];
+      if (uniqueStaffIds.length) {
+        activeStaffQuery = activeStaffQuery.in('id', uniqueStaffIds);
+      } else {
+        activeStaffQuery = activeStaffQuery.eq('id', '__none__');
+      }
+    }
+
     const [
       { count: totalBrands },
       { count: activeGoals },
       { count: pendingTasks },
+      { count: activeStaff },
       { count: publishedReports },
       { data: recentReports },
       { data: topBrands },
@@ -38,13 +51,14 @@ router.get('/', authenticate, async (req, res, next) => {
       supabase.from('brands').select('id', { count: 'exact', head: true }).in('id', brandIds),
       supabase.from('goals').select('id', { count: 'exact', head: true }).in('brand_id', brandIds).eq('status', 'active'),
       supabase.from('tasks').select('id', { count: 'exact', head: true }).in('brand_id', brandIds).eq('assigned_to', userId).eq('status', 'todo'),
+      activeStaffQuery,
       supabase.from('reports').select('id', { count: 'exact', head: true }).in('brand_id', brandIds).eq('status', 'published'),
       supabase.from('reports').select('id, title, type, status, published_at, brands(name, logo_url)').in('brand_id', brandIds).order('created_at', { ascending: false }).limit(5),
       supabase.from('brands').select('id, name, logo_url, clarity_score, industry').in('id', brandIds).order('clarity_score', { ascending: false }).limit(5),
     ]);
 
     sendSuccess(res, {
-      stats: { totalBrands, activeGoals, pendingTasks, publishedReports },
+      stats: { totalBrands, activeGoals, pendingTasks, activeStaff, publishedReports },
       recentReports: recentReports || [],
       topBrands:     topBrands || [],
     });

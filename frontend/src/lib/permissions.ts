@@ -75,7 +75,7 @@ export const BRAND_ROLE_META: Record<string, { label: string; icon: string; desc
   social_media_manager: { label: 'Social Media Manager',  icon: '📱',  desc: 'Social content and scheduling',     isElevated: false },
   analytics_specialist: { label: 'Analytics Specialist',  icon: '📈',  desc: 'Data and ClarityScore™',            isElevated: false },
   content_creator:      { label: 'Content Creator',       icon: '🎬',  desc: 'Video and content assets',          isElevated: false },
-  graphic_designer:     { label: 'Graphic Designer',      icon: '🖌️',  desc: 'Visual assets and design',          isElevated: false },
+  art_director:     { label: 'Art Director',      icon: '🖌️',  desc: 'Visual assets and design',          isElevated: false },
   community_manager:    { label: 'Community Manager',     icon: '💬',  desc: 'Community engagement',              isElevated: false },
   contributor:          { label: 'Contributor',           icon: '👤',  desc: 'General contributor',               isElevated: false },
 };

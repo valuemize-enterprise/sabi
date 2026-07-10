@@ -19,7 +19,7 @@ const ROLE_META: Record<string, { label: string; color: string; level: 'super' |
   social_media_manager: { label: 'Social Media Manager',color: 'bg-lime-500/15 text-lime-400 border-lime-500/25',       level: 'staff'       },
   analytics_specialist: { label: 'Analytics Specialist',color: 'bg-cyan-500/15 text-cyan-400 border-cyan-500/25',       level: 'staff'       },
   content_creator:      { label: 'Content Creator',     color: 'bg-rose-500/15 text-rose-400 border-rose-500/25',       level: 'staff'       },
-  graphic_designer:     { label: 'Graphic Designer',    color: 'bg-pink-500/15 text-pink-400 border-pink-500/25',       level: 'staff'       },
+  art_director:     { label: 'Art Director',    color: 'bg-pink-500/15 text-pink-400 border-pink-500/25',       level: 'staff'       },
   community_manager:    { label: 'Community Manager',   color: 'bg-emerald-500/15 text-emerald-400 border-emerald-500/25', level: 'staff'    },
   client_success:       { label: 'Client Success',      color: 'bg-violet-500/15 text-violet-400 border-violet-500/25', level: 'staff'       },
 };
@@ -82,7 +82,7 @@ export const BRAND_ROLE_OPTIONS = [
   { value: 'social_media_manager', label: 'Social Media Manager',  icon: '📱',  desc: 'Social content and scheduling',                                  elevated: false },
   { value: 'analytics_specialist', label: 'Analytics Specialist',  icon: '📈',  desc: 'Data and ClarityScore™',                                         elevated: false },
   { value: 'content_creator',      label: 'Content Creator',       icon: '🎬',  desc: 'Video and content assets',                                       elevated: false },
-  { value: 'graphic_designer',     label: 'Graphic Designer',      icon: '🖌️',  desc: 'Visual assets and design',                                       elevated: false },
+  { value: 'art_director',     label: 'Art Director',      icon: '🖌️',  desc: 'Visual assets and design',                                       elevated: false },
   { value: 'community_manager',    label: 'Community Manager',     icon: '💬',  desc: 'Community engagement',                                           elevated: false },
   { value: 'contributor',          label: 'Contributor',           icon: '👤',  desc: 'General contributor to this account',                            elevated: false },
 ];

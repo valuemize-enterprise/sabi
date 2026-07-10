@@ -72,9 +72,9 @@ export default function DashboardPage() {
         <>
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
             <StatCard label="Total Brands"    value={data?.stats.totalBrands ?? 0}    icon={Building2}  color="purple" />
-            <StatCard label="Active Staff"    value={data?.stats.totalStaff ?? 0}     icon={Users}      color="blue"   />
+            <StatCard label="Active Staff"    value={data?.stats.activeStaff ?? 0}     icon={Users}      color="blue"   />
             <StatCard label="Active Goals"    value={data?.stats.activeGoals ?? 0}    icon={Target}     color="green"  />
-            <StatCard label="Reports Published"value={data?.stats.totalReports ?? 0} icon={FileText}   color="amber"  />
+            <StatCard label="Reports Published"value={data?.stats.publishedReports ?? 0} icon={FileText}   color="amber"  />
           </div>
 
           {/* Top brands leaderboard */}

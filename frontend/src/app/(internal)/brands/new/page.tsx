@@ -33,7 +33,7 @@ const BRAND_ROLES: { value: string; label: string; desc: string; icon: string }[
   { value:'social_media_manager', label:'Social Media Manager', desc:'Manages social content and scheduling',       icon:'📱' },
   { value:'analytics_specialist', label:'Analytics Specialist', desc:'Owns data, reports and ClarityScore™',        icon:'📈' },
   { value:'content_creator',      label:'Content Creator',      desc:'Produces content assets for the brand',       icon:'🎬' },
-  { value:'graphic_designer',     label:'Graphic Designer',     desc:'Creates visual assets and designs',           icon:'🖌️' },
+  { value:'art_director',     label:'Art Director',     desc:'Creates visual assets and designs',           icon:'🖌️' },
   { value:'community_manager',    label:'Community Manager',    desc:'Manages brand community and engagement',      icon:'💬' },
   { value:'contributor',          label:'Contributor',          desc:'General contributor to this brand account',   icon:'👤' },
 ];
@@ -42,7 +42,7 @@ const ROLE_COLOR: Record<string, string> = {
   account_manager:'purple', brand_manager:'blue', creative_director:'pink',
   senior_strategist:'green', strategist:'teal', copywriter:'amber',
   social_media_manager:'green', analytics_specialist:'blue',
-  content_creator:'orange', graphic_designer:'pink', community_manager:'teal', contributor:'gray',
+  content_creator:'orange', art_director:'pink', community_manager:'teal', contributor:'gray',
 };
 
 // ── Token helper ──────────────────────────────────────────────
