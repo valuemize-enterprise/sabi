@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { Building2, Users, FileText, Target, TrendingUp, PenLine, Clock, CheckCircle2, AlertCircle, ChevronRight, BarChart3, Loader2 } from 'lucide-react';
+import { Building2, Users, FileText, Target, TrendingUp, PenLine, Clock, CheckCircle2, AlertCircle, ChevronRight, BarChart3, Loader2, Calendar, RefreshCw } from 'lucide-react';
 import { useAgencyStore } from '@/lib/store';
 import { analytics, brands as brandsApi, staff as staffApi } from '@/lib/api';
 import { StatCard, Badge } from '@/components/ui';
@@ -34,20 +34,45 @@ export default function DashboardPage() {
   const [data, setData]         = useState<any>(null);
   const [myBrands, setMyBrands] = useState<any[]>([]);
   const [loading, setLoading]   = useState(true);
+  const [targetsPrompt, setTargetsPrompt] = useState<{ type: 'set_targets' | 'midyear_review'; year: number } | null>(null);
   const hour = new Date().getHours();
   const greeting = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening';
+  const now = new Date();
+  const currentMonth = now.getMonth() + 1; // 1-12
+  const currentYear = now.getFullYear();
 
   useEffect(() => {
     const promises: Promise<any>[] = [];
-    if (isAdmin) promises.push(analytics.dashboard?.() ?? Promise.resolve({ data: {} }));
-    else promises.push(
-      fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000'}/api/agency/staff/me/brands`, {
-        headers: { Authorization: `Bearer ${localStorage.getItem('sabi_token')}` }
-      }).then(r => r.json()).catch(() => ({ data: [] }))
-    );
-    Promise.all(promises).then(([res]) => {
+    if (isAdmin) {
+      promises.push(analytics.dashboard?.() ?? Promise.resolve({ data: {} }));
+      // Check for targets prompts (MD + SA only)
+      if (user?.role === 'super_admin' || user?.role === 'managing_director') {
+        promises.push(
+          fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000'}/api/agency/targets?year=${currentYear}`, {
+            headers: { Authorization: `Bearer ${localStorage.getItem('sabi_token')}` }
+          }).then(r => r.json()).catch(() => ({ data: { targets: null } }))
+        );
+      }
+    } else {
+      promises.push(
+        fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000'}/api/agency/staff/me/brands`, {
+          headers: { Authorization: `Bearer ${localStorage.getItem('sabi_token')}` }
+        }).then(r => r.json()).catch(() => ({ data: [] }))
+      );
+    }
+    Promise.all(promises).then(([res, targetsRes]) => {
       if (isAdmin) setData(res.data ?? {});
       else setMyBrands(res.data ?? []);
+
+      // Determine targets prompt
+      if (targetsRes) {
+        const targets = targetsRes.data?.targets;
+        if (!targets && currentMonth >= 10) {
+          setTargetsPrompt({ type: 'set_targets', year: currentYear });
+        } else if (targets && !targets.midyear_reviewed_at && currentMonth >= 4 && currentMonth <= 6) {
+          setTargetsPrompt({ type: 'midyear_review', year: currentYear });
+        }
+      }
     }).finally(() => setLoading(false));
   }, [isAdmin]);
 
@@ -70,6 +95,32 @@ export default function DashboardPage() {
       ) : isAdmin ? (
         /* ── ADMIN / SA VIEW ───────────────────────────── */
         <>
+          {/* ── Targets prompts ──────────────────────────── */}
+          {targetsPrompt?.type === 'set_targets' && (
+            <div className="bg-amber-500/8 border border-amber-500/20 rounded-xl p-4 mb-6 flex items-center gap-3">
+              <Calendar className="w-5 h-5 text-amber-400 flex-shrink-0"/>
+              <div className="flex-1">
+                <p className="text-sm text-white font-medium">Set {targetsPrompt.year} Agency Targets</p>
+                <p className="text-xs text-white/40 mt-0.5">It's October — time to define next year's OKRs. Takes 2 minutes.</p>
+              </div>
+              <Link href="/settings/agency-targets" className="text-xs text-amber-400 border border-amber-500/25 rounded-lg px-3 py-1.5 hover:bg-amber-500/10 transition-all flex-shrink-0">
+                Set Targets →
+              </Link>
+            </div>
+          )}
+          {targetsPrompt?.type === 'midyear_review' && (
+            <div className="bg-purple-500/8 border border-purple-500/20 rounded-xl p-4 mb-6 flex items-center gap-3">
+              <RefreshCw className="w-5 h-5 text-purple-400 flex-shrink-0"/>
+              <div className="flex-1">
+                <p className="text-sm text-white font-medium">Mid-Year Review — April {targetsPrompt.year}</p>
+                <p className="text-xs text-white/40 mt-0.5">Time to review agency targets. Are you on track?</p>
+              </div>
+              <Link href="/settings/agency-targets" className="text-xs text-purple-400 border border-purple-500/25 rounded-lg px-3 py-1.5 hover:bg-purple-500/10 transition-all flex-shrink-0">
+                Review →
+              </Link>
+            </div>
+          )}
+
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
             <StatCard label="Total Brands"    value={data?.stats.totalBrands ?? 0}    icon={Building2}  color="purple" />
             <StatCard label="Active Staff"    value={data?.stats.activeStaff ?? 0}     icon={Users}      color="blue"   />

@@ -34,7 +34,7 @@ router.post('/message', authenticate, async (req, res, next) => {
       updatedSession = data;
     } else {
       const { data } = await supabase.from('aria_sessions').insert({
-        user_id:    req.user.id,
+        user_id:    req.user.role !== 'super_admin' ? req.user.id : null,
         session_type: 'agency_ask',
         messages,
       }).select().single();

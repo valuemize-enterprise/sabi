@@ -62,7 +62,7 @@ router.post('/', authenticate, requirePermission('CREATE_BRAND'), async (req, re
       website:     website || null,
       social_handles: social_handles || {},
       primary_color:  primary_color || '#6d28d9',
-      account_manager_id: account_manager_id || (req.user.id !== 'super_admin' ? req.user.id : null),
+      account_manager_id: account_manager_id || (req.user.role !== 'super_admin' ? req.user.id : null),
     };
     if (logo_url) payload.logo_url = logo_url;
 

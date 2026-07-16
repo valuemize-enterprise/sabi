@@ -106,7 +106,7 @@ router.post('/', authenticate, async (req, res, next) => {
         brief_id:        brief_id     || null,
         estimated_hours: estimated_hours ? parseFloat(estimated_hours) : null,
         tags:            tags || [],
-        created_by:      req.user.id,
+        created_by:      req.user.role !== 'super_admin' ? req.user.id : null,
       })
       .select(`
         id, title, status, priority, due_date, assignee_id, created_at,
@@ -163,6 +163,11 @@ router.put('/:id', authenticate, async (req, res, next) => {
     ];
     const updates = { updated_at: new Date().toISOString() };
     allowed.forEach(k => { if (req.body[k] !== undefined) updates[k] = req.body[k]; });
+
+    // Guard: 'verified' status must go through the dedicated verify endpoint
+    if (updates.status === 'verified') {
+      return sendError(res, 400, 'Cannot set status to "verified" directly — use PUT /api/agency/tasks/:id/verify');
+    }
 
     const { data: old } = await supabase.from('tasks').select('assignee_id, title').eq('id', req.params.id).single();
 
@@ -225,6 +230,28 @@ router.put('/:id/status', authenticate, async (req, res, next) => {
       }
     }
 
+    // If moved to done, notify brand admins that verification is needed
+    if (status === 'done' && data.brand_id) {
+      const { data: brandAdmins } = await supabase
+        .from('staff_brand_assignments')
+        .select('staff_id')
+        .eq('brand_id', data.brand_id)
+        .contains('roles_on_brand', ['brand_admin']);
+
+      if (brandAdmins?.length) {
+        await supabase.from('notifications').insert(
+          brandAdmins.map(a => ({
+            user_id:  a.staff_id,
+            type:     'task_needs_verification',
+            title:    `✅ Task Done: ${data.title}`,
+            body:     'A task has been marked done and needs verification.',
+            metadata: { task_id: data.id },
+            is_read:  false,
+          }))
+        );
+      }
+    }
+
     sendSuccess(res, { task: data }, 'Task status updated');
   } catch (err) { next(err); }
 });
@@ -273,7 +300,7 @@ router.post('/:id/comments', authenticate, async (req, res, next) => {
 
     const { data, error } = await supabase
       .from('task_comments')
-      .insert({ task_id: req.params.id, user_id: req.user.id, content: content.trim() })
+      .insert({ task_id: req.params.id, user_id: req.user.role !== 'super_admin' ? req.user.id : null, content: content.trim() })
       .select('id, content, created_at, users ( id, full_name, role )')
       .single();
 
@@ -353,7 +380,7 @@ router.post('/bulk-create', authenticate, async (req, res, next) => {
         estimated_hours: t.estimated_hours || null,
         tags:            t.tags || [],
         assignee_id:     matchedStaff?.id || null,
-        created_by:      req.user.id,
+        created_by:      req.user.role !== 'super_admin' ? req.user.id : null,
       };
     });
 

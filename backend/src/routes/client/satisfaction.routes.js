@@ -11,6 +11,24 @@ const router   = require('express').Router();
 const supabase = require('../../config/supabase');
 const { authenticateClient } = require('../../middleware/auth.middleware');
 const { sendSuccess, sendError } = require('../../utils/response.utils');
+const scoringService = require('../../services/scoring.service');
+
+// ── GET /api/client/satisfaction/prompt-status ───────────────
+// Checks if this client already rated this week — powers the dashboard prompt
+router.get('/prompt-status', authenticateClient, async (req, res, next) => {
+  try {
+    const weekStart = scoringService.toDateStr(scoringService.mondayOf(new Date()));
+
+    const { data } = await supabase
+      .from('client_satisfaction')
+      .select('id')
+      .eq('client_id', req.client.id)
+      .gte('created_at', weekStart)
+      .limit(1);
+
+    res.json({ success: true, data: { submittedThisWeek: (data ?? []).length > 0 } });
+  } catch (err) { next(err); }
+});
 
 // ── GET /api/client/satisfaction ─────────────────────────────
 router.get('/', authenticateClient, async (req, res, next) => {

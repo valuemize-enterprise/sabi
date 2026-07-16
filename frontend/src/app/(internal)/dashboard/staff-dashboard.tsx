@@ -5,7 +5,7 @@ import Link from 'next/link';
 import {
   Building2, Clock, CheckCircle2, PenLine,
   ChevronRight, Loader2, Target, Lightbulb, TrendingUp,
-  AlertCircle, Plus,
+  AlertCircle, Plus, ClipboardCheck, Star, Check, X
 } from 'lucide-react';
 import { useAgencyStore } from '@/lib/store';
 import { strategies as stratApi, goals as goalsApi } from '@/lib/api';
@@ -62,6 +62,12 @@ export default function StaffDashboard() {
   const [myStats, setMyStats]       = useState<any>({});
   const [strategies, setStrategies] = useState<Record<string, any>>({});
   const [atRiskGoals, setAtRiskGoals] = useState<any[]>([]);
+  const [toRate, setToRate] = useState<any[]>([]);
+  const [pendingVerification, setPendingVerification] = useState<any[]>([]);
+  const [overdueVerificationCount, setOverdueVerificationCount] = useState(0);
+  const [rejectingId, setRejectingId] = useState<string | null>(null);
+  const [rejectReason, setRejectReason] = useState('');
+  const [ratingInputs, setRatingInputs] = useState<Record<string,{score:number;note:string}>>({});
   const [loading, setLoading]       = useState(true);
 
   const hour     = new Date().getHours();
@@ -95,10 +101,57 @@ export default function StaffDashboard() {
         })
       );
       setAtRiskGoals(allGoals.slice(0, 3));
+
+      // Load pending verification and ratings for brand admins
+      const [toRateRes, pendingRes] = await Promise.all([
+        fetchMe('/api/agency/weekly-ratings/to-rate'),
+        fetchMe('/api/agency/tasks/pending-verification'),
+      ]);
+      setToRate(toRateRes.data?.toRate ?? []);
+      setPendingVerification(pendingRes.data?.tasks ?? []);
+      setOverdueVerificationCount(pendingRes.data?.overdueCount ?? 0);
+
       setLoading(false);
     };
     load();
   }, []);
+
+  const submitRating = async (staffId: string, brandId: string) => {
+    const r = ratingInputs[staffId];
+    if (!r?.score) return;
+    if (r.score <= 2 && !r.note?.trim()) { alert('A note is required for ratings of 2 or below'); return; }
+    try {
+      await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000'}/api/agency/weekly-ratings`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${tok()}` },
+        body: JSON.stringify({ staff_id: staffId, brand_id: brandId, score: r.score, note: r.note || null }),
+      }).then(async r2 => { const b = await r2.json(); if (!r2.ok) throw new Error(b.error || b.message); });
+      setToRate(p => p.filter(t => !(t.staff_id === staffId && t.brand_id === brandId)));
+    } catch (err: any) { alert(err.message); }
+  };
+
+  const verifyTask = async (taskId: string) => {
+    try {
+      await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000'}/api/agency/tasks/${taskId}/verify`, {
+        method: 'PUT',
+        headers: { Authorization: `Bearer ${tok()}` },
+      }).then(async r => { const b = await r.json(); if (!r.ok) throw new Error(b.error || b.message); });
+      setPendingVerification(p => p.filter(t => t.id !== taskId));
+    } catch (err: any) { alert(err.message); }
+  };
+
+  const rejectTask = async () => {
+    if (!rejectingId || !rejectReason.trim()) return;
+    try {
+      await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000'}/api/agency/tasks/${rejectingId}/reject-verification`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${tok()}` },
+        body: JSON.stringify({ reason: rejectReason.trim() }),
+      }).then(async r => { const b = await r.json(); if (!r.ok) throw new Error(b.error || b.message); });
+      setPendingVerification(p => p.filter(t => t.id !== rejectingId));
+      setRejectingId(null); setRejectReason('');
+    } catch (err: any) { alert(err.message); }
+  };
 
   if (loading) return (
     <div className="flex items-center justify-center min-h-screen">
@@ -127,6 +180,91 @@ export default function StaffDashboard() {
         <StatCard label="Done This Month" value={myStats?.tasks_done_month  ?? 0}              icon={CheckCircle2}color="green"  />
         <StatCard label="Work Logged"     value={myStats?.work_logs_month   ?? 0}              icon={PenLine}     color="blue"   />
       </div>
+
+      {/* ── Pending Verification Queue ────────────────────────── */}
+      {pendingVerification.length > 0 && (
+        <section className="mb-8">
+          <div className="flex items-center gap-2 mb-3">
+            <ClipboardCheck className="w-4 h-4 text-amber-400" />
+            <h2 className="text-sm font-semibold text-white">Pending Verification</h2>
+            <span className="text-xs text-white/25">— {pendingVerification.length} task{pendingVerification.length !== 1 ? 's' : ''} waiting</span>
+            {overdueVerificationCount > 0 && (
+              <span className="text-xs text-red-400 bg-red-500/10 border border-red-500/20 px-2 py-0.5 rounded-full ml-auto">
+                {overdueVerificationCount} overdue — affects your score
+              </span>
+            )}
+          </div>
+          <div className="space-y-2">
+            {pendingVerification.slice(0, 5).map((t: any) => (
+              <div key={t.id} className={`flex items-center gap-3 p-3 rounded-xl border ${t.isOverdue ? 'border-red-500/20 bg-red-500/5' : 'border-white/6 bg-white/3'}`}>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm text-white font-medium truncate">{t.title}</p>
+                  <p className="text-xs text-white/35">{t.brands?.name} · {t.assignee?.full_name} · waiting {t.daysWaiting}d</p>
+                </div>
+                <div className="flex items-center gap-2 flex-shrink-0">
+                  <button onClick={() => verifyTask(t.id)}
+                    className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-green-400 border border-green-500/20 rounded-lg hover:bg-green-500/8 transition-all">
+                    <Check className="w-3.5 h-3.5"/> Verify
+                  </button>
+                  <button onClick={() => { setRejectingId(t.id); setRejectReason(''); }}
+                    className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-red-400 border border-red-500/20 rounded-lg hover:bg-red-500/8 transition-all">
+                    <X className="w-3.5 h-3.5"/> Reject
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+          {pendingVerification.length > 5 && (
+            <Link href="/tasks?status=done" className="text-xs text-purple-400 hover:text-purple-300 transition-colors mt-2 inline-block">
+              View all {pendingVerification.length} →
+            </Link>
+          )}
+        </section>
+      )}
+
+      {/* ── Rate Your Team ────────────────────────────────────── */}
+      {toRate.length > 0 && (
+        <section className="mb-8">
+          <div className="flex items-center gap-2 mb-3">
+            <Star className="w-4 h-4 text-purple-400" />
+            <h2 className="text-sm font-semibold text-white">Rate Your Team</h2>
+            <span className="text-xs text-white/25">— takes 2 minutes, due by end of week</span>
+          </div>
+          <div className="space-y-2">
+            {toRate.map((t: any) => (
+              <div key={`${t.staff_id}_${t.brand_id}`} className="p-3 rounded-xl border border-white/6 bg-white/3">
+                <div className="flex items-center justify-between mb-2">
+                  <div>
+                    <p className="text-sm text-white font-medium">{t.users?.full_name}</p>
+                    <p className="text-xs text-white/35">{t.brands?.name} · {t.users?.role?.replace(/_/g,' ')}</p>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    {[1,2,3,4,5].map(n => (
+                      <button key={n} onClick={() => setRatingInputs(p => ({ ...p, [t.staff_id]: { ...p[t.staff_id], score: n } }))}
+                        className={`w-7 h-7 rounded-md flex items-center justify-center transition-all ${
+                          (ratingInputs[t.staff_id]?.score ?? 0) >= n ? 'bg-amber-500/20 text-amber-400' : 'bg-white/5 text-white/20'
+                        }`}>
+                        <Star className="w-3.5 h-3.5" fill={(ratingInputs[t.staff_id]?.score ?? 0) >= n ? 'currentColor' : 'none'} />
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                {(ratingInputs[t.staff_id]?.score ?? 0) > 0 && (ratingInputs[t.staff_id]?.score ?? 0) <= 2 && (
+                  <input className="sabi-input text-xs mb-2" placeholder="Required: reason for low rating…"
+                    value={ratingInputs[t.staff_id]?.note ?? ''}
+                    onChange={e => setRatingInputs(p => ({ ...p, [t.staff_id]: { ...p[t.staff_id], note: e.target.value } }))} />
+                )}
+                {(ratingInputs[t.staff_id]?.score ?? 0) > 0 && (
+                  <button onClick={() => submitRating(t.staff_id, t.brand_id)}
+                    className="text-xs text-purple-400 hover:text-purple-300 transition-colors">
+                    Submit →
+                  </button>
+                )}
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
 
       {/* ── THE BIG PICTURE — Active Strategies ─────────────── */}
       {hasStrategies && (
@@ -254,6 +392,27 @@ export default function StaffDashboard() {
         <QuickLink href="/my-work"   icon={PenLine}  label="Log Work"       color="purple" />
         <QuickLink href="/my-brands" icon={Building2}label="My Brands"      color="blue"   />
       </div>
+      {/* ── REJECT MODAL ───────────────────────────────────────── */}
+      {rejectingId && (
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-[#12122a] border border-red-500/20 rounded-2xl w-full max-w-md p-6">
+            <h3 className="text-base font-bold text-white mb-2">Send Back for Revision</h3>
+            <p className="text-xs text-white/40 mb-4">Explain what needs to be fixed. The assignee will be notified.</p>
+            <textarea className="sabi-input resize-none text-sm" rows={3} placeholder="e.g. Missing deliverables, doesn't meet brief requirements..."
+              value={rejectReason} onChange={e => setRejectReason(e.target.value)}/>
+            <div className="flex gap-2 mt-4">
+              <button onClick={rejectTask} disabled={!rejectReason.trim()}
+                className="flex-1 py-2 text-sm rounded-lg bg-red-500/15 border border-red-500/30 text-red-400 font-medium hover:bg-red-500/25 transition-all disabled:opacity-40">
+                Send Back
+              </button>
+              <button onClick={() => { setRejectingId(null); setRejectReason(''); }}
+                className="px-4 py-2 text-sm text-white/40 hover:text-white transition-colors">
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

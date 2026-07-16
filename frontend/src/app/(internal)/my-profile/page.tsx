@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import {
   Camera, Check, Loader2, Plus, X, ExternalLink,
-  Star, Award, Briefcase, Link, Linkedin, User, Eye, EyeOff
+  Star, Award, Briefcase, Link, Linkedin, User, Eye, EyeOff, ListChecks
 } from 'lucide-react';
 import { useAgencyStore } from '@/lib/store';
 import { AgencyTopNav } from '@/components/internal/AgencyTopNav';
@@ -50,6 +50,7 @@ export default function MyProfilePage() {
   const [saved, setSaved]             = useState(false);
   const [error, setError]             = useState('');
   const [completeness, setCompleteness] = useState(0);
+  const [coreFunctions, setCoreFunctions] = useState<any[]>([]);
   const fileRef = useRef<HTMLInputElement>(null);
 
   const setF = (k: string, v: any) => setForm(p => ({ ...p, [k]: v }));
@@ -69,6 +70,10 @@ export default function MyProfilePage() {
       setPortfolio(p.portfolio_links ?? []);
       setAvatarUrl(p.avatar_url ?? '');
     }).catch(() => {});
+
+    api('/api/agency/core-functions/mine')
+      .then((r:any) => setCoreFunctions(r.data?.roleFunctions ?? []))
+      .catch(() => {});
   }, []);
 
   // Completeness score
@@ -208,6 +213,28 @@ export default function MyProfilePage() {
           </div>
         </div>
       </div>
+
+      {/* ── Core Functions ──────────────────────────────────── */}
+      {coreFunctions.length > 0 && (
+        <div className="sabi-card p-6 mb-4">
+          <div className="flex items-center gap-2 mb-3">
+            <ListChecks className="w-4 h-4 text-purple-400" />
+            <h2 className="text-xs font-semibold text-white/40 uppercase tracking-wider">What's Expected of Me</h2>
+          </div>
+          <div className="space-y-2">
+            {coreFunctions.map((f: any) => (
+              <div key={f.id} className="flex items-start gap-2.5">
+                <span className="text-purple-400 flex-shrink-0 mt-0.5 text-sm">→</span>
+                <span className="text-sm text-white/60">{f.function_text}</span>
+              </div>
+            ))}
+          </div>
+          <p className="text-xs text-white/20 mt-4 pt-4 border-t border-white/5">
+            This is your core function baseline — anything you do beyond this can be logged as a
+            contribution claim for extra recognition. Set by your Managing Director.
+          </p>
+        </div>
+      )}
 
       {/* ── About ──────────────────────────────────────────── */}
       <div className="sabi-card p-6 mb-4 space-y-4">

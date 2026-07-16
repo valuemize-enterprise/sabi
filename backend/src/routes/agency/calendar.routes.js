@@ -48,7 +48,7 @@ router.post('/', authenticate, async (req, res, next) => {
       brand_id: is_global ? null : brand_id,
       title, description, event_date, event_type,
       is_global: is_global || false,
-      created_by: req.user.id,
+      created_by: req.user.role !== 'super_admin' ? req.user.id : null,
     }).select().single();
 
     if (error) throw error;

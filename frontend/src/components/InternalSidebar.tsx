@@ -6,7 +6,10 @@ import {
   LayoutDashboard, Building2, Users, FileText, Brain,
   Calendar, Bell, ClipboardList, Settings, LogOut,
   Briefcase, PenLine, BarChart3, Mail, Shield,
-  ChevronDown, ChevronRight
+  ChevronDown, ChevronRight,
+  DollarSign,
+  Activity,
+  ListChecks, Lock, Trophy, Target, Palette
 } from 'lucide-react';
 import { useState } from 'react';
 import { useAgencyStore } from '@/lib/store';
@@ -24,11 +27,17 @@ const SHARED_NAV = [
 ];
 
 const ADMIN_NAV = [
-  { href:'/brands',  label:'Brands',  icon:Building2 },
-  { href:'/staff',   label:'Staff',   icon:Users     },
-  { href:'/reports', label:'Reports', icon:FileText  },
-  { href:'/calendar',label:'Calendar',icon:Calendar  },
-  { href:'/audit',   label:'Audit Log',icon:ClipboardList },
+  { href: '/brands',   label: 'Brands',   icon: Building2      },
+  { href: '/staff',    label: 'Staff',     icon: Users          },
+  { href: '/finance',  label: 'Finance',   icon: DollarSign     },
+  { href: '/reports',  label: 'Reports',   icon: FileText       },
+  { href: '/calendar', label: 'Calendar',  icon: Calendar       },
+  { href: '/contribution-claims', label: 'Claims', icon: ListChecks },
+  { href: '/creative-review', label: 'Creative Review', icon: Palette, roles: ['super_admin','managing_director','creative_director'] },
+  { href: '/my-score', label: 'My Score', icon: BarChart3 },
+  { href: '/leaderboard', label: 'Leaderboard', icon: Trophy },
+  { href: '/audit',    label: 'Audit Log', icon: ClipboardList  },
+  { href: '/pulse',    label: 'Pulse', icon: Activity  },
 ];
 
 const SA_NAV = [
@@ -38,13 +47,17 @@ const SA_NAV = [
 const STAFF_NAV = [
   { href:'/my-brands', label:'My Brands', icon:Building2 },
   { href:'/my-work',   label:'My Work',   icon:PenLine   },
-   { href:'/my-profile',   label:'My Profile',   icon:Mail   },
+  { href:'/contribution-claims', label:'Claims', icon:ListChecks },
+  { href:'/my-score', label:'My Score', icon:BarChart3 },
+  { href:'/leaderboard', label:'Leaderboard', icon:Trophy },
+  { href:'/my-profile',   label:'My Profile',   icon:Mail   },
 ];
 
 const SETTINGS_SUB = [
   { href:'/settings/users',    label:'Users & Access', saOnly:true  },
   { href:'/settings/platform', label:'Platform',       saOnly:true  },
   { href:'/settings/emails',   label:'Email Templates',saOnly:true  },
+  { href:'/settings/agency-targets', label:'Agency Targets', roles:['super_admin','managing_director'] },
   { href:'/settings/api-keys', label:'API Keys',       saOnly:false },
   { href:'/settings/export',   label:'Export Data',    saOnly:false },
   { href:'/my-profile',   label:'My Profile',    saOnly:false },
@@ -70,7 +83,9 @@ export function InternalSidebar() {
     router.replace('/login');
   };
 
-  const NavLink = ({ href, label, icon: Icon, badge }: { href:string; label:string; icon:any; badge?:string }) => (
+  const PULSE_ROLES = ['super_admin', 'managing_director', 'ceo'];
+
+  const NavLink = ({ href, label, icon: Icon, badge, locked }: { href:string; label:string; icon:any; badge?:string; locked?:boolean }) => (
     <Link href={href}
       className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-all group ${
         active(href)
@@ -80,6 +95,7 @@ export function InternalSidebar() {
       <Icon className={`w-4 h-4 flex-shrink-0 ${active(href) ? 'text-purple-400' : 'text-white/30 group-hover:text-white/60'}`} />
       <span className="flex-1 leading-none">{label}</span>
       {badge && <span className="text-[9px] bg-purple-500/20 text-purple-400 font-bold px-1.5 py-0.5 rounded-full">{badge}</span>}
+      {locked && <Lock className="w-3 h-3 text-white/15 flex-shrink-0"/>}
     </Link>
   );
 
@@ -116,7 +132,7 @@ export function InternalSidebar() {
             <div className="pt-3 pb-1">
               <p className="text-[10px] text-white/20 font-semibold uppercase tracking-widest px-3">Management</p>
             </div>
-            {ADMIN_NAV.map(n => <NavLink key={n.href} {...n} />)}
+            {ADMIN_NAV.filter(n => !n.roles || n.roles.includes(role)).map(n => <NavLink key={n.href} {...n} locked={n.href === '/pulse' && !PULSE_ROLES.includes(role)} />)}
             {SA_NAV.map(n => sa ? <NavLink key={n.href} {...n} /> : null)}
           </>
         )}
@@ -144,7 +160,7 @@ export function InternalSidebar() {
             </button>
             {settingsOpen && (
               <div className="ml-4 pl-3 border-l border-white/5 mt-1 space-y-0.5">
-                {SETTINGS_SUB.filter(s => !s.saOnly || sa).map(s => (
+                {SETTINGS_SUB.filter(s => (!s.saOnly || sa) && (!s.roles || s.roles.includes(role))).map(s => (
                   <Link key={s.href} href={s.href}
                     className={`block px-3 py-1.5 text-xs rounded-lg transition-all ${
                       pathname === s.href

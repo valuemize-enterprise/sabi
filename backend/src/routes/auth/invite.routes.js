@@ -36,7 +36,7 @@ router.post('/staff', authenticate, async (req, res, next) => {
         role,
         token,
         expires_at:  expiresAt.toISOString(),
-        created_by:  req.user.id,
+        created_by:  req.user.role !== 'super_admin' ? req.user.id : null,
         metadata:    { department, full_name, suggested_name: full_name },
       })
       .select()
@@ -86,7 +86,7 @@ router.post('/client', authenticate, async (req, res, next) => {
         brand_id,
         token,
         expires_at:  expiresAt.toISOString(),
-        created_by:  req.user.id,
+        created_by:  req.user.role !== 'super_admin' ? req.user.id : null,
         metadata:    { full_name, job_title, brand_name: brand.name },
       })
       .select()

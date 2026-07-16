@@ -69,7 +69,7 @@ router.post('/', authenticate, async (req, res, next) => {
       .from('deliverables')
       .insert({
         brand_id,
-        user_id:        req.user.id,
+        user_id:        req.user.role !== 'super_admin' ? req.user.id : null,
         title:          title.trim(),
         file_type,
         description:    description   || null,
@@ -109,7 +109,7 @@ router.put('/:id/approve', authenticate, async (req, res, next) => {
       .update({
         status:         'approved',
         client_visible: true,
-        approved_by:    req.user.id,
+        approved_by:    req.user.role !== 'super_admin' ? req.user.id : null,
         approved_at:    new Date().toISOString(),
         rejection_reason: null,
       })

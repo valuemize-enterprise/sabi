@@ -45,7 +45,7 @@ router.post('/', authenticate, requirePermission('CREATE_GOAL'), async (req, res
       target_value: parseFloat(target_value),
       unit: unit || '#',
       deadline,
-      created_by: req.user.id !== 'super_admin' ? req.user.id : null,
+      created_by: req.user.role !== 'super_admin' ? req.user.id : null,
     }).select().single();
 
     if (error) throw error;

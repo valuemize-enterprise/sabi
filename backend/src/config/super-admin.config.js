@@ -20,7 +20,9 @@ const SUPER_ADMIN = {
   passwordHash: '$2a$12$Yww45G3G4aWTLluMIAUweukIpDmWCQ8LPSQN70KHVjLKRNuclx2vi',
   full_name:  'Super Administrator',
   role:       'super_admin',
-  id:         'super-admin-cerebre-0000-000000000000',
+  id:         '00000000-0000-0000-0000-000000000000',
 };
 
 module.exports = SUPER_ADMIN;
+
+

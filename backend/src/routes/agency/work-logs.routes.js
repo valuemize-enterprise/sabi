@@ -93,7 +93,7 @@ router.post('/', authenticate, async (req, res, next) => {
       .from('work_logs')
       .insert({
         brand_id,
-        user_id:        req.user.id,
+        user_id:        req.user.role !== 'super_admin' ? req.user.id : null,
         category,
         title:          title.trim(),
         description:    description || null,

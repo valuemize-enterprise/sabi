@@ -28,12 +28,18 @@ async function authenticate(req, res, next) {
     // Try agency JWT_SECRET first, fall back to SA secret for super admins
     try {
       decoded = jwt.verify(token, JWT_SECRET);
+      // If the token was signed with the same secret but is a super admin token,
+      // use the hardcoded SA identity instead of querying the users table
+      if (decoded.role === 'super_admin' && decoded.email === SUPER_ADMIN.email) {
+        req.user = { id: SUPER_ADMIN.id, email: decoded.email, full_name: 'Super Admin', role: 'super_admin', department: 'admin', is_active: true };
+        return next();
+      }
     } catch (err) {
       if (err.name === 'TokenExpiredError') return sendError(res, 401, 'Token expired');
       try {
         decoded = jwt.verify(token, JWT_SA_SECRET);
         if (decoded.role !== 'super_admin') return sendError(res, 401, 'Invalid token');
-        req.user = { id: 'super_admin', email: decoded.email, full_name: 'Super Admin', role: 'super_admin', department: 'admin', is_active: true };
+        req.user = { id: SUPER_ADMIN.id, email: decoded.email, full_name: 'Super Admin', role: 'super_admin', department: 'admin', is_active: true };
         return next();
       } catch {
         return sendError(res, 401, 'Invalid token');

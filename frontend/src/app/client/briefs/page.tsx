@@ -204,6 +204,12 @@ export default function ClientBriefsPage() {
                       <p className="font-semibold text-white">{b.title}</p>
                       <div className="flex items-center gap-2 flex-shrink-0">
                         <span className={`text-xs px-2 py-0.5 rounded-full border font-medium ${priMeta?.color}`}>{priMeta?.label}</span>
+                        {b.work_type && b.work_type !== 'unclassified' && (
+                          <Badge
+                            label={b.work_type === 'new_project' ? '🚀 New Project' : '📋 Retainer Work'}
+                            color={b.work_type === 'new_project' ? 'purple' : 'blue'}
+                          />
+                        )}
                         <Badge label={`${sc.icon} ${sc.label}`} color={sc.color} />
                       </div>
                     </div>
@@ -218,6 +224,22 @@ export default function ClientBriefsPage() {
                 {isOpen && (
                   <div className="px-5 pb-5 border-t border-white/5 pt-4">
                     <p className="text-sm text-white/60 leading-relaxed whitespace-pre-wrap">{b.description}</p>
+                    {b.work_type && b.work_type !== 'unclassified' && (
+                      <div className={`mt-4 rounded-xl p-3 border ${
+                        b.work_type === 'new_project'
+                          ? 'bg-purple-500/8 border-purple-500/20'
+                          : 'bg-blue-500/8 border-blue-500/20'
+                      }`}>
+                        <p className={`text-xs font-medium mb-1 ${b.work_type === 'new_project' ? 'text-purple-400' : 'text-blue-400'}`}>
+                          {b.work_type === 'new_project' ? '🚀 Classified as New Project' : '📋 Classified as Retainer Work'}
+                        </p>
+                        <p className="text-xs text-white/40">
+                          {b.work_type === 'new_project'
+                            ? 'This brief requires a new strategy and will be quoted separately.'
+                            : 'This brief falls within your existing retainer scope.'}
+                        </p>
+                      </div>
+                    )}
                     {b.admin_notes && (
                       <div className="mt-4 bg-blue-500/8 border border-blue-500/20 rounded-xl p-3">
                         <p className="text-xs text-blue-400 font-medium mb-1">Note from your team:</p>

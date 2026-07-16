@@ -58,6 +58,7 @@ const clientSatisfaction  = require('./routes/client/satisfaction.routes');  // 
 const clientMoments       = require('./routes/client/moments.routes');       // NEW
 const clientProofOfValue  = require('./routes/client/proof-of-value.routes');// NEW
 const clientBrandIdentity = require('./routes/client/brand-identity.routes');// NEW
+const clientStrategies    = require('./routes/client/strategies.routes');    // NEW
 
 // ── Super Admin Routes ────────────────────────────────────────
 const saAuth       = require('./routes/super-admin/auth.routes');
@@ -72,6 +73,20 @@ const saSettings   = require('./routes/super-admin/settings.routes');
 
 const agencyProfileRoutes      = require('./routes/agency/profile.routes');
 const agencyBrandIdentityRoutes= require('./routes/agency/brand-identity.routes');
+
+const financialsRoutes          = require('./routes/agency/financials.routes');
+const briefClassificationRoutes = require('./routes/agency/brief-classification.routes');
+const coreFunctionsRoutes       = require('./routes/agency/core-functions.routes');
+const staffLeaveRoutes          = require('./routes/agency/staff-leave.routes');
+
+const taskVerificationRoutes    = require('./routes/agency/task-verification.routes');
+const contributionClaimsRoutes  = require('./routes/agency/contribution-claims.routes');
+const weeklyRatingsRoutes       = require('./routes/agency/weekly-ratings.routes');
+const scoringRoutes             = require('./routes/agency/scoring.routes');
+
+const agencyTargetsRoutes       = require('./routes/agency/agency-targets.routes');
+const pulseRoutes               = require('./routes/agency/pulse.routes');
+const leaderboardRoutes         = require('./routes/agency/leaderboard.routes');
 
 
 // ── Middleware ────────────────────────────────────────────────
@@ -155,6 +170,7 @@ app.use('/api/client/satisfaction', clientSatisfaction);  // NEW
 app.use('/api/client/moments',      clientMoments);       // NEW
 app.use('/api/client/proof-of-value',clientProofOfValue); // NEW
 app.use('/api/client/brand/identity', clientBrandIdentity);// NEW
+app.use('/api/client/strategies',    clientStrategies);    // NEW
 
 // ── Super Admin Routes ────────────────────────────────────────
 app.use('/api/super-admin/dashboard', saDashboard);
@@ -178,6 +194,23 @@ app.use('/api/client/briefs',           clientBriefs);
 
 // Invitations (public routes — no auth middleware)
 app.use('/api/auth/invite',             inviteRoutes);
+
+// Phase 1 — financials, brief classification, core functions, staff leave
+app.use('/api/agency',                  financialsRoutes);
+app.use('/api/agency',                  briefClassificationRoutes);
+app.use('/api/agency/core-functions',   coreFunctionsRoutes);
+app.use('/api/agency/staff-leave',      staffLeaveRoutes);
+
+// Phase 2 — task verification, contribution claims, weekly ratings, scoring
+app.use('/api/agency/tasks',            taskVerificationRoutes);
+app.use('/api/agency/contribution-claims', contributionClaimsRoutes);
+app.use('/api/agency/weekly-ratings',   weeklyRatingsRoutes);
+app.use('/api/agency/scores',           scoringRoutes);
+
+// Phase 3 — agency targets, MD weekly pulse, leaderboard
+app.use('/api/agency/targets',          agencyTargetsRoutes);
+app.use('/api/agency/pulse',            pulseRoutes);
+app.use('/api/agency/leaderboard',      leaderboardRoutes);
 
 // ── 404 Handler ───────────────────────────────────────────────
 app.use('*', (req, res) => {

@@ -64,7 +64,7 @@ router.post('/generate', authenticate, async (req, res, next) => {
       nigerian_context: result.nigerian_context,
       ai_insights:      result.ai_insights,
       ai_strategy:      result.ai_strategy,
-      created_by:       req.user.id,
+      created_by:       req.user.role !== 'super_admin' ? req.user.id : null,
     }).select().single();
 
     if (insertErr) throw insertErr;

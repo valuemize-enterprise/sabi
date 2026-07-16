@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useParams } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import toast from 'react-hot-toast';
 import {
@@ -14,6 +14,7 @@ import { goals as goalsApi, strategies as stratApi } from '@/lib/api';
 import { useBrandPermissions } from '@/lib/permissions';
 import { AgencyTopNav }    from '@/components/internal/AgencyTopNav';
 import { LoadingPage, EmptyState, Badge } from '@/components/ui';
+import Router from 'next/router';
 
 const tok = () => typeof window !== 'undefined' ? localStorage.getItem('sabi_token') : null;
 const api = (p: string, opts?: RequestInit) =>
@@ -26,6 +27,8 @@ const COLUMNS = [
   { key:'in_progress', label:'In Progress',   color:'border-blue-500/20 bg-blue-500/3',     dot:'bg-blue-500'   },
   { key:'in_review',   label:'In Review',     color:'border-amber-500/20 bg-amber-500/3',   dot:'bg-amber-500'  },
   { key:'done',        label:'Done',          color:'border-green-500/20 bg-green-500/3',   dot:'bg-green-500'  },
+  { key:'blocked',     label:'Blocked',       color:'border-red-500/20 bg-red-500/3',       dot:'bg-red-500'    },
+  { key:'verified',    label:'Verified',      color:'border-purple-500/20 bg-purple-500/3', dot:'bg-purple-500' },
 ];
 
 const PRIORITY_META: Record<string,{label:string;color:string;dot:string}> = {
@@ -55,6 +58,10 @@ export default function BrandTasksPage() {
   const [filterAssignee, setFA] = useState('');
   const [dragging, setDragging] = useState<string | null>(null);
   const [generatingTasks, setGeneratingTasks] = useState(false);
+  const [rejectingId, setRejectingId] = useState<string | null>(null);
+  const [rejectReason, setRejectReason] = useState('');
+
+    const router = useRouter();
 
   const setF = (k: string, v: string) => setForm(p => ({ ...p, [k]: v }));
 
@@ -102,6 +109,26 @@ export default function BrandTasksPage() {
     } catch (err: any) { toast.error(err.message); }
   };
 
+  const verifyTask = async (taskId: string) => {
+    try {
+      await api(`/api/agency/tasks/${taskId}/verify`, { method: 'PUT' });
+      setTasks(p => p.map(t => t.id === taskId ? { ...t, status: 'verified' } : t));
+      toast.success('Task verified');
+    } catch (err: any) { toast.error(err.message); }
+  };
+
+  const rejectTask = async () => {
+    if (!rejectingId || !rejectReason.trim()) return;
+    try {
+      await api(`/api/agency/tasks/${rejectingId}/reject-verification`, {
+        method: 'PUT', body: JSON.stringify({ reason: rejectReason.trim() }),
+      });
+      setTasks(p => p.map(t => t.id === rejectingId ? { ...t, status: 'in_progress' } : t));
+      toast.success('Task sent back for revision');
+      setRejectingId(null); setRejectReason('');
+    } catch (err: any) { toast.error(err.message); }
+  };
+
   const generateFromStrategy = async (strategyId: string) => {
     if (!confirm('Generate tasks from this strategy using ARIA? This will create multiple tasks assigned to the team.')) return;
     setGeneratingTasks(true);
@@ -123,10 +150,15 @@ export default function BrandTasksPage() {
 
   return (
     <div className="p-6 max-w-7xl mx-auto">
-      <AgencyTopNav title="Tasks" breadcrumb={[{label:'Brands',href:'/brands'},{label:'Brand',href:`/brands/${brandId}`}]}/>
-      <Link href={`/brands/${brandId}`} className="flex items-center gap-2 text-xs text-white/30 hover:text-white mb-5 transition-colors w-fit">
-        <ArrowLeft className="w-3.5 h-3.5"/> Back to Brand
-      </Link>
+      {perms.canAssignStaff && (
+      <AgencyTopNav title="Tasks" breadcrumb={[{label:'Brands',href:'/brands'},{label:'Brand',href:`/brands/${brandId}`}]}/>)}
+ <button
+  type="button"
+  onClick={() => router.back()}
+  className="flex items-center gap-2 text-xs text-white/30 hover:text-white mb-5 transition-colors w-fit"
+>
+  <ArrowLeft className="w-3.5 h-3.5" /> Back
+</button>
 
       {/* Header */}
       <div className="flex items-start justify-between mb-6 flex-wrap gap-3">
@@ -268,7 +300,7 @@ export default function BrandTasksPage() {
 
       {/* ── KANBAN VIEW ────────────────────────────────────────── */}
       {view === 'kanban' && (
-        <div className="grid grid-cols-2 xl:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
           {COLUMNS.map(col => {
             const colTasks = tasksByStatus(col.key);
             return (
@@ -308,11 +340,25 @@ export default function BrandTasksPage() {
                             <span className="text-[10px] text-white/40 truncate">{assignee.full_name}</span>
                           </div>
                         )}
-                        {/* Status change */}
+                        {t.status === 'done' && perms.canManage && (
+                          <div className="flex gap-1.5 mt-2">
+                            <button onClick={() => verifyTask(t.id)}
+                              className="flex-1 flex items-center justify-center gap-1.5 text-[10px] py-1.5 rounded-lg bg-green-500/10 border border-green-500/25 text-green-400 hover:bg-green-500/20 transition-all font-medium">
+                              <Check className="w-3 h-3"/> Verify
+                            </button>
+                            <button onClick={() => { setRejectingId(t.id); setRejectReason(''); }}
+                              className="flex-1 flex items-center justify-center gap-1.5 text-[10px] py-1.5 rounded-lg bg-red-500/10 border border-red-500/25 text-red-400 hover:bg-red-500/20 transition-all font-medium">
+                              <X className="w-3 h-3"/> Reject
+                            </button>
+                          </div>
+                        )}
+                        {/* Status change — only admin/brand admin can move task out of Verified */}
+                        {(t.status !== 'verified' || perms.canManage) && (
                         <select className="w-full mt-2 text-[10px] bg-white/5 border border-white/8 rounded-lg px-2 py-1 text-white/50 hover:text-white cursor-pointer transition-all opacity-0 group-hover:opacity-100"
                           value={t.status} onChange={e => updateStatus(t.id, e.target.value)}>
-                          {COLUMNS.map(c => <option className='bg-black' key={c.key} value={c.key}>{c.label}</option>)}
+                          { COLUMNS.filter(c => c.key !== 'verified').map(c => <option className='bg-black' key={c.key} value={c.key}>{c.label}</option>)}
                         </select>
+                        )}
                       </div>
                     );
                   })}
@@ -369,11 +415,23 @@ export default function BrandTasksPage() {
                       <td className="px-4 py-3 text-xs text-white/40 max-w-[120px] truncate">{t.strategies?.title ?? '—'}</td>
                       <td className="px-4 py-3 text-xs text-white/35">{t.due_date ?? '—'}</td>
                       <td className="px-4 py-3 pr-5">
-                        <select className="text-xs bg-white/5 border border-white/10 rounded-lg px-2 py-1 text-white/50 hover:text-white cursor-pointer transition-all"
-                          value={t.status} onChange={e => updateStatus(t.id, e.target.value)}>
-                          {COLUMNS.map(c => <option className='bg-black' key={c.key} value={c.key}>{c.label}</option>)}
-                          <option className='bg-black' value="blocked">Blocked</option>
-                        </select>
+                        {t.status === 'done' && perms.canManage ? (
+                          <div className="flex items-center gap-2">
+                            <button onClick={() => verifyTask(t.id)}
+                              className="text-xs text-green-400 hover:text-green-300 transition-colors flex items-center gap-1">
+                              <Check className="w-3 h-3"/> Verify
+                            </button>
+                            <button onClick={() => { setRejectingId(t.id); setRejectReason(''); }}
+                              className="text-xs text-red-400 hover:text-red-300 transition-colors flex items-center gap-1">
+                              <X className="w-3 h-3"/> Reject
+                            </button>
+                          </div>
+                        ) : (t.status !== 'verified' || perms.canManage) ? (
+                          <select className="text-xs bg-white/5 border border-white/10 rounded-lg px-2 py-1 text-white/50 hover:text-white cursor-pointer transition-all"
+                            value={t.status} onChange={e => updateStatus(t.id, e.target.value)}>
+                            {COLUMNS.filter(c => c.key !== 'verified').map(c => <option key={c.key} value={c.key}>{c.label}</option>)}
+                          </select>
+                        ) : null}
                       </td>
                     </tr>
                   );
@@ -382,6 +440,27 @@ export default function BrandTasksPage() {
             </table>
           </div>
         )
+      )}
+      {/* ── REJECT MODAL ───────────────────────────────────────── */}
+      {rejectingId && (
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-[#12122a] border border-red-500/20 rounded-2xl w-full max-w-md p-6">
+            <h3 className="text-base font-bold text-white mb-2">Send Back for Revision</h3>
+            <p className="text-xs text-white/40 mb-4">Explain what needs to be fixed. The assignee will be notified.</p>
+            <textarea className="sabi-input resize-none text-sm" rows={3} placeholder="e.g. Missing deliverables, doesn't meet brief requirements..."
+              value={rejectReason} onChange={e => setRejectReason(e.target.value)}/>
+            <div className="flex gap-2 mt-4">
+              <button onClick={rejectTask} disabled={!rejectReason.trim()}
+                className="flex-1 py-2 text-sm rounded-lg bg-red-500/15 border border-red-500/30 text-red-400 font-medium hover:bg-red-500/25 transition-all disabled:opacity-40">
+                Send Back
+              </button>
+              <button onClick={() => { setRejectingId(null); setRejectReason(''); }}
+                className="px-4 py-2 text-sm text-white/40 hover:text-white transition-colors">
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

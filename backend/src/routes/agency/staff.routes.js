@@ -112,7 +112,7 @@ router.post('/:id/assign-brands', authenticate, requirePermission('MANAGE_USERS'
 
     await supabase.from('staff_brand_assignments').delete().eq('staff_id', req.params.id);
     await supabase.from('staff_brand_assignments').insert(
-      brand_ids.map(bid => ({ staff_id: req.params.id, brand_id: bid, role_on_brand }))
+      brand_ids.map(bid => ({ staff_id: req.params.id, brand_id: bid, role_on_brand, roles_on_brand: [role_on_brand], primary_role: role_on_brand }))
     );
     sendSuccess(res, null, 'Brand assignments updated');
   } catch (err) { next(err); }
@@ -166,7 +166,7 @@ router.get('/me/brands', authenticate, async (req, res, next) => {
         .from('tasks')
         .select('brand_id')
         .in('brand_id', brandIds)
-        .eq('assigned_to', req.user.id !== 'super_admin' ? req.user.id : null)
+        .eq('assigned_to', req.user.role !== 'super_admin' ? req.user.id : null)
         .in('status', ['todo', 'in_progress']);
 
       if (tasks) {

@@ -85,7 +85,7 @@ router.put('/:id/status', authenticate, async (req, res, next) => {
       .update({
         status,
         admin_notes:  admin_notes || null,
-        reviewed_by:  req.user.id !== 'super_admin' ? req.user.id : null,
+        reviewed_by:  req.user.role !== 'super_admin' ? req.user.id : null,
         reviewed_at:  new Date().toISOString(),
         updated_at:   new Date().toISOString(),
       })
@@ -137,7 +137,7 @@ router.post('/:id/convert-task', authenticate, async (req, res, next) => {
         assignee_id:  assignee_id || null,
         strategy_id:  strategy_id || null,
         brief_id:     brief.id,
-        created_by:   req.user.id !== 'super_admin' ? req.user.id : null,
+        created_by:   req.user.role !== 'super_admin' ? req.user.id : null,
         tags:         [brief.brief_type],
       })
       .select('id, title, status')

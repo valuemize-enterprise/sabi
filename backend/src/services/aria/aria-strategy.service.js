@@ -199,9 +199,73 @@ Extract key information and respond in JSON only:
   catch { return {}; }
 }
 
+// ── Weekly Pulse executive summary ────────────────────────────
+async function generateWeeklyPulse(pulseData) {
+  const panels = pulseData.panels;
+  const clientBrands = panels.clientReview.brands ?? panels.clientReview;
+  const goalAdmins = panels.goalAlignment.admins ?? panels.goalAlignment;
+
+  const prompt = `
+You are writing a weekly executive summary for the Managing Director of Cerebre Media Africa,
+a digital marketing agency in Lagos, Nigeria. Base this ONLY on the data provided — do not invent numbers.
+
+DATA FOR THE WEEK OF ${pulseData.weekStart}:
+
+Financials:
+- Expected this month: ₦${panels.pnl.expected.toLocaleString()}
+- Collected this month: ₦${panels.pnl.collected.toLocaleString()}
+- Overdue invoices: ${panels.pnl.overdueCount} totalling ₦${panels.pnl.overdueTotal.toLocaleString()}
+
+Staff Activity:
+- ${panels.activeStaff.activeCount} of ${panels.activeStaff.totalStaff} staff logged work this week
+- ${panels.activeStaff.zeroActivity.length} staff had zero logged activity: ${panels.activeStaff.zeroActivity.map(s=>s.full_name).join(', ') || 'none'}
+
+Achievements This Week (vs last week):
+- Tasks verified: ${panels.achievements.thisWeek.tasksVerified} (${panels.achievements.deltas.tasksVerified >= 0 ? '+' : ''}${panels.achievements.deltas.tasksVerified})
+- Briefs resolved: ${panels.achievements.thisWeek.briefsResolved} (${panels.achievements.deltas.briefsResolved >= 0 ? '+' : ''}${panels.achievements.deltas.briefsResolved})
+- Strategies approved: ${panels.achievements.thisWeek.strategiesApproved} (${panels.achievements.deltas.strategiesApproved >= 0 ? '+' : ''}${panels.achievements.deltas.strategiesApproved})
+
+Client Health (${clientBrands.length} active brands):
+${clientBrands.map(c => `- ${c.brand_name}: satisfaction ${c.satisfaction?.toFixed(1) ?? 'no rating'}/5, ${c.openBriefs} open briefs, ${c.overdueTasks} overdue tasks`).join('\n')}
+
+Challenges Flagged (${panels.challenges.totalFlags} total):
+- Goals at risk: ${panels.challenges.goalsAtRisk.length}
+- Briefs unanswered 3+ days: ${panels.challenges.unansweredBriefs.length}
+- Overdue tasks: ${panels.challenges.overdueTasks.length}
+- Tasks awaiting verification too long: ${panels.challenges.staleVerifications.length}
+- Client satisfaction drops: ${panels.challenges.satisfactionDrops.length}
+
+Brand Admin Goal Alignment:
+${goalAdmins.map(g => `- ${g.staff_name} (${g.brand_name}): ${g.onTrackPct ?? 'n/a'}% goals on track, rolling score ${g.rollingScore ?? 'n/a'}`).join('\n')}
+
+Write a concise executive summary in this EXACT JSON format (respond with JSON only):
+{
+  "headline": "One sentence capturing the week's overall state",
+  "went_well": ["specific point 1", "specific point 2", "specific point 3"],
+  "needs_attention": ["specific concern 1", "specific concern 2"],
+  "recommended_actions": ["specific action 1", "specific action 2", "specific action 3"],
+  "closing_note": "1-2 sentence forward-looking statement"
+}
+
+Be direct and specific — name brands and numbers where relevant. Do not pad with generic praise. If something is concerning, say so plainly.
+`;
+
+  const message = await client.messages.create({
+    model: MODEL, max_tokens: 1500,
+    messages: [{ role: 'user', content: prompt }],
+  });
+
+  const text = message.content[0].type === 'text' ? message.content[0].text : '{}';
+  const cleaned = text.replace(/```json|```/g, '').trim();
+
+  try { return JSON.parse(cleaned); }
+  catch { return { headline: text, raw: true }; }
+}
+
 module.exports = {
   generateStrategy,
   generateTasksFromStrategy,
   analyseSocialReport,
   extractBriefInsights,
+  generateWeeklyPulse,
 };

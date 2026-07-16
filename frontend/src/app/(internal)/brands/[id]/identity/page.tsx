@@ -150,8 +150,8 @@ export default function BrandIdentityPage() {
 
   return (
     <div className="p-6 max-w-4xl mx-auto">
-       <AgencyTopNav title="Brand Identity Vault"
-          breadcrumb={[{label:'Brands',href:'/brands'},{label:identity.name??'Brand',href:`/brands/${brandId}`}]}/>
+        {perms.canAssignStaff && (<AgencyTopNav title="Brand Identity Vault"
+          breadcrumb={[{label:'Brands',href:'/brands'},{label:identity.name??'Brand',href:`/brands/${brandId}`}]}/>)}
       <button
   type="button"
   onClick={() => router.back()}

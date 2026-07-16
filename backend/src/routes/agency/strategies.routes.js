@@ -32,6 +32,8 @@ router.get('/', authenticate, async (req, res, next) => {
         id, title, description, type, status,
         start_date, end_date, budget,
         brand_id, created_by, created_at, updated_at,
+        client_status, sent_to_client_at, client_approved_at,
+        pnl_status, expected_revenue, estimated_cost, brief_id,
         brands ( id, name, primary_color ),
         users  ( id, full_name, role )
       `, { count: 'exact' });
@@ -72,7 +74,7 @@ router.post('/', authenticate, async (req, res, next) => {
         end_date:      end_date     || null,
         budget:        budget       ? parseFloat(budget) : null,
         goals_linked:  goals_linked || [],
-        created_by:    req.user.id !== 'super_admin' ? req.user.id : null,
+        created_by:    req.user.role !== 'super_admin' ? req.user.id : null,
       })
       .select('id, title, type, status, brand_id, created_at')
       .single();
@@ -136,6 +138,72 @@ router.delete('/:id', authenticate, async (req, res, next) => {
   try {
     await supabase.from('strategies').delete().eq('id', req.params.id);
     sendSuccess(res, null, 'Strategy deleted');
+  } catch (err) { next(err); }
+});
+
+// ── PUT /api/agency/strategies/:id/send-to-client ───────────
+router.put('/:id/send-to-client', authenticate, async (req, res, next) => {
+  try {
+    const { data: strategy, error: fetchErr } = await supabase
+      .from('strategies')
+      .select('id, brand_id, brief_id, client_status')
+      .eq('id', req.params.id)
+      .single();
+
+    if (fetchErr || !strategy) return sendError(res, 404, 'Strategy not found');
+    if (strategy.client_status === 'sent' || strategy.client_status === 'approved') {
+      return sendError(res, 400, 'Strategy has already been sent or approved');
+    }
+
+    const { data, error } = await supabase
+      .from('strategies')
+      .update({
+        client_status: 'sent',
+        sent_to_client_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', req.params.id)
+      .select('id, title, client_status, sent_to_client_at')
+      .single();
+
+    if (error) throw error;
+
+    // Notify the client if a brief is linked
+    if (strategy.brief_id) {
+      const { data: brief } = await supabase
+        .from('client_briefs')
+        .select('brand_id, brands!brand_id ( id, name )')
+        .eq('id', strategy.brief_id)
+        .single();
+
+      if (brief) {
+        const { data: clients } = await supabase
+          .from('clients')
+          .select('id')
+          .eq('brand_id', brief.brand_id)
+          .eq('is_active', true);
+
+        if (clients?.length) {
+          await supabase.from('client_notifications').insert(
+            clients.map(c => ({
+              client_id: c.id,
+              type: 'strategy_submitted',
+              title: 'Strategy submitted for review',
+              message: `A new strategy "${data.title}" has been submitted for your review.`,
+              link: `/strategies`,
+            }))
+          );
+        }
+      }
+    }
+
+    await auditLog({
+      actorId: req.user.id, actorEmail: req.user.email, actorRole: req.user.role,
+      action: 'SEND_STRATEGY_TO_CLIENT', resourceType: 'strategy', resourceId: data.id,
+      details: { brand_id: strategy.brand_id }, req,
+    });
+
+    sendSuccess(res, { strategy: data }, 'Strategy sent to client for review');
   } catch (err) { next(err); }
 });
 

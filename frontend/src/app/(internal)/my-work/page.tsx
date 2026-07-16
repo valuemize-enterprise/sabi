@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { PenLine, Plus, X, Loader2, Check, Clock, Target, Lightbulb, ExternalLink } from 'lucide-react';
+import { PenLine, Plus, X, Loader2, Check, Clock, Target, Lightbulb, ExternalLink, Star } from 'lucide-react';
 import { useAgencyStore } from '@/lib/store';
 import { goals as goalsApi, strategies as stratApi } from '@/lib/api';
 import { LINK_META, type ProofLink } from '@/lib/permissions';
@@ -47,6 +47,13 @@ export default function MyWorkPage() {
   const [error, setError]         = useState('');
   const [period, setPeriod]       = useState<'week'|'month'|'all'>('week');
   const [brandFilter, setBrandFilter] = useState('');
+  const [showClaimForm, setShowClaimForm] = useState(false);
+  const [claimForm, setClaimForm] = useState({ brand_id:'', title:'', description:'' });
+  const [claimLinks, setClaimLinks] = useState<ProofLink[]>([]);
+  const [savingClaim, setSavingClaim] = useState(false);
+  const [myClaims, setMyClaims] = useState<any[]>([]);
+  const [weekClaimCount, setWeekClaimCount] = useState(0);
+  const maxClaimsPerWeek = 2;
 
   const setF = (k: string, v: string) => setForm(p => ({ ...p, [k]: v }));
 
@@ -56,6 +63,10 @@ export default function MyWorkPage() {
       apiFetch('/api/agency/work-logs?limit=100').catch(() => ({ data: [] })),
     ]).then(([b, l]) => { setMyBrands(b.data ?? []); setLogs(l.data ?? []); })
       .finally(() => setLoading(false));
+
+    apiFetch('/api/agency/contribution-claims/mine')
+      .then((r: any) => { setMyClaims(r.data?.claims ?? []); setWeekClaimCount(r.data?.thisWeekCount ?? 0); })
+      .catch(() => {});
   }, []);
 
   // Load goals + strategies when brand changes
@@ -101,6 +112,24 @@ export default function MyWorkPage() {
     finally { setSaving(false); }
   };
 
+  const submitClaim = async () => {
+    if (!claimForm.brand_id || !claimForm.title || !claimForm.description) { setError('All fields are required'); return; }
+    if (claimLinks.length === 0) { setError('At least one proof link is required'); return; }
+    setSavingClaim(true); setError('');
+    try {
+      const res: any = await apiFetch('/api/agency/contribution-claims', {
+        method: 'POST',
+        body: JSON.stringify({ ...claimForm, proof_links: claimLinks }),
+      });
+      setMyClaims(p => [res.data.claim, ...p]);
+      setWeekClaimCount(p => p + 1);
+      setClaimForm({ brand_id:'', title:'', description:'' });
+      setClaimLinks([]);
+      setShowClaimForm(false);
+    } catch (err: any) { setError(err.message); }
+    finally { setSavingClaim(false); }
+  };
+
   // Filters
   const now = new Date();
   const visible = logs.filter(l => {
@@ -122,9 +151,15 @@ export default function MyWorkPage() {
             {visible.length} entr{visible.length !== 1 ? 'ies' : 'y'} · {totalHours.toFixed(1)}h · feeds directly into client reports
           </p>
         </div>
-        <button onClick={openForm} className="sabi-btn-primary flex items-center gap-2 px-4 py-2.5 text-sm">
-          <Plus className="w-4 h-4" /> Log Work
-        </button>
+        <div className="flex items-center gap-2">
+          <button onClick={() => setShowClaimForm(true)}
+            className="flex items-center gap-2 px-4 py-2.5 text-sm text-amber-400 border border-amber-500/20 rounded-xl hover:bg-amber-500/8 transition-all">
+            <Star className="w-4 h-4"/> Claim a Contribution
+          </button>
+          <button onClick={openForm} className="sabi-btn-primary flex items-center gap-2 px-4 py-2.5 text-sm">
+            <Plus className="w-4 h-4"/> Log Work
+          </button>
+        </div>
       </div>
 
       {/* Stats row */}
@@ -274,6 +309,49 @@ export default function MyWorkPage() {
         </div>
       )}
 
+      {/* ── Claim a Contribution modal ──────────────────────── */}
+      {showClaimForm && (
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-[#12122a] border border-amber-500/20 rounded-2xl w-full max-w-lg max-h-[90vh] flex flex-col">
+            <div className="flex items-center justify-between p-6 border-b border-white/5">
+              <div>
+                <h2 className="text-base font-bold text-white">Claim a Contribution</h2>
+                <p className="text-xs text-white/30 mt-0.5">Something beyond your core function — bring proof</p>
+              </div>
+              <button onClick={() => setShowClaimForm(false)}><X className="w-5 h-5 text-white/30"/></button>
+            </div>
+            <div className="flex-1 overflow-y-auto p-6 space-y-4">
+              {error && <div className="bg-red-500/10 border border-red-500/20 rounded-lg p-3 text-red-400 text-sm">{error}</div>}
+              <select className="sabi-input" value={claimForm.brand_id} onChange={e => setClaimForm(p=>({...p,brand_id:e.target.value}))}>
+                <option className='bg-black' value="">Select brand…</option>
+                {myBrands.map((b: any) => <option className='bg-black' key={b.brand_id??b.id} value={b.brand_id??b.id}>{b.name}</option>)}
+              </select>
+              <input className="sabi-input" placeholder="What did you do? e.g. 'Introduced Reels trend-jacking format'"
+                value={claimForm.title} onChange={e => setClaimForm(p=>({...p,title:e.target.value}))}/>
+              <textarea className="sabi-input resize-none" rows={4}
+                placeholder="Explain why this goes beyond your normal role — what impact did it have?"
+                value={claimForm.description} onChange={e => setClaimForm(p=>({...p,description:e.target.value}))}/>
+              <ProofLinksInput value={claimLinks} onChange={setClaimLinks}/>
+              <div className="flex items-center justify-between">
+                <p className="text-xs text-amber-400/60">
+                  {weekClaimCount >= maxClaimsPerWeek
+                    ? `⚠️ You've already used your ${maxClaimsPerWeek} weekly claims — this one rolls to next week.`
+                    : `${maxClaimsPerWeek - weekClaimCount} of ${maxClaimsPerWeek} weekly claim${maxClaimsPerWeek - weekClaimCount !== 1 ? 's' : ''} remaining`
+                  }
+                </p>
+              </div>
+            </div>
+            <div className="flex gap-3 p-6 border-t border-white/5">
+              <button onClick={submitClaim} disabled={savingClaim || claimLinks.length === 0}
+                className="sabi-btn-primary flex-1 flex items-center justify-center gap-2 py-2.5 text-sm disabled:opacity-50">
+                {savingClaim ? <><Loader2 className="w-4 h-4 animate-spin"/>Submitting…</> : <><Check className="w-4 h-4"/>Submit Claim</>}
+              </button>
+              <button onClick={() => setShowClaimForm(false)} className="px-4 text-sm text-white/40">Cancel</button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Work log list */}
       {loading ? <LoadingPage /> : visible.length === 0 ? (
         <EmptyState icon={PenLine} title={period === 'week' ? 'No work logged this week' : 'No entries yet'}
@@ -338,6 +416,26 @@ export default function MyWorkPage() {
               </div>
             );
           })}
+        </div>
+      )}
+
+      {/* Contribution claims history */}
+      {myClaims.length > 0 && (
+        <div className="mt-8">
+          <h2 className="text-xs text-white/30 font-semibold uppercase tracking-wider mb-3">My Contribution Claims</h2>
+          <div className="space-y-2">
+            {myClaims.map((c: any) => (
+              <div key={c.id} className="flex items-center justify-between p-3 bg-white/3 border border-white/6 rounded-xl">
+                <div>
+                  <p className="text-sm text-white">{c.title}</p>
+                  <p className="text-xs text-white/30">{c.brands?.name} · {c.week_start}</p>
+                </div>
+                {c.status === 'pending'  && <Badge label="Pending" color="amber"/>}
+                {c.status === 'verified' && <Badge label={`+${c.points_awarded} pts`} color="green"/>}
+                {c.status === 'rejected' && <Badge label="Not verified" color="red"/>}
+              </div>
+            ))}
+          </div>
         </div>
       )}
 

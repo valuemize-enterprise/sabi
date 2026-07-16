@@ -7,7 +7,7 @@ import toast from 'react-hot-toast';
 import {
   ArrowLeft, Lightbulb, Plus, Sparkles, Send, Check,
   X, Loader2, Pencil, Trash2, ChevronDown, ChevronUp,
-  Calendar, Brain, ListTodo, Clock
+  Calendar, Brain, ListTodo, Clock, DollarSign
 } from 'lucide-react';
 import { goals as goalsApi } from '@/lib/api';
 import { AgencyTopNav }    from '@/components/internal/AgencyTopNav';
@@ -54,6 +54,10 @@ export default function BrandStrategiesPage() {
   const [generating, setGenerating] = useState(false);
   const [genTasksId, setGenTasksId] = useState<string | null>(null);
   const [sendingId, setSendingId]   = useState<string | null>(null);
+  const [pnlStrategyId, setPnlStrategyId] = useState<string | null>(null);
+  const [pnlForm, setPnlForm] = useState({ expected_revenue:'', estimated_cost:'', due_date:'' });
+  const [costSuggestion, setCostSuggestion] = useState<any>(null);
+  const [savingPnl, setSavingPnl] = useState(false);
   const [error, setError]       = useState('');
 
   const setF = (k: string, v: string) => setForm(p => ({ ...p, [k]: v }));
@@ -135,6 +139,39 @@ export default function BrandStrategiesPage() {
       setItems(p => p.map(s => s.id === strategyId ? { ...s, client_status:'sent', sent_to_client_at: new Date().toISOString() } : s));
     } catch (err: any) { toast.error(err.message); }
     finally { setSendingId(null); }
+  };
+
+  // ── P&L handlers ─────────────────────────────────────────
+  const openPnl = async (strategy: any) => {
+    setPnlStrategyId(strategy.id);
+    setPnlForm({
+      expected_revenue: strategy.expected_revenue ? String(strategy.expected_revenue) : '',
+      estimated_cost:   strategy.estimated_cost   ? String(strategy.estimated_cost)   : '',
+      due_date: '',
+    });
+    try {
+      const res:any = await api(`/api/agency/strategies/${strategy.id}/pnl/cost-suggestion`);
+      setCostSuggestion(res.data);
+    } catch { setCostSuggestion(null); }
+  };
+
+  const savePnl = async () => {
+    if (!pnlForm.expected_revenue || !pnlForm.estimated_cost) return;
+    setSavingPnl(true);
+    try {
+      const res:any = await api(`/api/agency/strategies/${pnlStrategyId}/pnl`, {
+        method: 'PATCH',
+        body: JSON.stringify({
+          expected_revenue: parseFloat(pnlForm.expected_revenue),
+          estimated_cost:   parseFloat(pnlForm.estimated_cost),
+          due_date: pnlForm.due_date || undefined,
+        }),
+      });
+      setItems(p => p.map(s => s.id === pnlStrategyId ? { ...s, ...res.data.strategy } : s));
+      setPnlStrategyId(null);
+      toast.success(`P&L saved. Gross margin: ₦${res.data.grossMargin.toLocaleString()}. Invoice auto-created.`);
+    } catch (err:any) { toast.error(err.message); }
+    finally { setSavingPnl(false); }
   };
 
   const del = async (id: string, title: string) => {
@@ -300,6 +337,83 @@ export default function BrandStrategiesPage() {
         </div>
       )}
 
+      {/* ── P&L modal ──────────────────────────────────────── */}
+      {pnlStrategyId && (
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-[#12122a] border border-amber-500/25 rounded-2xl w-full max-w-md">
+            <div className="flex items-center justify-between p-6 border-b border-white/5">
+              <div>
+                <div className="flex items-center gap-2 mb-0.5">
+                  <DollarSign className="w-4 h-4 text-amber-400"/>
+                  <h2 className="text-base font-bold text-white">Project P&L</h2>
+                </div>
+                <p className="text-xs text-white/30">This is a New Project — set the expected revenue and cost</p>
+              </div>
+              <button onClick={() => setPnlStrategyId(null)} className="text-white/30 hover:text-white transition-colors">
+                <X className="w-5 h-5"/>
+              </button>
+            </div>
+
+            <div className="p-6 space-y-4">
+              <div>
+                <label className="text-xs text-white/50 mb-1.5 block">Expected Revenue (₦) *</label>
+                <input type="number" className="sabi-input"
+                  placeholder="What will the agency charge the client?"
+                  value={pnlForm.expected_revenue}
+                  onChange={e => setPnlForm(p => ({ ...p, expected_revenue: e.target.value }))}/>
+              </div>
+
+              <div>
+                <label className="text-xs text-white/50 mb-1.5 block">Estimated Cost (₦) *</label>
+                <input type="number" className="sabi-input"
+                  placeholder="Cost to deliver this project"
+                  value={pnlForm.estimated_cost}
+                  onChange={e => setPnlForm(p => ({ ...p, estimated_cost: e.target.value }))}/>
+                {costSuggestion && (
+                  <button type="button"
+                    onClick={() => setPnlForm(p => ({ ...p, estimated_cost: String(costSuggestion.suggestedCost) }))}
+                    className="text-xs text-purple-400 hover:text-purple-300 transition-colors mt-1.5">
+                    💡 Use suggested: ₦{costSuggestion.suggestedCost.toLocaleString()}
+                    {' '}({costSuggestion.totalHours}h × ₦{costSuggestion.hourlyRate.toLocaleString()}/hr)
+                  </button>
+                )}
+              </div>
+
+              <div>
+                <label className="text-xs text-white/50 mb-1.5 block">Invoice Due Date</label>
+                <input type="date" className="sabi-input text-sm"
+                  value={pnlForm.due_date}
+                  onChange={e => setPnlForm(p => ({ ...p, due_date: e.target.value }))}/>
+                <p className="text-xs text-white/20 mt-1">Defaults to 30 days from today if left blank</p>
+              </div>
+
+              {pnlForm.expected_revenue && pnlForm.estimated_cost && (
+                <div className="bg-white/3 border border-white/8 rounded-xl p-3 flex items-center justify-between">
+                  <span className="text-xs text-white/40">Gross Margin</span>
+                  <span className={`text-sm font-bold ${
+                    (parseFloat(pnlForm.expected_revenue) - parseFloat(pnlForm.estimated_cost)) >= 0
+                      ? 'text-green-400' : 'text-red-400'
+                  }`}>
+                    ₦{(parseFloat(pnlForm.expected_revenue) - parseFloat(pnlForm.estimated_cost)).toLocaleString()}
+                  </span>
+                </div>
+              )}
+            </div>
+
+            <div className="flex gap-3 p-6 border-t border-white/5">
+              <button onClick={savePnl}
+                disabled={savingPnl || !pnlForm.expected_revenue || !pnlForm.estimated_cost}
+                className="sabi-btn-primary flex-1 flex items-center justify-center gap-2 py-2.5 text-sm disabled:opacity-50">
+                {savingPnl ? <><Loader2 className="w-4 h-4 animate-spin"/>Saving…</> : <><Check className="w-4 h-4"/>Save P&L</>}
+              </button>
+              <button onClick={() => setPnlStrategyId(null)} className="px-4 text-sm text-white/40 hover:text-white transition-colors">
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* ── Strategy list ─────────────────────────────────── */}
       {loading ? <LoadingPage/> : items.length === 0 ? (
         <EmptyState icon={Lightbulb} title="No strategies yet"
@@ -325,6 +439,8 @@ export default function BrandStrategiesPage() {
                         {s.client_status === 'sent'     && <Badge label="Sent to Client"  color="blue"/>}
                         {s.client_status === 'approved' && <Badge label="Client Approved" color="green"/>}
                         {s.content && !s.content.raw    && <Badge label="AI Generated"    color="purple"/>}
+                        {s.pnl_status === 'pending'   && <Badge label="⚠️ P&L Pending" color="amber"/>}
+                        {s.pnl_status === 'completed' && <Badge label={`💰 ₦${Number(s.expected_revenue).toLocaleString()}`} color="green"/>}
                       </div>
                     </div>
                     <div className="flex items-center gap-3 mt-1 flex-wrap">
@@ -395,6 +511,18 @@ export default function BrandStrategiesPage() {
                           className="flex items-center gap-1.5 text-xs text-green-400 hover:text-green-300 transition-colors disabled:opacity-50">
                           {sendingId===s.id?<Loader2 className="w-3.5 h-3.5 animate-spin"/>:<Send className="w-3.5 h-3.5"/>}
                           Send to Client
+                        </button>
+                      )}
+                      {s.pnl_status === 'pending' && (
+                        <button onClick={() => openPnl(s)}
+                          className="flex items-center gap-1.5 text-xs text-amber-400 hover:text-amber-300 transition-colors font-medium">
+                          <DollarSign className="w-3.5 h-3.5"/> Set P&L
+                        </button>
+                      )}
+                      {s.pnl_status === 'completed' && (
+                        <button onClick={() => openPnl(s)}
+                          className="flex items-center gap-1.5 text-xs text-white/40 hover:text-white transition-colors">
+                          <DollarSign className="w-3.5 h-3.5"/> View P&L
                         </button>
                       )}
                       <button onClick={() => del(s.id, s.title)}

@@ -5,7 +5,7 @@ import Link from 'next/link';
 import {
   Brain, FileText, Target, Swords, Users2, Trophy,
   Calendar, TrendingUp, TrendingDown, Bell, ChevronRight,
-  Loader2, RefreshCw, Star, Smartphone, Lightbulb, HelpCircle
+  Loader2, RefreshCw, Star, Smartphone, Lightbulb, HelpCircle, X
 } from 'lucide-react';
 import { clientPortal } from '@/lib/api';
 import { useClientStore } from '@/lib/store';
@@ -64,6 +64,10 @@ export default function ClientDashboardPage() {
   const [data, setData]   = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [showSatisfactionPrompt, setShowSatisfactionPrompt] = useState(false);
+  const [satisfactionScore, setSatisfactionScore] = useState(0);
+  const [satisfactionComment, setSatisfactionComment] = useState('');
+  const [submittingSatisfaction, setSubmittingSatisfaction] = useState(false);
 
   const load = async () => {
     try {
@@ -76,7 +80,31 @@ export default function ClientDashboardPage() {
 
   useEffect(() => { load(); }, []);
 
+  useEffect(() => {
+    const tok = typeof window !== 'undefined' ? localStorage.getItem('sabi_client_token') : null;
+    fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000'}/api/client/satisfaction/prompt-status`, {
+      headers: { Authorization: `Bearer ${tok}` },
+    }).then(r => r.json()).then((r: any) => {
+      setShowSatisfactionPrompt(!r.data?.submittedThisWeek);
+    }).catch(() => {});
+  }, []);
+
   const refresh = () => { setRefreshing(true); load(); };
+
+  const submitSatisfaction = async () => {
+    if (!satisfactionScore) return;
+    setSubmittingSatisfaction(true);
+    try {
+      const tok = typeof window !== 'undefined' ? localStorage.getItem('sabi_client_token') : null;
+      await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000'}/api/client/satisfaction`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${tok}` },
+        body: JSON.stringify({ nps_score: satisfactionScore, comment: satisfactionComment || null }),
+      }).then(async r => { const b = await r.json(); if (!r.ok) throw new Error(b.error || b.message); });
+      setShowSatisfactionPrompt(false);
+    } catch (err) { console.error(err); }
+    finally { setSubmittingSatisfaction(false); }
+  };
 
   if (loading) return (
     <div className="flex items-center justify-center min-h-screen bg-[#0d0d1a]">
@@ -118,6 +146,41 @@ export default function ClientDashboardPage() {
           Refresh
         </button>
       </div>
+
+      {/* ── Weekly satisfaction prompt ────────────────────────── */}
+      {showSatisfactionPrompt && (
+        <div className="sabi-card p-5 mb-6 border-purple-500/25" style={{ background: 'linear-gradient(135deg, rgba(109,40,217,0.1) 0%, rgba(13,13,26,1) 70%)' }}>
+          <div className="flex items-start justify-between mb-3">
+            <div>
+              <p className="text-sm font-semibold text-white">How was this week? 👋</p>
+              <p className="text-xs text-white/40 mt-0.5">Your honest rating helps your Cerebre team stay accountable</p>
+            </div>
+            <button onClick={() => setShowSatisfactionPrompt(false)} className="text-white/20 hover:text-white transition-colors">
+              <X className="w-4 h-4"/>
+            </button>
+          </div>
+          <div className="flex items-center gap-2 mb-3">
+            {[1,2,3,4,5].map(n => (
+              <button key={n} onClick={() => setSatisfactionScore(n)}
+                className={`w-11 h-11 rounded-xl flex items-center justify-center transition-all ${
+                  satisfactionScore >= n ? 'bg-amber-500/25 text-amber-400' : 'bg-white/5 text-white/20'
+                }`}>
+                <Star className="w-5 h-5" fill={satisfactionScore >= n ? 'currentColor' : 'none'}/>
+              </button>
+            ))}
+          </div>
+          {satisfactionScore > 0 && (
+            <>
+              <input className="sabi-input text-sm mb-3" placeholder="Anything specific? (optional)"
+                value={satisfactionComment} onChange={e => setSatisfactionComment(e.target.value)}/>
+              <button onClick={submitSatisfaction} disabled={submittingSatisfaction}
+                className="sabi-btn-primary flex items-center gap-2 px-4 py-2 text-sm disabled:opacity-50">
+                {submittingSatisfaction ? <Loader2 className="w-4 h-4 animate-spin"/> : 'Submit'}
+              </button>
+            </>
+          )}
+        </div>
+      )}
 
       {/* ClarityScore™ hero card */}
       <div className="sabi-card p-6 mb-5"

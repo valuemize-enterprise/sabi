@@ -58,7 +58,7 @@ router.get('/', authenticateClient, async (req, res, next) => {
 
     const { data, count, error } = await supabase
       .from('client_briefs')
-      .select('id, title, brief_type, status, priority, deadline, created_at, admin_notes', { count: 'exact' })
+      .select('id, title, brief_type, status, priority, deadline, created_at, admin_notes, work_type', { count: 'exact' })
       .eq('client_id', req.client.id)
       .order('created_at', { ascending: false })
       .range(offset, offset + Number(limit) - 1);

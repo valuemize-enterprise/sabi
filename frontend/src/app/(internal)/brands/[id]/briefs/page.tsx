@@ -56,15 +56,27 @@ export default function BrandBriefsPage() {
   const [showConvert, setShowConvert] = useState<string | null>(null);
   const [convertForm, setConvertForm] = useState({ assignee_id:'', priority:'medium', due_date:'' });
   const [noteText, setNoteText] = useState<Record<string,string>>({});
+  const [brandScope, setBrandScope] = useState('');
+  const [classifying, setClassifying] = useState<string | null>(null);
+  const [strategyMap, setStrategyMap] = useState<Record<string, any>>({});
 
   useEffect(() => {
     Promise.all([
       api(`/api/agency/briefs?brand_id=${brandId}&limit=50`),
       api(`/api/agency/brands/${brandId}/team`),
-    ]).then(([br, tr]: any) => {
+      api(`/api/agency/strategies?brand_id=${brandId}&limit=100`),
+    ]).then(([br, tr, sr]: any) => {
       setBriefs(br.data ?? []);
       setTeam((tr.data?.team ?? []).map((m:any) => m.users).filter(Boolean));
+      // Map strategies by brief_id for quick lookup
+      const map: Record<string, any> = {};
+      (sr.data ?? []).forEach((s: any) => { if (s.brief_id) map[s.brief_id] = s; });
+      setStrategyMap(map);
     }).catch(() => {}).finally(() => setLoading(false));
+
+    api(`/api/agency/brands/${brandId}/financials`)
+      .then((r:any) => setBrandScope(r.data?.financials?.retainer_scope ?? ''))
+      .catch(() => {});
   }, [brandId]);
 
   const updateStatus = async (briefId: string, status: string) => {
@@ -91,6 +103,17 @@ export default function BrandBriefsPage() {
       toast.success(`Task created: "${res.data.task.title}" — The assignee has been notified.`);
     } catch (err: any) { toast.error(err.message); }
     finally { setConverting(null); }
+  };
+
+  const classify = async (briefId: string, work_type: string) => {
+    setClassifying(briefId);
+    try {
+      await api(`/api/agency/briefs/${briefId}/classify`, {
+        method: 'PATCH', body: JSON.stringify({ work_type }),
+      });
+      setBriefs(p => p.map(b => b.id === briefId ? { ...b, work_type } : b));
+    } catch (err:any) { toast.error(err.message); }
+    finally { setClassifying(null); }
   };
 
   const pendingCount = briefs.filter(b => b.status === 'submitted').length;
@@ -130,6 +153,7 @@ export default function BrandBriefsPage() {
             const sc   = STATUS_FLOW.find(s => s.value === b.status);
             const isOpen = expanded === b.id;
             const ai   = b.metadata ?? {};
+            const linkedStrategy = strategyMap[b.id];
 
             return (
               <div key={b.id} className={`sabi-card overflow-hidden ${b.status==='submitted'?'border-amber-500/20':''}`}>
@@ -146,6 +170,11 @@ export default function BrandBriefsPage() {
                           <Badge label={tm.label} color="blue"/>
                           {sc && <Badge label={sc.label} color={sc.color}/>}
                           <span className={`text-xs px-2 py-0.5 rounded-full border font-medium capitalize ${PRIORITY_COLOR[b.priority]}`}>{b.priority}</span>
+                          {b.work_type === 'new_project' && linkedStrategy && (
+                            linkedStrategy.pnl_status === 'completed'
+                              ? <Badge label={`P&L ✓ ₦${Number(linkedStrategy.expected_revenue||0).toLocaleString('en-NG')}`} color="green"/>
+                              : <Badge label="P&L Pending" color="amber"/>
+                          )}
                           {b.deadline && <span className="text-xs text-white/25 flex items-center gap-1"><Clock className="w-3 h-3"/>Due: {b.deadline}</span>}
                         </div>
                       </div>
@@ -209,6 +238,95 @@ export default function BrandBriefsPage() {
                         )}
                       </div>
                     )}
+
+                    {/* Classification */}
+                    <div className="bg-white/3 border border-white/8 rounded-xl p-4">
+                      <div className="flex items-center justify-between mb-3">
+                        <p className="text-xs text-white/40 font-semibold uppercase tracking-wider">
+                          Classification — Is this Retainer Work or a New Project?
+                        </p>
+                        {b.work_type && b.work_type !== 'unclassified' && (
+                          <Badge
+                            label={b.work_type === 'new_project' ? '🚀 New Project' : '📋 Retainer'}
+                            color={b.work_type === 'new_project' ? 'purple' : 'blue'}
+                          />
+                        )}
+                      </div>
+
+                      {/* P&L status for new projects */}
+                      {b.work_type === 'new_project' && linkedStrategy && (
+                        <div className={`rounded-lg p-3 mb-3 border ${
+                          linkedStrategy.pnl_status === 'completed'
+                            ? 'bg-green-500/6 border-green-500/15'
+                            : 'bg-amber-500/6 border-amber-500/15'
+                        }`}>
+                          <div className="flex items-center justify-between">
+                            <p className="text-xs font-medium text-white/50">P&L Status</p>
+                            {linkedStrategy.pnl_status === 'completed' ? (
+                              <span className="text-xs text-green-400 font-medium">Completed</span>
+                            ) : (
+                              <span className="text-xs text-amber-400 font-medium">Pending — fill in Strategies page</span>
+                            )}
+                          </div>
+                          {linkedStrategy.pnl_status === 'completed' && (
+                            <div className="grid grid-cols-3 gap-3 mt-2 text-xs">
+                              <div><p className="text-white/30">Revenue</p><p className="text-white/70 font-medium">₦{Number(linkedStrategy.expected_revenue||0).toLocaleString('en-NG')}</p></div>
+                              <div><p className="text-white/30">Cost</p><p className="text-white/70 font-medium">₦{Number(linkedStrategy.estimated_cost||0).toLocaleString('en-NG')}</p></div>
+                              <div><p className="text-white/30">Margin</p><p className={`font-medium ${(linkedStrategy.expected_revenue-linkedStrategy.estimated_cost)>=0?'text-green-400':'text-red-400'}`}>₦{Number((linkedStrategy.expected_revenue||0)-(linkedStrategy.estimated_cost||0)).toLocaleString('en-NG')}</p></div>
+                            </div>
+                          )}
+                        </div>
+                      )}
+
+                      {brandScope && (
+                        <div className="bg-blue-500/6 border border-blue-500/15 rounded-lg p-3 mb-3">
+                          <p className="text-[10px] text-blue-400 font-medium mb-1">📎 Documented Retainer Scope (for reference)</p>
+                          <p className="text-xs text-white/50 leading-relaxed line-clamp-3">{brandScope}</p>
+                        </div>
+                      )}
+
+                      {b.work_type === 'new_project' && linkedStrategy && linkedStrategy.pnl_status !== 'completed' && (
+                        <Link href={`/brands/${brandId}/strategies`}
+                          className="mt-2 inline-flex items-center gap-1.5 text-xs text-amber-400 hover:text-amber-300 transition-colors">
+                          → Go to Strategies to fill P&L
+                        </Link>
+                      )}
+
+                      {!brandScope && (
+                        <p className="text-xs text-amber-400/70 mb-3">
+                          ⚠️ No retainer scope documented for this brand yet. Add one in Financials before classifying to avoid disputes.
+                        </p>
+                      )}
+
+                      <p className="text-xs text-white/25 mb-3">
+                        Rule of thumb: if this brief requires a new strategy, it is a New Project — not Retainer.
+                      </p>
+
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => classify(b.id, 'retainer')}
+                          disabled={classifying === b.id}
+                          className={`flex-1 flex items-center justify-center gap-2 py-2 text-xs rounded-lg border transition-all disabled:opacity-50 ${
+                            b.work_type === 'retainer'
+                              ? 'border-blue-500/40 bg-blue-500/15 text-blue-300 font-medium'
+                              : 'border-white/8 text-white/40 hover:border-blue-500/25 hover:text-blue-300'
+                          }`}
+                        >
+                          📋 Retainer Work
+                        </button>
+                        <button
+                          onClick={() => classify(b.id, 'new_project')}
+                          disabled={classifying === b.id}
+                          className={`flex-1 flex items-center justify-center gap-2 py-2 text-xs rounded-lg border transition-all disabled:opacity-50 ${
+                            b.work_type === 'new_project'
+                              ? 'border-purple-500/40 bg-purple-500/15 text-purple-300 font-medium'
+                              : 'border-white/8 text-white/40 hover:border-purple-500/25 hover:text-purple-300'
+                          }`}
+                        >
+                          🚀 New Project
+                        </button>
+                      </div>
+                    </div>
 
                     {/* Admin note */}
                     <div>
