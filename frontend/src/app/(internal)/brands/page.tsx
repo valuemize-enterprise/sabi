@@ -37,7 +37,7 @@ export default function ClientsPage() {
   useEffect(() => { load(); }, [search, status]);
 
   return (
-    <div className="p-6 max-w-7xl mx-auto">
+    <div className="p-4 sm:p-6 max-w-7xl mx-auto">
       <AgencyTopNav title="Clients" subtitle="All brand accounts" />
       <PageHeader
         title="Clients"
@@ -50,8 +50,8 @@ export default function ClientsPage() {
       />
 
       {/* Filters */}
-      <div className="flex items-center gap-3 mb-6">
-        <div className="relative flex-1 max-w-xs">
+      <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 mb-5 sm:mb-6">
+        <div className="relative flex-1 sm:max-w-xs">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/30" />
           <input className="sabi-input pl-9 text-sm" placeholder="Search brands…" value={search} onChange={e => setSearch(e.target.value)} />
         </div>

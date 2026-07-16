@@ -39,7 +39,7 @@ export default function BrandSettingsPage() {
   if (loading) return <LoadingPage />;
 
   return (
-    <div className="p-6 max-w-2xl mx-auto">
+    <div className="p-4 sm:p-6 max-w-2xl mx-auto">
       <AgencyTopNav />
       <button
   type="button"

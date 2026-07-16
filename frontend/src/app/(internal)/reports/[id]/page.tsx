@@ -41,7 +41,7 @@ export default function ReportDetailPage() {
   const brand   = report.brands;
 
   return (
-    <div className="p-6 max-w-4xl mx-auto">
+    <div className="p-4 sm:p-6 max-w-4xl mx-auto">
       <AgencyTopNav/>
       <Link href="/reports" className="flex items-center gap-2 text-xs text-white/30 hover:text-white mb-5 transition-colors w-fit">
         <ArrowLeft className="w-3.5 h-3.5"/> Back to Reports

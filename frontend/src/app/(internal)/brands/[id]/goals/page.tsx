@@ -51,7 +51,7 @@ export default function BrandGoalsPage() {
   const STATUS_COLOR: Record<string,string> = { active:'purple', achieved:'green', missed:'red', paused:'gray' };
 
   return (
-    <div className="p-6 max-w-4xl mx-auto">
+    <div className="p-4 sm:p-6 max-w-4xl mx-auto">
       <button onClick={() => router.back()} className="flex items-center gap-2 text-xs text-white/30 hover:text-white mb-5 transition-colors w-fit"><ArrowLeft className="w-3.5 h-3.5"/>Back</button>
       <PageHeader title="Goals" subtitle="KPIs and performance targets for this brand"
         action={<button className="sabi-btn-primary flex items-center gap-2 px-4 py-2 text-sm" onClick={() => setShowForm(true)}><Plus className="w-4 h-4"/>Add Goal</button>}/>

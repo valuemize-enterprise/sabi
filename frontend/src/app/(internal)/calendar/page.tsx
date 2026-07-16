@@ -56,7 +56,7 @@ export default function CalendarPage() {
   const nextMonth = () => { if (month===12) { setMonth(1); setYear(y=>y+1); } else setMonth(m=>m+1); };
 
   return (
-    <div className="p-6 max-w-6xl mx-auto">
+    <div className="p-4 sm:p-6 max-w-6xl mx-auto">
       <AgencyTopNav title="Calendar" subtitle="MomentMap™ — Nigerian cultural & commercial calendar"/>
       <PageHeader title="Calendar" subtitle="Plan content around Nigerian cultural moments"
         action={

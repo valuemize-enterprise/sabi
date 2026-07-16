@@ -31,7 +31,7 @@ export default function FinanceOverviewPage() {
 
   if (loading) return <LoadingPage label="Loading agency financials…"/>;
   if (error) return (
-    <div className="p-6 max-w-4xl mx-auto">
+    <div className="p-4 sm:p-6 max-w-4xl mx-auto">
       <div className="sabi-card p-10 text-center">
         <AlertCircle className="w-8 h-8 text-red-400/50 mx-auto mb-3"/>
         <p className="text-white/40 text-sm">{error}</p>
@@ -42,7 +42,7 @@ export default function FinanceOverviewPage() {
   const maxBrandRevenue = Math.max(...(data.revenueByBrand ?? []).map((b:any) => b.revenue), 1);
 
   return (
-    <div className="p-6 max-w-4xl mx-auto">
+    <div className="p-4 sm:p-6 max-w-4xl mx-auto">
       <AgencyTopNav title="Finance Overview" subtitle={data.month}/>
 
       {/* Top stats */}

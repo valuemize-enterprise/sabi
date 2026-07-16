@@ -146,7 +146,7 @@ export default function SuperAdminSettingsPage() {
   const section = SECTIONS.find(s => s.id === activeSection)!;
 
   return (
-    <div className="p-6 max-w-5xl mx-auto">
+    <div className="p-4 sm:p-6 max-w-5xl mx-auto">
       <div className="mb-8">
         <p className="text-xs text-red-400/60 font-semibold uppercase tracking-widest mb-1">Platform Configuration</p>
         <h1 className="text-2xl font-bold text-white">Settings</h1>

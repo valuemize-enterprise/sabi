@@ -105,7 +105,7 @@ export default function ClientValuePage() {
   const highImpact = withPOV.filter(t => (t.proof_of_value_data?.povScore ?? 0) >= 70).length;
 
   return (
-    <div className="p-6 max-w-4xl mx-auto">
+    <div className="p-4 sm:p-6 max-w-4xl mx-auto">
       {/* Header */}
       <div className="flex items-start justify-between mb-7">
         <div>

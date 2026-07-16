@@ -49,7 +49,7 @@ export default function ClientDeliverablesPage() {
   if (loading) return <LoadingPage label="Loading deliverables…"/>;
 
   return (
-    <div className="p-6 max-w-4xl mx-auto">
+    <div className="p-4 sm:p-6 max-w-4xl mx-auto">
       <div className="mb-7">
         <h1 className="text-xl font-bold text-white">Deliverables</h1>
         <p className="text-sm text-white/40 mt-1">Work files approved and shared by your Cerebre team</p>

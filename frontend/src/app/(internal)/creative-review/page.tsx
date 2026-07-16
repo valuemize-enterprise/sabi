@@ -69,7 +69,7 @@ export default function CreativeReviewPage() {
   );
 
   return (
-    <div className="p-6 max-w-4xl mx-auto">
+    <div className="p-4 sm:p-6 max-w-4xl mx-auto">
       <AgencyTopNav title="Creative Review" subtitle={`Week of ${weekStart} — rate your creative team's output`}/>
 
       {byStaff.length === 0 ? (

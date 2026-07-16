@@ -86,7 +86,7 @@ export default function BrandOverviewPage() {
   const gradeColor = grade === 'S' ? 'text-yellow-400' : grade === 'A' ? 'text-green-400' : grade === 'B' ? 'text-blue-400' : 'text-amber-400';
 
   return (
-    <div className="p-6 max-w-6xl mx-auto">
+    <div className="p-4 sm:p-6 max-w-6xl mx-auto">
       <AgencyTopNav />
       <button
         type="button"
@@ -97,8 +97,8 @@ export default function BrandOverviewPage() {
       </button>
 
       {/* Brand header */}
-      <div className="sabi-card p-6 mb-6">
-        <div className="flex items-start justify-between flex-wrap gap-4">
+      <div className="sabi-card p-4 sm:p-6 mb-5 sm:mb-6">
+        <div className="flex flex-col sm:flex-row items-start justify-between gap-4">
           <div className="flex items-center gap-4">
             <div className="w-14 h-14 rounded-2xl flex items-center justify-center text-xl font-black text-white"
               style={{ backgroundColor: `${brand.primary_color || '#6d28d9'}33`, border: `1px solid ${brand.primary_color || '#6d28d9'}55` }}>
@@ -143,7 +143,7 @@ export default function BrandOverviewPage() {
 
       {/* Sub-page navigation */}
       <h2 className="text-xs font-semibold text-white/30 uppercase tracking-widest mb-3">Manage Brand</h2>
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 mb-4">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2 sm:gap-3 mb-4">
         {SUB_PAGES.map(({ href, label, icon: Icon, desc, color }) => (
           <Link key={href} href={`/brands/${brandId}/${href}`}
             className="sabi-card p-4 hover:border-white/10 transition-all group cursor-pointer text-center">

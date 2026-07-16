@@ -105,7 +105,7 @@ export default function BrandFinancialsPage() {
   const expectedInvoices = invoices.filter(i => i.status === 'expected' || i.status === 'invoiced');
 
   return (
-    <div className="p-6 max-w-4xl mx-auto">
+    <div className="p-4 sm:p-6 max-w-4xl mx-auto">
       <AgencyTopNav title="Financials" breadcrumb={[{label:'Brands',href:'/brands'},{label:'Brand',href:`/brands/${brandId}`}]}/>
       <Link href={`/brands/${brandId}`} className="flex items-center gap-2 text-xs text-white/30 hover:text-white mb-5 transition-colors w-fit">
         <ArrowLeft className="w-3.5 h-3.5"/> Back to Brand

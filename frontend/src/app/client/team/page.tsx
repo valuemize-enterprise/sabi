@@ -23,7 +23,7 @@ export default function ClientTeamPage() {
   }, []);
 
   return (
-    <div className="p-6 max-w-3xl mx-auto">
+    <div className="p-4 sm:p-6 max-w-3xl mx-auto">
       {/* Header */}
       <div className="mb-7">
         <h1 className="text-xl font-bold text-white">Your Team</h1>

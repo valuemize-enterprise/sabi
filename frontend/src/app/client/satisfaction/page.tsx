@@ -24,7 +24,7 @@ export default function ClientSatisfactionPage() {
   };
 
   if (submitted) return (
-    <div className="p-6 max-w-2xl mx-auto flex flex-col items-center justify-center min-h-[50vh] text-center">
+    <div className="p-4 sm:p-6 max-w-2xl mx-auto flex flex-col items-center justify-center min-h-[50vh] text-center">
       <div className="w-16 h-16 rounded-2xl bg-green-500/20 border border-green-500/30 flex items-center justify-center mb-4"><CheckCircle2 className="w-7 h-7 text-green-400"/></div>
       <h2 className="text-xl font-bold text-white mb-2">Thank you!</h2>
       <p className="text-white/40">Your feedback has been submitted. We genuinely appreciate it and use it to improve every month.</p>
@@ -32,7 +32,7 @@ export default function ClientSatisfactionPage() {
   );
 
   return (
-    <div className="p-6 max-w-2xl mx-auto">
+    <div className="p-4 sm:p-6 max-w-2xl mx-auto">
       <div className="mb-7"><h1 className="text-xl font-bold text-white">Satisfaction Survey</h1><p className="text-sm text-white/40 mt-1">Share how we're doing. Takes less than 2 minutes.</p></div>
       <form onSubmit={submit} className="space-y-5">
         {QUESTIONS.map(q=>(

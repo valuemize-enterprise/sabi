@@ -29,7 +29,7 @@ export default function ApiKeysPage() {
   };
 
   return (
-    <div className="p-6 max-w-3xl mx-auto">
+    <div className="p-4 sm:p-6 max-w-3xl mx-auto">
       <AgencyTopNav title="Settings"/>
       <div className="flex items-center gap-3 mb-8">
         <div className="w-10 h-10 rounded-xl bg-amber-500/20 border border-amber-500/30 flex items-center justify-center"><Key className="w-5 h-5 text-amber-400"/></div>

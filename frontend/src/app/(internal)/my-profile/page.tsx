@@ -149,7 +149,7 @@ export default function MyProfilePage() {
   const progressColor = completeness >= 80 ? 'bg-green-500' : completeness >= 50 ? 'bg-amber-500' : 'bg-red-500';
 
   return (
-    <div className="p-6 max-w-3xl mx-auto">
+    <div className="p-4 sm:p-6 max-w-3xl mx-auto">
       <AgencyTopNav title="My Profile" subtitle="How others see you on Sabi — your clients see this too"/>
 
       {/* Completeness bar */}

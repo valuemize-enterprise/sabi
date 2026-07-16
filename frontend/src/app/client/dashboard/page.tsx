@@ -129,13 +129,13 @@ export default function ClientDashboardPage() {
   }).length;
 
   return (
-    <div className="p-6 max-w-5xl mx-auto">
+    <div className="p-4 sm:p-6 max-w-5xl mx-auto">
 
       {/* Greeting header */}
-      <div className="flex items-start justify-between mb-7">
+      <div className="flex items-start justify-between mb-5 sm:mb-7">
         <div>
           <p className="text-white/30 text-sm">{greeting},</p>
-          <h1 className="text-2xl font-bold text-white mt-0.5">
+          <h1 className="text-xl sm:text-2xl font-bold text-white mt-0.5">
             {client?.full_name?.split(' ')[0] ?? 'Welcome'} 👋
           </h1>
           <p className="text-white/40 text-sm mt-1">{client?.job_title} · {brand.name}</p>
@@ -183,14 +183,14 @@ export default function ClientDashboardPage() {
       )}
 
       {/* ClarityScore™ hero card */}
-      <div className="sabi-card p-6 mb-5"
+      <div className="sabi-card p-4 sm:p-6 mb-4 sm:mb-5"
         style={{ background: 'linear-gradient(135deg, rgba(109,40,217,0.15) 0%, rgba(13,13,26,1) 60%)' }}>
-        <div className="flex items-center gap-6">
+        <div className="flex flex-col sm:flex-row items-center sm:items-center gap-4 sm:gap-6">
           <ClarityDonut score={score} />
           <div className="flex-1">
             <p className="text-xs text-purple-400/70 font-semibold uppercase tracking-widest mb-1">ClarityScore™</p>
             <div className="flex items-baseline gap-2 mb-1">
-              <span className="text-5xl font-black text-white">{score}</span>
+              <span className="text-3xl sm:text-5xl font-black text-white">{score}</span>
               <span className="text-lg text-white/30">/ 1000</span>
             </div>
             <p className="text-sm text-white/40">
@@ -313,7 +313,7 @@ export default function ClientDashboardPage() {
 
       {/* Quick navigation grid */}
       <h2 className="text-xs text-white/30 font-semibold uppercase tracking-widest mb-3">Quick Access</h2>
-      <div className="grid grid-cols-4 md:grid-cols-8 gap-3 mb-5">
+      <div className="grid grid-cols-4 md:grid-cols-8 gap-2 sm:gap-3 mb-5">
         <QuickLink href="/client/ask"          icon={Brain}     label="Ask ARIA"       color="purple" />
         <QuickLink href="/client/reports"      icon={FileText}  label="Reports"        color="blue"   />
         <QuickLink href="/client/goals"        icon={Target}    label="Goals"          color="green"  />

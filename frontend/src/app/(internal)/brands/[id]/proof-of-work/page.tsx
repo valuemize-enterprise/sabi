@@ -102,7 +102,7 @@ export default function BrandProofOfWorkPage() {
   if (loading) return <LoadingPage label="Loading proof of work…" />;
 
   return (
-    <div className="p-6 max-w-5xl mx-auto">
+    <div className="p-4 sm:p-6 max-w-5xl mx-auto">
       {perms.canAssignStaff && (<AgencyTopNav
         title="Proof of Work"
         subtitle="Everything the team has done for this brand"

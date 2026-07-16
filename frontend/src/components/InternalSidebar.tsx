@@ -9,17 +9,16 @@ import {
   ChevronDown, ChevronRight,
   DollarSign,
   Activity,
-  ListChecks, Lock, Trophy, Target, Palette
+  ListChecks, Lock, Trophy, Target, Palette, X
 } from 'lucide-react';
 import { useState } from 'react';
 import { useAgencyStore } from '@/lib/store';
+import { useMobileSidebar } from '@/lib/MobileSidebarContext';
 
-// ── Role helpers ──────────────────────────────────────────────
 const ADMIN_ROLES = ['super_admin','ceo','managing_director','creative_director','strategy_director','account_director'];
 const isAdmin = (role: string) => ADMIN_ROLES.includes(role);
 const isSA    = (role: string) => role === 'super_admin';
 
-// ── Nav definitions ───────────────────────────────────────────
 const SHARED_NAV = [
   { href:'/dashboard',      label:'Dashboard',     icon:LayoutDashboard },
   { href:'/ask',            label:'Ask ARIA',      icon:Brain, badge:'AI' },
@@ -49,7 +48,7 @@ const STAFF_NAV = [
   { href:'/my-work',   label:'My Work',   icon:PenLine   },
   { href:'/contribution-claims', label:'Claims', icon:ListChecks },
   { href:'/my-score', label:'My Score', icon:BarChart3 },
-  { href:'/leaderboard', label:'Leaderboard', icon:Trophy },
+  { href:'/leaderboard', label: 'Leaderboard', icon:Trophy },
   { href:'/my-profile',   label:'My Profile',   icon:Mail   },
 ];
 
@@ -71,6 +70,7 @@ export function InternalSidebar() {
   const admin    = isAdmin(role);
   const sa       = isSA(role);
   const [settingsOpen, setSettingsOpen] = useState(pathname.startsWith('/settings'));
+  const { open, close } = useMobileSidebar();
 
   const active = (href: string) => {
     if (href === '/dashboard') return pathname === '/dashboard';
@@ -87,6 +87,7 @@ export function InternalSidebar() {
 
   const NavLink = ({ href, label, icon: Icon, badge, locked }: { href:string; label:string; icon:any; badge?:string; locked?:boolean }) => (
     <Link href={href}
+      onClick={close}
       className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-all group ${
         active(href)
           ? 'bg-purple-600/20 text-purple-300 border border-purple-500/20'
@@ -99,8 +100,8 @@ export function InternalSidebar() {
     </Link>
   );
 
-  return (
-    <aside className="fixed left-0 top-0 h-screen w-60 bg-[#0a0a18] border-r border-white/5 flex flex-col z-40">
+  const sidebarContent = (
+    <>
       {/* Logo */}
       <div className="flex items-center gap-2.5 px-5 h-16 border-b border-white/5 flex-shrink-0">
         <div className="w-8 h-8 rounded-lg bg-purple-600/25 border border-purple-500/30 flex items-center justify-center">
@@ -118,15 +119,15 @@ export function InternalSidebar() {
             </div>
           </div>
         )}
+        <button onClick={close} className="ml-auto md:hidden text-white/40 hover:text-white p-1">
+          <X className="w-5 h-5" />
+        </button>
       </div>
 
       {/* Navigation */}
       <nav className="flex-1 overflow-y-auto py-3 px-3 space-y-0.5">
-
-        {/* Shared — all roles */}
         {SHARED_NAV.map(n => <NavLink key={n.href} {...n} />)}
 
-        {/* Admin/SA only section */}
         {admin && (
           <>
             <div className="pt-3 pb-1">
@@ -137,7 +138,6 @@ export function InternalSidebar() {
           </>
         )}
 
-        {/* Staff only section */}
         {!admin && (
           <>
             <div className="pt-3 pb-1">
@@ -147,7 +147,6 @@ export function InternalSidebar() {
           </>
         )}
 
-        {/* Settings (accordion) — admin and SA only */}
         {admin && (
           <div className="pt-2">
             <button onClick={() => setSettingsOpen(o => !o)}
@@ -162,6 +161,7 @@ export function InternalSidebar() {
               <div className="ml-4 pl-3 border-l border-white/5 mt-1 space-y-0.5">
                 {SETTINGS_SUB.filter(s => (!s.saOnly || sa) && (!s.roles || s.roles.includes(role))).map(s => (
                   <Link key={s.href} href={s.href}
+                    onClick={close}
                     className={`block px-3 py-1.5 text-xs rounded-lg transition-all ${
                       pathname === s.href
                         ? 'text-purple-400 bg-purple-500/10'
@@ -194,6 +194,25 @@ export function InternalSidebar() {
           </button>
         </div>
       </div>
-    </aside>
+    </>
+  );
+
+  return (
+    <>
+      {/* Desktop sidebar — always visible */}
+      <aside className="hidden md:flex fixed left-0 top-0 h-screen w-60 bg-[#0a0a18] border-r border-white/5 flex-col z-40">
+        {sidebarContent}
+      </aside>
+
+      {/* Mobile overlay sidebar */}
+      {open && (
+        <div className="md:hidden fixed inset-0 z-50">
+          <div className="absolute inset-0 bg-black/60" onClick={close} />
+          <aside className="absolute left-0 top-0 h-full w-64 bg-[#0a0a18] border-r border-white/5 flex flex-col animate-slide-in-left">
+            {sidebarContent}
+          </aside>
+        </div>
+      )}
+    </>
   );
 }

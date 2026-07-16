@@ -119,7 +119,7 @@ export default function BrandBriefsPage() {
   const pendingCount = briefs.filter(b => b.status === 'submitted').length;
 
   return (
-    <div className="p-6 max-w-4xl mx-auto">
+    <div className="p-4 sm:p-6 max-w-4xl mx-auto">
       <AgencyTopNav title="Client Briefs"
         breadcrumb={[{label:'Brands',href:'/brands'},{label:'Brand',href:`/brands/${brandId}`}]}/>
       <Link href={`/brands/${brandId}`} className="flex items-center gap-2 text-xs text-white/30 hover:text-white mb-5 transition-colors w-fit">

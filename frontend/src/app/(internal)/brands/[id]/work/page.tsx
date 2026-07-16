@@ -90,7 +90,7 @@ export default function BrandWorkPage() {
   const totalHours = visible.reduce((s, l) => s + (l.hours ?? 0), 0);
 
   return (
-    <div className="p-6 max-w-3xl mx-auto">
+    <div className="p-4 sm:p-6 max-w-3xl mx-auto">
       <button
         type="button"
         onClick={() => router.back()}

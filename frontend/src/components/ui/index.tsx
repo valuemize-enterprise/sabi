@@ -20,10 +20,10 @@ export function StatCard({
     teal:   'text-teal-400 bg-teal-500/10',
   };
   return (
-    <div className="sabi-card p-5 hover:border-white/10 transition-all">
-      <div className="flex items-start justify-between mb-3">
+    <div className="sabi-card p-3 sm:p-5 hover:border-white/10 transition-all">
+      <div className="flex items-start justify-between mb-2 sm:mb-3">
         {Icon && (
-          <div className={`w-9 h-9 rounded-lg flex items-center justify-center ${colors[color]}`}>
+          <div className={`w-8 h-8 sm:w-9 sm:h-9 rounded-lg flex items-center justify-center ${colors[color]}`}>
             <Icon className="w-4 h-4" />
           </div>
         )}
@@ -33,7 +33,7 @@ export function StatCard({
           </span>
         )}
       </div>
-      <p className="text-2xl font-bold text-white">{value}</p>
+      <p className="text-xl sm:text-2xl font-bold text-white">{value}</p>
       <p className="text-xs text-white/40 mt-1">{label}</p>
       {sub && <p className="text-xs text-white/25 mt-0.5">{sub}</p>}
     </div>
@@ -51,7 +51,7 @@ export function Badge({ label, color = 'purple' }: { label: string; color?: stri
     gray:   'bg-white/5 text-white/40 border-white/10',
   };
   return (
-    <span className={`inline-flex capitalize items-center text-xs px-2 py-0.5 rounded-full border font-medium ${colors[color] ?? colors.gray}`}>
+    <span className={`inline-flex capitalize items-center text-[10px] sm:text-xs px-1.5 sm:px-2 py-0.5 rounded-full border font-medium ${colors[color] ?? colors.gray}`}>
       {label}
     </span>
   );
@@ -65,10 +65,10 @@ export function EmptyState({
   action?: { label: string; onClick: () => void };
 }) {
   return (
-    <div className="flex flex-col items-center justify-center py-16 px-6 text-center">
+    <div className="flex flex-col items-center justify-center py-12 sm:py-16 px-4 sm:px-6 text-center">
       {Icon && (
-        <div className="w-14 h-14 rounded-2xl bg-white/3 border border-white/5 flex items-center justify-center mb-4">
-          <Icon className="w-6 h-6 text-white/20" />
+        <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-white/3 border border-white/5 flex items-center justify-center mb-4">
+          <Icon className="w-5 h-5 sm:w-6 sm:h-6 text-white/20" />
         </div>
       )}
       <p className="text-white/60 font-medium mb-1">{title}</p>
@@ -102,12 +102,12 @@ export function PageHeader({
   action?: React.ReactNode;
 }) {
   return (
-    <div className="flex items-start justify-between mb-7">
-      <div>
-        <h1 className="text-xl font-bold text-white">{title}</h1>
-        {subtitle && <p className="text-sm text-white/40 mt-1">{subtitle}</p>}
+    <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3 mb-5 sm:mb-7">
+      <div className="min-w-0">
+        <h1 className="text-lg sm:text-xl font-bold text-white">{title}</h1>
+        {subtitle && <p className="text-xs sm:text-sm text-white/40 mt-1">{subtitle}</p>}
       </div>
-      {action && <div>{action}</div>}
+      {action && <div className="flex-shrink-0">{action}</div>}
     </div>
   );
 }
@@ -121,10 +121,10 @@ export function TabBar({
   onChange: (id: string) => void;
 }) {
   return (
-    <div className="flex items-center gap-1 p-1 bg-white/3 rounded-xl border border-white/5 w-fit mb-6">
+    <div className="flex items-center gap-1 p-1 bg-white/3 rounded-xl border border-white/5 w-fit mb-5 sm:mb-6 overflow-x-auto">
       {tabs.map(t => (
         <button key={t.id} onClick={() => onChange(t.id)}
-          className={`px-4 py-2 text-sm rounded-lg transition-all ${
+          className={`px-3 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm rounded-lg transition-all whitespace-nowrap ${
             active === t.id ? 'bg-purple-600 text-white shadow-lg shadow-purple-500/20' : 'text-white/40 hover:text-white'
           }`}>
           {t.label}

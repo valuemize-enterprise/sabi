@@ -53,7 +53,7 @@ export default function MyScorePage() {
 
   if (loading) return <LoadingPage label="Loading your score…"/>;
   if (error) return (
-    <div className="p-6 max-w-2xl mx-auto">
+    <div className="p-4 sm:p-6 max-w-2xl mx-auto">
       <div className="sabi-card p-10 text-center">
         <AlertCircle className="w-8 h-8 text-red-400/50 mx-auto mb-3"/>
         <p className="text-white/40 text-sm">{error}</p>
@@ -66,7 +66,7 @@ export default function MyScorePage() {
   const trend = history.length >= 2 ? history[0].total - history[1].total : 0;
 
   return (
-    <div className="p-6 max-w-2xl mx-auto">
+    <div className="p-4 sm:p-6 max-w-2xl mx-auto">
       <AgencyTopNav title="My Score" subtitle={data?.scoreType === 'brand_admin' ? 'Your weekly Brand Admin scorecard' : 'Your weekly performance score'}/>
 
       {!latest ? (

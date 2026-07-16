@@ -77,10 +77,10 @@ export default function DashboardPage() {
   }, [isAdmin]);
 
   return (
-    <div className="p-6 max-w-6xl mx-auto">
+    <div className="p-4 sm:p-6 max-w-6xl mx-auto">
       {/* Header */}
-      <div className="mb-8">
-        <h1 className="text-2xl font-bold text-white">
+      <div className="mb-6 sm:mb-8">
+        <h1 className="text-xl sm:text-2xl font-bold text-white">
           {greeting}, {user?.full_name?.split(' ')[0]} 👋
         </h1>
         <p className="text-white/35 text-sm mt-1 capitalize">
@@ -97,7 +97,7 @@ export default function DashboardPage() {
         <>
           {/* ── Targets prompts ──────────────────────────── */}
           {targetsPrompt?.type === 'set_targets' && (
-            <div className="bg-amber-500/8 border border-amber-500/20 rounded-xl p-4 mb-6 flex items-center gap-3">
+            <div className="bg-amber-500/8 border border-amber-500/20 rounded-xl p-3 sm:p-4 mb-5 sm:mb-6 flex flex-col sm:flex-row items-start sm:items-center gap-3">
               <Calendar className="w-5 h-5 text-amber-400 flex-shrink-0"/>
               <div className="flex-1">
                 <p className="text-sm text-white font-medium">Set {targetsPrompt.year} Agency Targets</p>
@@ -109,7 +109,7 @@ export default function DashboardPage() {
             </div>
           )}
           {targetsPrompt?.type === 'midyear_review' && (
-            <div className="bg-purple-500/8 border border-purple-500/20 rounded-xl p-4 mb-6 flex items-center gap-3">
+            <div className="bg-purple-500/8 border border-purple-500/20 rounded-xl p-3 sm:p-4 mb-5 sm:mb-6 flex flex-col sm:flex-row items-start sm:items-center gap-3">
               <RefreshCw className="w-5 h-5 text-purple-400 flex-shrink-0"/>
               <div className="flex-1">
                 <p className="text-sm text-white font-medium">Mid-Year Review — April {targetsPrompt.year}</p>

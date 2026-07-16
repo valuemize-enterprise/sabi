@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useClientStore } from '@/lib/store';
+import { useMobileSidebar } from '@/lib/MobileSidebarContext';
 import {
   LayoutDashboard, Brain, FileText, Target, Users2, BarChart3,
   Calendar, Trophy, MessageCircle, Bell, Settings, HelpCircle,
@@ -10,7 +11,7 @@ import {
   Paperclip,
   CheckSquare,
   ClipboardList,
-  Palette
+  Palette, X
 } from 'lucide-react';
 
 const nav = [
@@ -38,18 +39,22 @@ export function ClientSidebar() {
   const pathname = usePathname();
   const { client, clearClient } = useClientStore();
   const brand = client?.brand;
+  const { open, close } = useMobileSidebar();
 
-  return (
-    <aside className="fixed left-0 top-0 h-screen w-60 bg-[#0a0a18] border-r border-white/5 flex flex-col z-40">
+  const sidebarContent = (
+    <>
       {/* Brand header */}
       <div className="flex items-center gap-3 px-4 h-16 border-b border-white/5">
         <div className="w-9 h-9 rounded-lg bg-purple-500/20 border border-purple-500/30 flex items-center justify-center text-sm font-bold text-purple-300 flex-shrink-0">
           {brand?.name?.[0] ?? 'B'}
         </div>
-        <div className="min-w-0">
+        <div className="min-w-0 flex-1">
           <p className="text-xs font-bold text-white truncate">{brand?.name ?? 'Your Brand'}</p>
           <p className="text-[10px] text-white/30 truncate">Powered by Cerebre</p>
         </div>
+        <button onClick={close} className="md:hidden text-white/40 hover:text-white p-1">
+          <X className="w-5 h-5" />
+        </button>
       </div>
 
       <nav className="flex-1 overflow-y-auto py-4 px-3 space-y-0.5">
@@ -57,6 +62,7 @@ export function ClientSidebar() {
           const active = href === '/client/dashboard' ? pathname === href : pathname.startsWith(href);
           return (
             <Link key={href} href={href}
+              onClick={close}
               className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-all group ${
                 active ? 'bg-purple-600/20 text-purple-300 border border-purple-500/20' : 'text-white/50 hover:text-white hover:bg-white/5'
               }`}>
@@ -83,6 +89,25 @@ export function ClientSidebar() {
           </button>
         </div>
       </div>
-    </aside>
+    </>
+  );
+
+  return (
+    <>
+      {/* Desktop sidebar */}
+      <aside className="hidden md:flex fixed left-0 top-0 h-screen w-60 bg-[#0a0a18] border-r border-white/5 flex-col z-40">
+        {sidebarContent}
+      </aside>
+
+      {/* Mobile overlay sidebar */}
+      {open && (
+        <div className="md:hidden fixed inset-0 z-50">
+          <div className="absolute inset-0 bg-black/60" onClick={close} />
+          <aside className="absolute left-0 top-0 h-full w-64 bg-[#0a0a18] border-r border-white/5 flex flex-col animate-slide-in-left">
+            {sidebarContent}
+          </aside>
+        </div>
+      )}
+    </>
   );
 }

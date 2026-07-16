@@ -51,7 +51,7 @@ export default function ClientStrategyReviewPage() {
 
   if (loading) return <LoadingPage label="Loading strategy…"/>;
   if (error && !strategy) return (
-    <div className="p-6 max-w-3xl mx-auto">
+    <div className="p-4 sm:p-6 max-w-3xl mx-auto">
       <div className="sabi-card p-10 text-center">
         <p className="text-white/40">{error}</p>
         <Link href="/client/strategies" className="text-purple-400 text-sm mt-3 block">← Back to Strategies</Link>
@@ -60,7 +60,7 @@ export default function ClientStrategyReviewPage() {
   );
 
   if (done) return (
-    <div className="p-6 max-w-3xl mx-auto">
+    <div className="p-4 sm:p-6 max-w-3xl mx-auto">
       <div className="sabi-card p-12 text-center">
         <div className={`w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 ${decision==='approved'?'bg-green-500/20 border border-green-500/30':'bg-amber-500/20 border border-amber-500/30'}`}>
           {decision==='approved' ? <Check className="w-8 h-8 text-green-400"/> : <MessageSquare className="w-8 h-8 text-amber-400"/>}
@@ -82,7 +82,7 @@ export default function ClientStrategyReviewPage() {
   );
 
   return (
-    <div className="p-6 max-w-3xl mx-auto">
+    <div className="p-4 sm:p-6 max-w-3xl mx-auto">
       <Link href="/client/strategies" className="flex items-center gap-2 text-xs text-white/30 hover:text-white mb-5 transition-colors w-fit">
         <ArrowLeft className="w-3.5 h-3.5"/> Back to Strategies
       </Link>

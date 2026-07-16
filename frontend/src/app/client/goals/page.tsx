@@ -15,7 +15,7 @@ export default function ClientGoalsPage() {
   const statusColor: Record<string, string> = { active: 'purple', achieved: 'green', missed: 'red', paused: 'gray' };
 
   return (
-    <div className="p-6 max-w-4xl mx-auto">
+    <div className="p-4 sm:p-6 max-w-4xl mx-auto">
       <div className="mb-7">
         <h1 className="text-xl font-bold text-white">Goals</h1>
         <p className="text-sm text-white/40 mt-1">Track your brand's KPIs and performance targets</p>

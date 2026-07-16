@@ -1,9 +1,10 @@
 'use client';
 
 import Link from 'next/link';
-import { Bell, ChevronLeft } from 'lucide-react';
+import { Bell, ChevronLeft, Menu } from 'lucide-react';
 import { useAgencyStore } from '@/lib/store';
 import { usePathname } from 'next/navigation';
+import { useMobileSidebar } from '@/lib/MobileSidebarContext';
 
 interface TopNavProps {
   title?:    string;
@@ -14,23 +15,27 @@ interface TopNavProps {
 export function TopNav({ title, subtitle, back }: TopNavProps) {
   const { user } = useAgencyStore();
   const pathname  = usePathname();
+  const { toggle } = useMobileSidebar();
 
   return (
-    <header className="h-14 border-b border-white/5 flex items-center justify-between px-6 bg-[#0d0d1a]/80 backdrop-blur-sm sticky top-0 z-30">
-      {/* Left: breadcrumb / title */}
+    <header className="h-14 border-b border-white/5 flex items-center justify-between px-4 md:px-6 bg-[#0d0d1a]/80 backdrop-blur-sm sticky top-0 z-30">
+      {/* Left: hamburger + breadcrumb / title */}
       <div className="flex items-center gap-3 min-w-0">
+        <button onClick={toggle} className="md:hidden text-white/50 hover:text-white p-1 -ml-1">
+          <Menu className="w-5 h-5" />
+        </button>
         {back && (
           <Link href={back.href}
             className="flex items-center gap-1.5 text-xs text-white/30 hover:text-white transition-colors flex-shrink-0">
             <ChevronLeft className="w-3.5 h-3.5" />
-            {back.label}
+            <span className="hidden sm:inline">{back.label}</span>
           </Link>
         )}
         {back && title && <span className="text-white/15 text-sm">/</span>}
         {title && (
           <div className="min-w-0">
             <h1 className="text-sm font-semibold text-white truncate">{title}</h1>
-            {subtitle && <p className="text-xs text-white/35 truncate">{subtitle}</p>}
+            {subtitle && <p className="text-xs text-white/35 truncate hidden sm:block">{subtitle}</p>}
           </div>
         )}
       </div>
@@ -50,8 +55,6 @@ export function TopNav({ title, subtitle, back }: TopNavProps) {
   );
 }
 
-// ── Backward-compatible alias ──────────────────────────────────
-// Pages imported as `AgencyTopNav` — this keeps them working
 export const AgencyTopNav = TopNav;
 
 export default TopNav;

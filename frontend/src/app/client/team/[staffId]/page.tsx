@@ -44,7 +44,7 @@ export default function StaffProfilePage() {
 
   // ── Loading ────────────────────────────────────────────────
   if (loading) return (
-    <div className="p-6 max-w-2xl mx-auto">
+    <div className="p-4 sm:p-6 max-w-2xl mx-auto">
       <div className="flex items-center justify-center h-48">
         <Loader2 className="w-5 h-5 text-purple-400 animate-spin" />
       </div>
@@ -53,7 +53,7 @@ export default function StaffProfilePage() {
 
   // ── Error ──────────────────────────────────────────────────
   if (error || !profile) return (
-    <div className="p-6 max-w-2xl mx-auto">
+    <div className="p-4 sm:p-6 max-w-2xl mx-auto">
       <Link href="/client/team"
         className="flex items-center gap-2 text-xs text-white/30 hover:text-white mb-5 transition-colors w-fit">
         <ArrowLeft className="w-3.5 h-3.5" /> Back to Team
@@ -72,7 +72,7 @@ export default function StaffProfilePage() {
 
   // ── Profile ────────────────────────────────────────────────
   return (
-    <div className="p-6 max-w-2xl mx-auto">
+    <div className="p-4 sm:p-6 max-w-2xl mx-auto">
       <Link href="/client/team"
         className="flex items-center gap-2 text-xs text-white/30 hover:text-white mb-5 transition-colors w-fit">
         <ArrowLeft className="w-3.5 h-3.5" /> Back to Team

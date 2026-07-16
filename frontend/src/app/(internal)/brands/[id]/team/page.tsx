@@ -166,7 +166,7 @@ export default function BrandTeamPage() {
     : available;
 
   return (
-    <div className="p-6 max-w-4xl mx-auto">
+    <div className="p-4 sm:p-6 max-w-4xl mx-auto">
       {perms.canAssignStaff && (
       <AgencyTopNav title="Brand Team"
         breadcrumb={[{ label: 'Brands', href: '/brands' }, { label: 'Brand', href: `/brands/${brandId}` }]} />)}

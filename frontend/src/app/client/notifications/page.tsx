@@ -18,7 +18,7 @@ export default function ClientNotificationsPage() {
   const unread = notifs.filter(n=>!n.read).length;
 
   return (
-    <div className="p-6 max-w-3xl mx-auto">
+    <div className="p-4 sm:p-6 max-w-3xl mx-auto">
       <div className="flex items-start justify-between mb-7">
         <div><h1 className="text-xl font-bold text-white">Notifications</h1>{unread>0&&<p className="text-sm text-white/40 mt-1">{unread} unread</p>}</div>
         {unread>0&&<button onClick={()=>setNotifs(p=>p.map(n=>({...n,read:true})))} className="flex items-center gap-1.5 text-xs text-purple-400 hover:text-purple-300 transition-colors"><CheckCheck className="w-3.5 h-3.5"/>Mark all read</button>}

@@ -70,7 +70,7 @@ export default function ClientTasksPage() {
   if (loading) return <LoadingPage label="Loading your brand's work log…"/>;
 
   return (
-    <div className="p-6 max-w-4xl mx-auto">
+    <div className="p-4 sm:p-6 max-w-4xl mx-auto">
       <div className="mb-7">
         <h1 className="text-xl font-bold text-white">Work Done for You</h1>
         <p className="text-sm text-white/40 mt-1">

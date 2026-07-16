@@ -149,7 +149,7 @@ export default function BrandTasksPage() {
   if (loading) return <LoadingPage label="Loading tasks…" />;
 
   return (
-    <div className="p-6 max-w-7xl mx-auto">
+    <div className="p-4 sm:p-6 max-w-7xl mx-auto">
       {perms.canAssignStaff && (
       <AgencyTopNav title="Tasks" breadcrumb={[{label:'Brands',href:'/brands'},{label:'Brand',href:`/brands/${brandId}`}]}/>)}
  <button

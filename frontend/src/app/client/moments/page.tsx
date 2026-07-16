@@ -16,7 +16,7 @@ const TYPE_COLORS: Record<string,string> = { cultural:'purple',national:'green',
 
 export default function ClientMomentsPage() {
   return (
-    <div className="p-6 max-w-4xl mx-auto">
+    <div className="p-4 sm:p-6 max-w-4xl mx-auto">
       <div className="mb-7">
         <div className="flex items-center gap-2 mb-1">
           <h1 className="text-xl font-bold text-white">MomentMap™</h1>

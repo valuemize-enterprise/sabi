@@ -41,7 +41,7 @@ export default function ClientBrandIdentityPage() {
 
   if (loading) return <LoadingPage label="Loading brand identity…" />;
   if (!identity) return (
-    <div className="p-6 max-w-3xl mx-auto">
+    <div className="p-4 sm:p-6 max-w-3xl mx-auto">
       <div className="sabi-card p-10 text-center">
         <Palette className="w-10 h-10 text-white/15 mx-auto mb-3"/>
         <p className="text-white/40 text-sm">Brand identity not available yet.</p>
@@ -83,7 +83,7 @@ export default function ClientBrandIdentityPage() {
   );
 
   return (
-    <div className="p-6 max-w-3xl mx-auto">
+    <div className="p-4 sm:p-6 max-w-3xl mx-auto">
       {/* Header card */}
       <div className="sabi-card p-6 mb-5">
         <div className="flex items-start gap-5">

@@ -37,7 +37,7 @@ export default function LeaderboardPage() {
   const list = data?.leaderboard ?? [];
 
   return (
-    <div className="p-6 max-w-2xl mx-auto">
+    <div className="p-4 sm:p-6 max-w-2xl mx-auto">
       <AgencyTopNav title="Leaderboard" subtitle="Recognizing consistent contribution — updated weekly"/>
 
       {/* Tabs */}

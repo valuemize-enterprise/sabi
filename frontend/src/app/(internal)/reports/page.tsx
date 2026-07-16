@@ -116,7 +116,7 @@ export default function ReportsPage() {
   const selBrand = brands.find(b=>b.id===form.brand_id);
 
   return (
-    <div className="p-6 max-w-5xl mx-auto">
+    <div className="p-4 sm:p-6 max-w-5xl mx-auto">
       <AgencyTopNav title="Reports" subtitle="Brand performance reports" />
 
       <div className="flex items-start justify-between mb-6 flex-wrap gap-3">

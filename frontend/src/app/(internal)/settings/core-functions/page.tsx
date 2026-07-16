@@ -97,7 +97,7 @@ export default function CoreFunctionsPage() {
   }
 
   return (
-    <div className="p-6 max-w-4xl mx-auto">
+    <div className="p-4 sm:p-6 max-w-4xl mx-auto">
       <AgencyTopNav title="Core Functions" subtitle="Define what's expected of each role — this is what contribution claims are measured against"/>
 
       <div className="bg-purple-500/6 border border-purple-500/15 rounded-xl p-4 mb-6">

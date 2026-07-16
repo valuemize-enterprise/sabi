@@ -75,7 +75,7 @@ export default function SuperAdminAuditPage() {
   };
 
   return (
-    <div className="p-6 max-w-7xl mx-auto">
+    <div className="p-4 sm:p-6 max-w-7xl mx-auto">
       <div className="flex items-start justify-between mb-8">
         <div>
           <p className="text-xs text-red-400/60 font-semibold uppercase tracking-widest mb-1">Security & Compliance</p>
