@@ -15,6 +15,7 @@ const router   = require('express').Router();
 const supabase = require('../../config/supabase');
 const { authenticate } = require('../../middleware/auth.middleware');
 const { sendSuccess, sendError } = require('../../utils/response.utils');
+const notify = require('../../services/notification-triggers.service');
 
 const GLOBAL_ADMIN_ROLES = ['super_admin','ceo','managing_director','creative_director','strategy_director','account_director'];
 const isGlobalAdmin = (role) => GLOBAL_ADMIN_ROLES.includes(role);
@@ -191,6 +192,8 @@ router.put('/:id/verify', authenticate, async (req, res, next) => {
       metadata: { claim_id: claim.id }, is_read: false,
     });
 
+    notify.onClaimResolved({ id: data.id, title: data.title, user_id: data.staff_id, brand_id: data.brand_id }, true, points_awarded, review_note);
+
     sendSuccess(res, { claim: data }, 'Claim verified');
   } catch (err) { next(err); }
 });
@@ -223,6 +226,8 @@ router.put('/:id/reject', authenticate, async (req, res, next) => {
       body: `${req.user.full_name}: "${review_note.trim()}"`,
       metadata: { claim_id: claim.id }, is_read: false,
     });
+
+    notify.onClaimResolved({ id: data.id, title: data.title, user_id: data.staff_id, brand_id: data.brand_id }, false, 0, review_note.trim());
 
     sendSuccess(res, { claim: data }, 'Claim rejected with feedback');
   } catch (err) { next(err); }

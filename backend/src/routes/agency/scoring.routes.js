@@ -16,6 +16,7 @@ const { authenticate } = require('../../middleware/auth.middleware');
 const { sendSuccess, sendError } = require('../../utils/response.utils');
 const { auditLog } = require('../../middleware/logger.middleware');
 const scoringService = require('../../services/scoring.service');
+const notify = require('../../services/notification-triggers.service');
 
 // ── GET /api/agency/scores/mine ────────────────────────────────
 router.get('/mine', authenticate, async (req, res, next) => {
@@ -89,6 +90,8 @@ router.patch('/config', authenticate, async (req, res, next) => {
       action: 'UPDATE_SCORING_CONFIG', resourceType: 'scoring_config', resourceId: '1',
       details: { before, after: data }, req,
     });
+
+    notify.onSensitiveAction({ actionLabel: 'Scoring weights changed', actorName: req.user.full_name, details: `Updated: ${Object.keys(updates).filter(k => k !== 'updated_by' && k !== 'updated_at').join(', ')}` });
 
     sendSuccess(res, { config: data }, 'Scoring weights updated. Future weeks use the new weights — past scores are unaffected.');
   } catch (err) { next(err); }

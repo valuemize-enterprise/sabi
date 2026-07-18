@@ -12,6 +12,7 @@ const supabase = require('../../config/supabase');
 const { authenticateClient } = require('../../middleware/auth.middleware');
 const { sendSuccess, sendError } = require('../../utils/response.utils');
 const scoringService = require('../../services/scoring.service');
+const notify         = require('../../services/notification-triggers.service');
 
 // ── GET /api/client/satisfaction/prompt-status ───────────────
 // Checks if this client already rated this week — powers the dashboard prompt
@@ -81,6 +82,8 @@ router.post('/', authenticateClient, async (req, res, next) => {
       }
       throw error;
     }
+
+    notify.onSatisfactionSubmitted({ id: data.id, brand_id: req.client.brand_id, rating: nps_score, comment });
 
     sendSuccess(res, data, 'Thank you for your feedback', 201);
   } catch (err) { next(err); }

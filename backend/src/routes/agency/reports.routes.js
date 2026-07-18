@@ -18,6 +18,7 @@ const { sendSuccess, sendError, sendPaginated } = require('../../utils/response.
 const { auditLog }     = require('../../middleware/logger.middleware');
 const narrativeService = require('../../services/aria/narrative.service');
 const emailService = require('../../services/email.service');
+const notify       = require('../../services/notification-triggers.service');
 
 // GET /api/agency/reports
 router.get('/', authenticate, async (req, res, next) => {
@@ -125,6 +126,8 @@ router.post('/:id/publish', authenticate, requirePermission('PUBLISH_REPORT'), a
     if (error) throw error;
     await auditLog({ actorId: req.user.id, actorEmail: req.user.email, actorRole: req.user.role,
       action: 'PUBLISH_REPORT', resourceType: 'report', resourceId: req.params.id, req });
+
+    notify.onReportPublished({ id: data.id, title: data.title, brand_id: data.brand_id, period_label: data.period_start ? `${data.period_start} to ${data.period_end}` : '' });
 
     const { data: brand } = await supabase
       .from('brands')

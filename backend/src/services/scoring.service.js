@@ -10,6 +10,7 @@
 'use strict';
 
 const supabase = require('../config/supabase');
+const notify   = require('./notification-triggers.service');
 
 const GLOBAL_ADMIN_ROLES = ['super_admin','ceo','managing_director','creative_director','strategy_director','account_director'];
 
@@ -224,6 +225,7 @@ async function computeMissingScores() {
   const config = await getConfig();
   const targetWeek = lastCompletedWeekStart();
   const targetWeekStr = toDateStr(targetWeek);
+  const computedRows = [];
 
   // Staff scores
   const { data: staff } = await supabase.from('users').select('id').eq('is_active', true);
@@ -236,6 +238,10 @@ async function computeMissingScores() {
       user_id: s.id, score_type: 'staff', week_start: targetWeekStr,
       components: result.components, total: result.total, excluded: result.excluded,
     }, { onConflict: 'user_id,score_type,week_start' });
+    if (!result.excluded) {
+      const rolling = await getRollingAverage(s.id, 'staff');
+      computedRows.push({ user_id: s.id, total: result.total, rolling_avg: rolling || result.total });
+    }
   }
 
   // Brand Admin scores (one per brand_admin assignment — a person can be BA of multiple brands)
@@ -249,7 +255,13 @@ async function computeMissingScores() {
       user_id: ba.staff_id, score_type: 'brand_admin', week_start: targetWeekStr,
       components: result.components, total: result.total, excluded: result.excluded,
     }, { onConflict: 'user_id,score_type,week_start' });
+    if (!result.excluded) {
+      const rolling = await getRollingAverage(ba.staff_id, 'brand_admin');
+      computedRows.push({ user_id: ba.staff_id, total: result.total, rolling_avg: rolling || result.total });
+    }
   }
+
+  if (computedRows.length > 0) notify.onScoresPublished(computedRows);
 
   return { computedWeek: targetWeekStr };
 }

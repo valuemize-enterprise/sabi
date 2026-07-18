@@ -14,6 +14,7 @@ const supabase = require('../../config/supabase');
 const { authenticate } = require('../../middleware/auth.middleware');
 const { sendSuccess, sendError } = require('../../utils/response.utils');
 const { auditLog } = require('../../middleware/logger.middleware');
+const notify       = require('../../services/notification-triggers.service');
 
 const GLOBAL_ADMIN_ROLES = ['super_admin','ceo','managing_director','creative_director','strategy_director','account_director'];
 const isGlobalAdmin = (role) => GLOBAL_ADMIN_ROLES.includes(role);
@@ -72,6 +73,8 @@ router.put('/:id/verify', authenticate, async (req, res, next) => {
       details: { title: task.title }, req,
     });
 
+    notify.onTaskVerified({ id: task.id, title: task.title, assignee_id: task.assignee_id, brand_id: task.brand_id }, req.user.full_name);
+
     sendSuccess(res, { task: data }, 'Task verified');
   } catch (err) { next(err); }
 });
@@ -107,6 +110,8 @@ router.put('/:id/reject-verification', authenticate, async (req, res, next) => {
         is_read:  false,
       });
     }
+
+    notify.onTaskRejected({ id: task.id, title: task.title, assignee_id: task.assignee_id, brand_id: task.brand_id }, req.user.full_name, reason.trim());
 
     sendSuccess(res, { task: data }, 'Task sent back for revision');
   } catch (err) { next(err); }

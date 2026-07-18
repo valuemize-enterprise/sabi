@@ -12,6 +12,7 @@ const router   = require('express').Router();
 const supabase = require('../../config/supabase');
 const { authenticate } = require('../../middleware/auth.middleware');
 const { sendSuccess, sendError, sendPaginated } = require('../../utils/response.utils');
+const notify = require('../../services/notification-triggers.service');
 
 const ADMIN_ROLES = ['super_admin','ceo','managing_director','creative_director','strategy_director','account_director'];
 
@@ -107,6 +108,8 @@ router.put('/:id/status', authenticate, async (req, res, next) => {
       });
     }
 
+    notify.onBriefStatusChanged({ id: data.id, title: data.title, brand_id: data.brand_id }, status, admin_notes);
+
     sendSuccess(res, { brief: data }, 'Brief status updated');
   } catch (err) { next(err); }
 });
@@ -159,6 +162,8 @@ router.post('/:id/convert-task', authenticate, async (req, res, next) => {
         is_read:  false,
       });
     }
+
+    notify.onTaskAssigned({ id: task.id, title: task.title, brand_id: brief.brand_id, assignee_id: assignee_id || null, strategy_id: strategy_id || null }, req.user.full_name);
 
     sendSuccess(res, { task }, 'Brief converted to task', 201);
   } catch (err) { next(err); }

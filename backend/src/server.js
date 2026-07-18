@@ -71,6 +71,8 @@ const saAudit      = require('./routes/super-admin/audit.routes');
 const saClients    = require('./routes/super-admin/clients.routes');         // NEW
 const saSettings   = require('./routes/super-admin/settings.routes');
 
+const systemNotifications = require('./routes/system.notifications.routes');
+
 const agencyProfileRoutes      = require('./routes/agency/profile.routes');
 const agencyBrandIdentityRoutes= require('./routes/agency/brand-identity.routes');
 
@@ -182,6 +184,9 @@ app.use('/api/super-admin/audit',     saAudit);
 app.use('/api/super-admin/clients',   saClients);         // NEW
 app.use('/api/super-admin/settings',  saSettings);
 
+// ── System Notifications (sweep + test) ──────────────────────
+app.use('/api/system/notifications',  systemNotifications);
+
 
 app.use('/api/agency/briefs',           agencyBriefs);
 app.use('/api/agency/tasks',            agencyTasksV2);      // replaces old agencyTasks
@@ -235,6 +240,17 @@ const server = app.listen(PORT, () => {
 // Render cold-start: keep-alive on incoming requests
 server.keepAliveTimeout = 65_000;
 server.headersTimeout   = 66_000;
+
+// ── Fallback sweeper while server is awake (hourly) ──────────
+// Primary trigger should still be the cron ping — this only covers gaps.
+const { runSweep } = require('./services/notification-sweeper.service');
+let lastSweep = 0;
+setInterval(() => {
+  if (Date.now() - lastSweep > 50 * 60 * 1000) {
+    lastSweep = Date.now();
+    runSweep().catch(e => console.error('[sweep]', e.message));
+  }
+}, 10 * 60 * 1000);
 
 // Graceful shutdown
 process.on('SIGTERM', () => {

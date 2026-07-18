@@ -16,6 +16,7 @@ const { authenticate, requirePermission } = require('../../middleware/auth.middl
 const { sendSuccess, sendError, sendPaginated } = require('../../utils/response.utils');
 const { auditLog }     = require('../../middleware/logger.middleware');
 const velocityService  = require('../../services/aria/velocity-tracker.service');
+const notify           = require('../../services/notification-triggers.service');
 
 router.get('/', authenticate, async (req, res, next) => {
   try {
@@ -77,6 +78,9 @@ router.put('/:id', authenticate, requirePermission('EDIT_GOAL'), async (req, res
 
     const { data, error } = await supabase.from('goals').update(updates).eq('id', req.params.id).select().single();
     if (error) throw error;
+    if (updates.status === 'achieved' || updates.status === 'at_risk') {
+      notify.onGoalStatusChanged({ id: data.id, title: data.title, brand_id: data.brand_id }, updates.status);
+    }
     sendSuccess(res, { goal: data });
   } catch (err) { next(err); }
 });

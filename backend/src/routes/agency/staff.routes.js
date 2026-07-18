@@ -19,6 +19,7 @@ const { sendSuccess, sendError, sendPaginated } = require('../../utils/response.
 const { auditLog } = require('../../middleware/logger.middleware');
 const { canManage } = require('../../config/roles.config');
 const emailService = require('../../services/email.service');
+const notify = require('../../services/notification-triggers.service');
 
 router.get('/', authenticate, requirePermission('VIEW_ALL_STAFF'), async (req, res, next) => {
   try {
@@ -57,6 +58,8 @@ router.post('/', authenticate, requirePermission('CREATE_STAFF'), async (req, re
 
     await auditLog({ actorId: req.user.id, actorEmail: req.user.email, actorRole: req.user.role,
       action: 'CREATE_STAFF', resourceType: 'user', resourceId: data.id, details: { email, role }, req });
+
+    notify.onSensitiveAction({ actionLabel: 'Staff created', actorName: req.user.full_name, details: `${full_name} (${role})` });
 
     emailService.sendWelcomeStaff({
       name: data.full_name,

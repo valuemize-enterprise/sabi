@@ -16,6 +16,7 @@ const { authenticate, requirePermission } = require('../../middleware/auth.middl
 const { sendSuccess, sendError, sendPaginated } = require('../../utils/response.utils');
 const { auditLog }     = require('../../middleware/logger.middleware');
 const clarityService   = require('../../services/aria/clarity-score.service');
+const notify           = require('../../services/notification-triggers.service');
 
 // GET /api/agency/brands
 router.get('/', authenticate, async (req, res, next) => {
@@ -118,11 +119,14 @@ router.put('/:id', authenticate, requirePermission('EDIT_BRAND'), async (req, re
 // DELETE /api/agency/brands/:id
 router.delete('/:id', authenticate, requirePermission('DELETE_BRAND'), async (req, res, next) => {
   try {
+    const { data: brand } = await supabase.from('brands').select('name').eq('id', req.params.id).single();
     const { error } = await supabase.from('brands').delete().eq('id', req.params.id);
     if (error) throw error;
 
     await auditLog({ actorId: req.user.id, actorEmail: req.user.email, actorRole: req.user.role,
       action: 'DELETE_BRAND', resourceType: 'brand', resourceId: req.params.id, req });
+
+    notify.onSensitiveAction({ actionLabel: 'Brand deleted', actorName: req.user.full_name, details: `Brand: ${brand?.name || req.params.id}` });
 
     sendSuccess(res, null, 'Brand deleted');
   } catch (err) { next(err); }

@@ -14,6 +14,7 @@ const supabase = require('../../config/supabase');
 const { authenticateClient } = require('../../middleware/auth.middleware');
 const { sendSuccess, sendError, sendPaginated } = require('../../utils/response.utils');
 const ariaService = require('../../services/aria/aria-strategy.service');
+const notify      = require('../../services/notification-triggers.service');
 
 // ── Helper: create notification for all brand admins ─────────
 async function notifyBrandAdmins(brandId, title, body, metadata) {
@@ -128,8 +129,9 @@ router.post('/', authenticateClient, async (req, res, next) => {
             .update({ metadata: insights })
             .eq('id', brief.id);
         }
+        notify.onBriefSubmitted(brief, insights);
       })
-      .catch(() => {});
+      .catch(() => { notify.onBriefSubmitted(brief, null); });
 
     sendSuccess(res, { brief }, 'Brief submitted successfully', 201);
   } catch (err) { next(err); }

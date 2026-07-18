@@ -13,6 +13,7 @@ const router   = require('express').Router();
 const supabase = require('../../config/supabase');
 const { authenticate } = require('../../middleware/auth.middleware');
 const { sendSuccess, sendError } = require('../../utils/response.utils');
+const notify = require('../../services/notification-triggers.service');
 
 const GLOBAL_ADMIN_ROLES = ['super_admin','ceo','managing_director','creative_director','strategy_director','account_director'];
 const isGlobalAdmin = (role) => GLOBAL_ADMIN_ROLES.includes(role);
@@ -89,6 +90,7 @@ router.post('/', authenticate, async (req, res, next) => {
       .single();
 
     if (error) throw error;
+    if (is_creative_of_week) notify.onCreativeOfWeek(staff_id, note || 'Creative work');
     sendSuccess(res, { rating: data }, 'Rating submitted');
   } catch (err) { next(err); }
 });

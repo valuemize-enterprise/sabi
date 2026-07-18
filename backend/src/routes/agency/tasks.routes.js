@@ -15,6 +15,7 @@ const { authenticate } = require('../../middleware/auth.middleware');
 const { sendSuccess, sendError, sendPaginated } = require('../../utils/response.utils');
 const { auditLog }    = require('../../middleware/logger.middleware');
 const povService      = require('../../services/aria/proof-of-value.service');
+const notify          = require('../../services/notification-triggers.service');
 
 router.get('/', authenticate, async (req, res, next) => {
   try {
@@ -46,6 +47,7 @@ router.post('/', authenticate, async (req, res, next) => {
     }).select().single();
 
     if (error) throw error;
+    notify.onTaskAssigned(data, req.user.full_name);
     sendSuccess(res, { task: data }, 'Task created', 201);
   } catch (err) { next(err); }
 });
@@ -58,6 +60,7 @@ router.put('/:id', authenticate, async (req, res, next) => {
 
     const { data, error } = await supabase.from('tasks').update(updates).eq('id', req.params.id).select().single();
     if (error) throw error;
+    if (data.assignee_id) notify.onTaskAssigned(data, req.user.full_name);
     sendSuccess(res, { task: data });
   } catch (err) { next(err); }
 });

@@ -16,6 +16,7 @@ const supabase        = require('../../config/supabase');
 const { authenticate } = require('../../middleware/auth.middleware');
 const { sendSuccess, sendError, sendPaginated } = require('../../utils/response.utils');
 const { auditLog }    = require('../../middleware/logger.middleware');
+const notify          = require('../../services/notification-triggers.service');
 
 const VALID_TYPES = ['content','social','paid','seo','email','brand','campaign','quarterly','annual','other'];
 const VALID_STATUS = ['draft','active','paused','completed','archived'];
@@ -202,6 +203,8 @@ router.put('/:id/send-to-client', authenticate, async (req, res, next) => {
       action: 'SEND_STRATEGY_TO_CLIENT', resourceType: 'strategy', resourceId: data.id,
       details: { brand_id: strategy.brand_id }, req,
     });
+
+    notify.onStrategySubmitted({ id: data.id, title: data.title, brand_id: strategy.brand_id });
 
     sendSuccess(res, { strategy: data }, 'Strategy sent to client for review');
   } catch (err) { next(err); }
