@@ -9,13 +9,13 @@ import {
   ChevronDown, ChevronRight,
   DollarSign,
   Activity,
-  ListChecks, Lock, Trophy, Target, Palette, X
+  ListChecks, Lock, Trophy, Target, Palette, X, Command
 } from 'lucide-react';
 import { useState } from 'react';
 import { useAgencyStore } from '@/lib/store';
 import { useMobileSidebar } from '@/lib/MobileSidebarContext';
 
-const ADMIN_ROLES = ['super_admin','ceo','managing_director','creative_director','strategy_director','account_director'];
+const ADMIN_ROLES = ['super_admin','ceo','managing_director','creative_director','strategy_director','account_director','brand_admin','hr'];
 const isAdmin = (role: string) => ADMIN_ROLES.includes(role);
 const isSA    = (role: string) => role === 'super_admin';
 
@@ -26,6 +26,7 @@ const SHARED_NAV = [
 ];
 
 const ADMIN_NAV = [
+  { href: '/command',  label: 'Command',  icon: Command,       roles: ['super_admin','admin','md','brand_admin'] },
   { href: '/brands',   label: 'Brands',   icon: Building2      },
   { href: '/staff',    label: 'Staff',     icon: Users          },
   { href: '/finance',  label: 'Finance',   icon: DollarSign     },
@@ -37,6 +38,7 @@ const ADMIN_NAV = [
   { href: '/leaderboard', label: 'Leaderboard', icon: Trophy },
   { href: '/audit',    label: 'Audit Log', icon: ClipboardList  },
   { href: '/pulse',    label: 'Pulse', icon: Activity  },
+  { href: '/people',   label: 'People', icon: Users, roles: ['super_admin','admin','md','hr'] },
 ];
 
 const SA_NAV = [

@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 import { useAgencyStore } from '@/lib/store';
 import { AgencyTopNav } from '@/components/internal/AgencyTopNav';
+import ProfileClaimBanner from '@/components/people/ProfileClaimBanner';
 
 const SKILL_SUGGESTIONS = [
   'Brand Strategy','Content Writing','Copywriting','Social Media Management',
@@ -51,6 +52,8 @@ export default function MyProfilePage() {
   const [error, setError]             = useState('');
   const [completeness, setCompleteness] = useState(0);
   const [coreFunctions, setCoreFunctions] = useState<any[]>([]);
+  const [profileState, setProfileState] = useState('published');
+  const [syncedFacts, setSyncedFacts] = useState<{display_name?:string; role_title?:string; department?:string; start_date?:string}>({});
   const fileRef = useRef<HTMLInputElement>(null);
 
   const setF = (k: string, v: any) => setForm(p => ({ ...p, [k]: v }));
@@ -69,12 +72,25 @@ export default function MyProfilePage() {
       setCerts(p.certifications ?? []);
       setPortfolio(p.portfolio_links ?? []);
       setAvatarUrl(p.avatar_url ?? '');
+      setProfileState(p.state ?? 'published');
     }).catch(() => {});
 
     api('/api/agency/core-functions/mine')
       .then((r:any) => setCoreFunctions(r.data?.roleFunctions ?? []))
       .catch(() => {});
-  }, []);
+
+    if (user?.id) {
+      api(`/api/people/${user.id}/file`).then((r: any) => {
+        const rec = r.record ?? {};
+        setSyncedFacts({
+          display_name: rec.display_name,
+          role_title: rec.role_title,
+          department: rec.department,
+          start_date: rec.start_date,
+        });
+      }).catch(() => {});
+    }
+  }, [user?.id]);
 
   // Completeness score
   useEffect(() => {
@@ -152,6 +168,17 @@ export default function MyProfilePage() {
     <div className="p-4 sm:p-6 max-w-3xl mx-auto">
       <AgencyTopNav title="My Profile" subtitle="How others see you on Sabi — your clients see this too"/>
 
+      <ProfileClaimBanner
+        userId={user?.id ?? ''}
+        state={profileState}
+        hasPhoto={Boolean(avatarUrl)}
+        hasBio={Boolean(form.bio)}
+        onChanged={() => api('/api/agency/staff/me/profile').then((r: any) => {
+          const p = r.data?.profile ?? r.data ?? {};
+          setProfileState(p.state ?? 'published');
+        })}
+      />
+
       {/* Completeness bar */}
       <div className="sabi-card p-5 mb-6">
         <div className="flex items-center justify-between mb-2">
@@ -213,6 +240,45 @@ export default function MyProfilePage() {
           </div>
         </div>
       </div>
+
+      {/* ── Synced from HR (locked) ──────────────────────────── */}
+      {(syncedFacts.display_name || syncedFacts.role_title) && (
+        <div className="sabi-card p-6 mb-4">
+          <div className="flex items-center gap-2 mb-3">
+            <span className="text-xs">🔒</span>
+            <h2 className="text-xs font-semibold text-white/40 uppercase tracking-wider">Synced from HR</h2>
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            {syncedFacts.display_name && (
+              <div>
+                <p className="text-[10px] text-white/30 mb-0.5">Full Name</p>
+                <p className="text-sm text-white/70">{syncedFacts.display_name}</p>
+              </div>
+            )}
+            {syncedFacts.role_title && (
+              <div>
+                <p className="text-[10px] text-white/30 mb-0.5">Role Title</p>
+                <p className="text-sm text-white/70">{syncedFacts.role_title}</p>
+              </div>
+            )}
+            {syncedFacts.department && (
+              <div>
+                <p className="text-[10px] text-white/30 mb-0.5">Department</p>
+                <p className="text-sm text-white/70">{syncedFacts.department}</p>
+              </div>
+            )}
+            {syncedFacts.start_date && (
+              <div>
+                <p className="text-[10px] text-white/30 mb-0.5">Start Date</p>
+                <p className="text-sm text-white/70">{new Date(syncedFacts.start_date).toLocaleDateString('en-NG', { day:'numeric', month:'long', year:'numeric' })}</p>
+              </div>
+            )}
+          </div>
+          <p className="text-[10px] text-white/20 mt-3 pt-3 border-t border-white/5">
+            These fields are managed by HR and synced automatically. Contact HR to request changes.
+          </p>
+        </div>
+      )}
 
       {/* ── Core Functions ──────────────────────────────────── */}
       {coreFunctions.length > 0 && (

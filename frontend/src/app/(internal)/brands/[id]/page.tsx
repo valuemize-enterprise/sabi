@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { brands as brandsApi, analytics } from '@/lib/api';
 import {
@@ -55,6 +55,9 @@ const ICON_COLORS: Record<string, string> = {
 
 export default function BrandOverviewPage() {
   const { id: brandId } = useParams<{ id: string }>();
+  const searchParams = useSearchParams();
+  const initialTab = searchParams.get('tab') ?? 'overview';
+  const [tab, setTab] = useState(initialTab);
   const [brand, setBrand] = useState<any>(null);
   const [stats, setStats] = useState<any>(null);
   const [loading, setLoading] = useState(true);

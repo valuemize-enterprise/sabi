@@ -35,8 +35,15 @@ router.get('/', authenticateClient, async (req, res, next) => {
 
     if (error) throw error;
 
+    // Filter to only published profiles (People OS §6)
+    const userIds = (data || []).filter(a => a.users?.full_name).map(a => a.users.id);
+    const { data: profiles } = userIds.length
+      ? await supabase.from('staff_profiles').select('user_id, state').in('user_id', userIds)
+      : { data: [] };
+    const publishedIds = new Set((profiles || []).filter(p => p.state === 'published').map(p => p.user_id));
+
     const team = (data || [])
-      .filter(a => a.users?.full_name)
+      .filter(a => a.users?.full_name && publishedIds.has(a.users.id))
       .map(a => ({
         id:            a.id,
         user_id:       a.users.id,

@@ -75,6 +75,11 @@ router.put('/:id/verify', authenticate, async (req, res, next) => {
 
     notify.onTaskVerified({ id: task.id, title: task.title, assignee_id: task.assignee_id, brand_id: task.brand_id }, req.user.full_name);
 
+    // People OS onboarding — first_task_done
+    if (task.assignee_id) {
+      require('../../services/people.service').setOnboardingStep(task.assignee_id, 'first_task_done').catch(() => {});
+    }
+
     sendSuccess(res, { task: data }, 'Task verified');
   } catch (err) { next(err); }
 });

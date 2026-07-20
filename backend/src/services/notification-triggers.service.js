@@ -40,10 +40,11 @@ async function getAdmins() {
 }
 
 async function getBrandAdmins(brandId) {
-  const { data } = await supabase.from('brand_admins')
-    .select('user:users(id, email, full_name)')
+  const { data } = await supabase.from('staff_brand_assignments')
+    .select('users!staff_id(id, email, full_name)')
+    .contains('roles_on_brand', ['brand_admin'])
     .eq('brand_id', brandId);
-  return (data || []).map(r => r.user).filter(Boolean);
+  return (data || []).map(r => r.users).filter(Boolean);
 }
 
 async function getBrand(brandId) {

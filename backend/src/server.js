@@ -90,6 +90,9 @@ const agencyTargetsRoutes       = require('./routes/agency/agency-targets.routes
 const pulseRoutes               = require('./routes/agency/pulse.routes');
 const leaderboardRoutes         = require('./routes/agency/leaderboard.routes');
 
+// ── People OS Routes ─────────────────────────────────────────
+const { peopleRouter, leaveRouter } = require('./routes/people.routes');
+
 
 // ── Middleware ────────────────────────────────────────────────
 const { errorHandler }  = require('./middleware/error.middleware');
@@ -184,6 +187,9 @@ app.use('/api/super-admin/audit',     saAudit);
 app.use('/api/super-admin/clients',   saClients);         // NEW
 app.use('/api/super-admin/settings',  saSettings);
 
+// ── Command Center ──────────────────────────────────────────
+app.use('/api/agency/command', require('./routes/command.routes'));
+
 // ── System Notifications (sweep + test) ──────────────────────
 app.use('/api/system/notifications',  systemNotifications);
 
@@ -216,6 +222,10 @@ app.use('/api/agency/scores',           scoringRoutes);
 app.use('/api/agency/targets',          agencyTargetsRoutes);
 app.use('/api/agency/pulse',            pulseRoutes);
 app.use('/api/agency/leaderboard',      leaderboardRoutes);
+
+// Phase 4 — People OS
+app.use('/api/people',                  peopleRouter);
+app.use('/api/leave',                   leaveRouter);
 
 // ── 404 Handler ───────────────────────────────────────────────
 app.use('*', (req, res) => {

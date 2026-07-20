@@ -818,4 +818,246 @@ T.client_invoice_reminder = (d) => ({
     `Already paid? Wonderful — please ignore this and accept our thanks. Payments can take a day to reflect.`),
 });
 
+/* ─────────────── COMMAND CENTER (D6 addition) ──────────────── */
+
+// 33 · Brand turned At Risk — urgency + consequential (critical, unmutable)
+T.brand_status_changed = (d) => ({
+  category: 'critical', tone: 'urgency+consequential',
+  subject: `🔴 ${d.brandName} just turned At Risk on the Command Center`,
+  preheader: `${(d.reasons || []).slice(0, 2).join(' · ')} — the two-click fix path is inside.`,
+  html: base(C.red, '🛰️', 'A brand crossed the line', esc(d.brandName),
+    greeting(d.name) +
+    p(`The Command Center rule engine just moved <strong>${esc(d.brandName)}</strong> from <strong>${esc(d.prevStatus === 'watch' ? 'Watch' : 'Healthy')}</strong> to <strong style="color:${C.red};">At Risk</strong>. This is not a prediction — every reason below is a real record already breaching a standard the agency agreed on:`) +
+    `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:6px 0 18px;border:1px solid ${C.line};border-radius:12px;">
+      ${(d.reasons || []).map(r => `<tr><td style="padding:11px 16px;border-bottom:1px solid ${C.line};font-size:13.5px;color:${C.ink};"><span style="display:inline-block;width:9px;height:9px;border-radius:3px;background:${C.red};margin-right:9px;"></span><strong>${esc(r)}</strong></td></tr>`).join('')}
+      ${d.reasonCount > (d.reasons || []).length ? `<tr><td style="padding:9px 16px;font-size:12.5px;color:${C.soft};">+ ${d.reasonCount - d.reasons.length} more on the Command Center</td></tr>` : ''}
+    </table>` +
+    steps('The two-click fix path', [
+      `Open the <strong>Command Center</strong> — ${esc(d.brandName)} is now at the top of the list.`,
+      `Expand the row: every red chip links straight to the offending record (the task, the brief, the invoice).`,
+      `Fix the underlying records — the moment they clear, the brand recovers automatically. No one flips this switch manually.`,
+    ]) +
+    impactStrip(
+      `At Risk means a client relationship is actively degrading on at least one agreed standard — money, work, or trust.`,
+      `You will not receive this email again for this episode. The daily task/brief/invoice reminders continue, but this is the one flare for the whole fire.`,
+      `Handled today, this becomes a line in Monday&rsquo;s digest under recoveries — the kind of line clients never see and never needed to.`
+    ) +
+    cta('Open the Command Center →', `${APP}/command`, C.red),
+    `${d.brandName} is now At Risk`,
+    `Status alerts are critical notifications and bypass email preferences by design. Recovery is automatic once the underlying records clear.`),
+});
+
+/* ═══════════════════ PEOPLE OS (D1–D7) ═══════════════════════ */
+
+// 34 · Profile draft ready — celebration + humour
+T.profile_draft_ready = (d) => ({
+  category: 'people', tone: 'celebration+humour',
+  subject: `✨ ${d.name}, your Sabi profile is already written. Yes, really.`,
+  preheader: `We drafted it so you don't stare at a blank page. Two minutes to make it yours.`,
+  html: base(C.purple, '✨', 'Your profile draft is ready', 'Written for you, waiting on you',
+    greeting(d.name) +
+    p(`Welcome to Cerebre! While you were finding the kitchen, ARIA wrote the first draft of your team profile — bio, skills, the works — built from what HR told us about your role as <strong>${esc(d.roleTitle)}</strong>. Blank pages are for other agencies.`) +
+    steps('Make it yours in 2 minutes', [
+      `Open <strong>My Profile</strong> and read the draft — fix anything we got wrong.`,
+      `Add your photo (the one where you look like you mean business).`,
+      `Hit <strong>Publish</strong> — nothing goes live until you do. Your facts (role, title, start date) stay synced from HR automatically.`,
+    ]) +
+    impactStrip(
+      `Your profile is how clients and teammates meet you before they meet you — it lives on the client Team pages for your brands.`,
+      `Unpublished, there&rsquo;s an empty seat with your name on it. The reminders start friendly and get less so. 😅`,
+      `A polished professional presence on day one, zero writing required — and the &ldquo;What&rsquo;s Expected of Me&rdquo; card so you always know your lane.`
+    ) +
+    cta('Review my draft →', `${APP}/my-profile`, C.purple),
+    `Your profile draft is ready to claim`),
+});
+
+// 35 · Profile reminder ladder (D5: nag, never publish)
+T.profile_reminder = (d) => {
+  const lvl = d.level || 1;
+  const copy = {
+    1: { subject: `👀 Your profile draft misses you (day ${d.daysWaiting})`,
+         open: `Your profile has been sitting in draft for <strong>${d.daysWaiting} days</strong>. It&rsquo;s written. It just needs your eyes, your photo, and one click. The kettle takes longer.` },
+    2: { subject: `⏰ Day ${d.daysWaiting}: clients see an empty seat where your face should be`,
+         open: `Real talk: your brands&rsquo; client Team pages are live, and your slot is blank. Every day unpublished is a day the client meets everyone on the team except you.` },
+    3: { subject: `🚨 Day ${d.daysWaiting}: your Brand Admin has been copied on this`,
+         open: `Two weeks in draft. We never auto-publish — your profile is yours — but your Brand Admin now knows it&rsquo;s the last open item on your onboarding checklist. Five minutes ends this email thread forever.` },
+  }[Math.min(lvl, 3)];
+  return {
+    category: lvl >= 3 ? 'disciplinary' : 'people',
+    tone: lvl === 1 ? 'humour' : lvl === 2 ? 'urgency' : 'consequential',
+    subject: copy.subject,
+    preheader: `Review, personalize, publish — we never publish for you.`,
+    html: base(lvl >= 3 ? C.red : C.purple, '📇', 'Your profile is still in draft', `Day ${d.daysWaiting}`,
+      ribbon(lvl, `${d.daysWaiting} days unpublished.`) +
+      greeting(d.name) + p(copy.open) +
+      impactStrip(
+        `A published profile completes your onboarding and puts your face next to your verified work.`,
+        `It stays the one unchecked box on your onboarding — visible to HR and your Brand Admin.`,
+        `Publishing takes this off everyone&rsquo;s list, including yours — and the draft is already 90% done.`
+      ) +
+      cta('Publish my profile →', `${APP}/my-profile`, lvl >= 3 ? C.red : C.purple),
+      `Profile still in draft — day ${d.daysWaiting}`,
+      lvl >= 3 ? `We will never publish on your behalf — but the checklist stays open until you do.` : undefined),
+  };
+};
+
+// 36 · Role updated — celebration / informational
+T.role_updated = (d) => ({
+  category: 'people', tone: 'celebration',
+  subject: `🎊 It's official: you're now ${d.newTitle}`,
+  preheader: `HR updated your record — everything synced automatically.`,
+  html: base(C.gold, '🎊', 'Your role just changed', `${esc(d.prevTitle || 'Previous role')} → ${esc(d.newTitle)}`,
+    greeting(d.name) +
+    p(`HR has updated your record: you are now <strong>${esc(d.newTitle)}</strong>. Sabi synced everything in one pass — your profile, your &ldquo;What&rsquo;s Expected of Me&rdquo; core functions, and the client Team pages for your brands. Nothing for you to edit.`) +
+    steps('Worth two minutes', [
+      `Open your profile — check the new title reads right to a client.`,
+      `Read your updated core functions — your score is measured against the new lane starting now.`,
+    ]) +
+    impactStrip(
+      `Your core functions define what counts as your job vs a contribution claim — they just changed with your role.`,
+      `Nothing — this is good news with homework attached.`,
+      `A title that&rsquo;s true everywhere at once, and clear expectations from day one in the new seat.`
+    ) +
+    cta('See my updated profile →', `${APP}/my-profile`, C.gold),
+    `Role updated to ${d.newTitle}`),
+});
+
+// 37 · Leave request — to approvers
+T.leave_request = (d) => ({
+  category: 'people', tone: 'informational',
+  subject: `🌴 Leave request: ${d.staffName} · ${d.startDate} → ${d.endDate}`,
+  preheader: `${d.leaveType} leave awaiting your decision.`,
+  html: base(C.indigo, '🌴', 'A leave request needs a decision', esc(d.staffName),
+    greeting(d.name) +
+    p(`<strong>${esc(d.staffName)}</strong> has requested <strong>${esc(d.leaveType)}</strong> leave from <strong>${esc(d.startDate)}</strong> to <strong>${esc(d.endDate)}</strong>.`) +
+    (d.note ? infoBox('Their note', esc(d.note)) : '') +
+    impactStrip(
+      `Approved leave is automatically excluded from their scoring weeks — the fairness rules need your decision to activate.`,
+      `Undecided requests leave the person planning life in limbo — and unapproved absence looks like missed work to the scoring engine.`,
+      `A team that requests properly because requests get answered fast.`
+    ) +
+    cta('Decide in People OS →', `${APP}/people?tab=leave`, C.indigo),
+    `Leave request from ${d.staffName}`),
+});
+
+// 38 · Leave decision — to the requester
+T.leave_decision = (d) => ({
+  category: 'people', tone: d.approved ? 'celebration' : 'informational',
+  subject: d.approved
+    ? `✅ Leave approved: ${d.startDate} → ${d.endDate}. Log off properly.`
+    : `↩️ About your leave request (${d.startDate} → ${d.endDate})`,
+  preheader: d.approved ? `Approved by ${d.approverName}. Scoring exclusion is automatic.` : `Decision from ${d.approverName} inside.`,
+  html: base(d.approved ? C.green : C.indigo, d.approved ? '🏖️' : '📋',
+    d.approved ? 'Your leave is approved' : 'Your leave request was declined', esc(d.leaveType + ' leave'),
+    greeting(d.name) +
+    (d.approved
+      ? p(`<strong>${esc(d.approverName)}</strong> approved your ${esc(d.leaveType)} leave from <strong>${esc(d.startDate)}</strong> to <strong>${esc(d.endDate)}</strong>. Sabi has already excluded those weeks from your scoring — rest without the math anxiety.`)
+      : p(`<strong>${esc(d.approverName)}</strong> couldn&rsquo;t approve this one. The reason is below — talk to them directly if timing can flex.`) +
+        infoBox('Reason', esc(d.decisionNote || 'See your approver'))) +
+    impactStrip(
+      d.approved ? `Leave weeks are fully excluded from your 4-week rolling average — by design.` : `Declined requests cost you nothing on your score.`,
+      d.approved ? `Just one thing: hand over open tasks before you go — verified beats &ldquo;almost done&rdquo;.` : `Nothing — resubmit with new dates anytime.`,
+      d.approved ? `Actual rest. The system holds your place.` : `A clear reason and a fast path to a better slot.`
+    ) +
+    cta(d.approved ? 'View my leave →' : 'Request new dates →', `${APP}/my-profile`, d.approved ? C.green : C.indigo),
+    d.approved ? `Leave approved` : `Leave request declined`),
+});
+
+// 39 · Probation ending — consequential, to HR (+BA CC)
+T.probation_ending = (d) => ({
+  category: 'people', tone: 'consequential',
+  subject: `⏳ ${d.personName}'s probation ends in 7 days — decide deliberately`,
+  preheader: `${d.roleTitle} · ends ${d.probationEnd}. Silence is also a decision — make a real one.`,
+  html: base(C.amber, '⏳', 'A probation decision is due', esc(d.personName),
+    greeting(d.name) +
+    p(`<strong>${esc(d.personName)}</strong> (${esc(d.roleTitle)}) completes probation on <strong>${esc(d.probationEnd)}</strong>. In seven days they either become a confirmed part of this team or they don&rsquo;t — and the worst outcome is the one that happens by nobody deciding.`) +
+    steps('The deliberate version', [
+      `Open their Person File — rolling score, low-rating notes, recognition, all in one place.`,
+      `Talk to their Brand Admin (copied on this email) for the ground truth.`,
+      `Confirm, extend, or exit — and record it in the Person File either way.`,
+    ]) +
+    impactStrip(
+      `Probation is the one moment the exit door is cheap and expectations are explicit.`,
+      `Let it lapse and you&rsquo;ve confirmed by default — including any doubts you never wrote down.`,
+      `Either a confirmed teammate who knows they earned it, or a clean early decision everyone respects.`
+    ) +
+    cta('Open their Person File →', `${APP}/people`, C.amber),
+    `Probation decision due for ${d.personName}`),
+});
+
+// 40 · Document expiring — urgency, to HR
+T.document_expiring = (d) => ({
+  category: 'people', tone: 'urgency',
+  subject: d.daysLeft <= 0
+    ? `🔴 EXPIRED: ${d.personName}'s ${d.docLabel}`
+    : `📁 ${d.daysLeft} days: ${d.personName}'s ${d.docLabel} expires`,
+  preheader: `Document vault alert — renew before it becomes a compliance scramble.`,
+  html: base(d.daysLeft <= 7 ? C.red : C.amber, '📁', 'A document is expiring', esc(d.personName),
+    ribbon(d.level || 1, d.daysLeft <= 0 ? 'Already expired.' : `${d.daysLeft} days remaining.`) +
+    greeting(d.name) +
+    p(`<strong>${esc(d.personName)}</strong>&rsquo;s <strong>${esc(d.docLabel)}</strong> (${esc(d.docType)}) ${d.daysLeft <= 0 ? 'has <strong>expired</strong>' : `expires in <strong>${d.daysLeft} days</strong>`}.`) +
+    impactStrip(
+      `Contracts, IDs and certifications are the paperwork that lets everything else be legal.`,
+      `Expired documents surface at the worst moments — client audits, disputes, visa runs.`,
+      `A vault that renews on calendar time instead of crisis time.`
+    ) +
+    cta('Open the vault →', `${APP}/people?tab=documents`, d.daysLeft <= 7 ? C.red : C.amber),
+    `${d.docLabel} expiring for ${d.personName}`),
+});
+
+// 41 · Work anniversary — celebration (D6)
+T.work_anniversary = (d) => ({
+  category: 'celebrations', tone: 'celebration',
+  subject: `🎉 ${d.years} year${d.years > 1 ? 's' : ''} at Cerebre today, ${d.name}!`,
+  preheader: `Happy work anniversary — the receipts of your impact are all in Sabi.`,
+  html: base(C.gold, '🎉', `Happy ${d.years}-year anniversary!`, 'Cerebre Media Africa',
+    greeting(d.name) +
+    p(`<strong>${d.years} year${d.years > 1 ? 's' : ''} ago today</strong>, you joined this team. Since then: verified work with your name on it, clients who know your face from the Team page, and a score history that tells the real story. Thank you for building this with us. 🥂`) +
+    impactStrip(
+      `Tenure is the quiet metric — everything compounds on people who stay.`,
+      `Nothing. Today is yours.`,
+      `Our gratitude, publicly logged. Screenshot this one too.`
+    ) +
+    cta('See my journey →', `${APP}/my-profile`, C.gold),
+    `Happy work anniversary!`,
+    `No action needed. Just history, acknowledged. 🎊`),
+});
+
+// 42 · Birthday — celebration (D6: day only, never age)
+T.birthday = (d) => ({
+  category: 'celebrations', tone: 'celebration',
+  subject: `🎂 Happy birthday, ${d.name}!`,
+  preheader: `From everyone at Cerebre Media Africa.`,
+  html: base(C.gold, '🎂', `Happy birthday, ${esc(d.name)}!`, 'From all of us at Cerebre',
+    greeting(d.name) +
+    p(`It&rsquo;s your day. The tasks will wait, the briefs will wait, even ARIA will wait. Have something sweet, take the long lunch, and accept the team&rsquo;s terrible singing with grace. 🎈`) +
+    impactStrip(
+      `Teams that celebrate people build the kind of culture clients can feel.`,
+      `Only risk today: cake-related productivity loss. Acceptable.`,
+      `A very good day. That&rsquo;s the whole feature.`
+    ),
+    `Happy birthday from Cerebre!`,
+    `No CTA today. Go enjoy it. 🎉`),
+});
+
+// 43 · Offboarding started — critical, to leadership + HR
+T.offboarding_started = (d) => ({
+  category: 'critical', tone: 'informational',
+  subject: `📤 Offboarding started: ${d.personName} (${d.roleTitle})`,
+  preheader: `Access revoked, profile unpublished, ${d.openTasks} open task(s) flagged for reassignment.`,
+  html: base(C.red, '📤', 'An offboarding has begun', esc(d.personName),
+    greeting(d.name) +
+    p(`HR has started offboarding for <strong>${esc(d.personName)}</strong> (${esc(d.roleTitle)}). The kill switch ran the full checklist automatically:`) +
+    infoBox('Completed automatically', 'Account deactivated · profile removed from client Team pages · brand assignments released · exit recorded') +
+    infoBox('Needs a human', `${d.openTasks} open task(s) unassigned — Brand Admins should reassign them this week`) +
+    impactStrip(
+      `A departed teammate still visible to clients or still holding access is both a security hole and a trust wobble — the switch closes both instantly.`,
+      `Unreassigned tasks drift toward their due dates ownerless — the overdue sweeps will start flagging them.`,
+      `A clean exit: history preserved (verified work, scores, recognition), access gone, clients undisturbed.`
+    ) +
+    cta('Review in People OS →', `${APP}/people`, C.red),
+    `Offboarding: ${d.personName}`,
+    `Offboarding notices are critical and bypass email preferences by design.`),
+});
+
 module.exports = { T, base, C };

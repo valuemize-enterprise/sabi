@@ -125,14 +125,14 @@ router.get('/', authenticate, async (req, res, next) => {
     const clientReview = [];
     for (const b of (brands ?? [])) {
       const [{ data: satNow }, { data: satPrev }, { data: openBriefs }, { data: overdueTasks }, { data: lastReport }] = await Promise.all([
-        supabase.from('client_satisfaction').select('rating').eq('brand_id', b.id).gte('created_at', weekStart).lt('created_at', weekEnd),
-        supabase.from('client_satisfaction').select('rating').eq('brand_id', b.id).gte('created_at', prevWeekStart).lt('created_at', weekStart),
+        supabase.from('client_satisfaction').select('nps_score').eq('brand_id', b.id).gte('created_at', weekStart).lt('created_at', weekEnd),
+        supabase.from('client_satisfaction').select('nps_score').eq('brand_id', b.id).gte('created_at', prevWeekStart).lt('created_at', weekStart),
         supabase.from('client_briefs').select('id',{count:'exact',head:true}).eq('brand_id', b.id).in('status',['submitted','acknowledged','in_review']),
         supabase.from('tasks').select('id',{count:'exact',head:true}).eq('brand_id', b.id).lt('due_date', scoringService.toDateStr(now)).not('status','in','("verified","done")'),
         supabase.from('social_reports').select('created_at').eq('brand_id', b.id).eq('published_to_client', true).order('created_at',{ascending:false}).limit(1),
       ]);
-      const avgNow = satNow?.length ? satNow.reduce((s,r)=>s+r.rating,0)/satNow.length : null;
-      const avgPrev = satPrev?.length ? satPrev.reduce((s,r)=>s+r.rating,0)/satPrev.length : null;
+      const avgNow = satNow?.length ? satNow.reduce((s,r)=>s+r.nps_score,0)/satNow.length : null;
+      const avgPrev = satPrev?.length ? satPrev.reduce((s,r)=>s+r.nps_score,0)/satPrev.length : null;
       const daysSinceReport = lastReport?.[0]?.created_at ? Math.floor((now.getTime() - new Date(lastReport[0].created_at).getTime())/86400000) : null;
 
       clientReview.push({

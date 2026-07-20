@@ -106,6 +106,9 @@ router.post('/set-password', authenticate, async (req, res, next) => {
     await supabase.from('users').update({ password_hash: hash, must_reset_password: false }).eq('id', req.user.id);
     await auditLog({ actorId: req.user.id, actorEmail: req.user.email, actorRole: req.user.role, action: 'PASSWORD_CHANGED', req });
 
+    // People OS onboarding — portal_activated
+    require('../services/people.service').setOnboardingStep(req.user.id, 'portal_activated').catch(() => {});
+
     sendSuccess(res, null, 'Password updated successfully');
   } catch (err) { next(err); }
 });

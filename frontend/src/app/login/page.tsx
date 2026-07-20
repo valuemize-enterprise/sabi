@@ -22,7 +22,14 @@ export default function LoginPage() {
       const res: any = await agencyAuth.login(email, password);
       localStorage.setItem('sabi_token', res.data.token);
       setAuth(res.data.token, res.data.user);
-      router.push(res.data.user.must_reset_password ? '/set-password' : '/dashboard');
+      const LANDING: Record<string, string> = {
+        super_admin: '/command',
+        admin: '/command',
+        md: '/command',
+        hr: '/people',
+      };
+      const dest = res.data.user.must_reset_password ? '/set-password' : (LANDING[res.data.user.role] ?? '/dashboard');
+      router.push(dest);
     } catch (err: any) { setError(err.message || 'Invalid credentials'); }
     finally { setLoading(false); }
   };

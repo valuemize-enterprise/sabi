@@ -34,6 +34,8 @@
 
 const supabase = require('../config/supabase');
 const dispatch = require('./email-dispatch.service');
+const { watchBrandStatus } = require('./brand-status-watch.service');
+const { runPeopleSweeps } = require('./people-sweeps.service');
 
 // ── Lagos time helpers ─────────────────────────────────────────
 const lagos = () => new Date(new Date().toLocaleString('en-US', { timeZone: 'Africa/Lagos' }));
@@ -85,9 +87,9 @@ async function sweepTaskDeadlines(stats, brands) {
       const level = overdueDays >= 5 ? 3 : overdueDays >= 3 ? 2 : 1;
       let cc = [];
       if (level === 3) {
-        const { data: bas } = await supabase.from('brand_admins')
-          .select('user:users(email)').eq('brand_id', t.brand_id);
-        cc = (bas || []).map(r => r.user?.email).filter(Boolean);
+        const { data: bas } = await supabase.from('staff_brand_assignments')
+          .select('users!staff_id(email)').contains('roles_on_brand', ['brand_admin']).eq('brand_id', t.brand_id);
+        cc = (bas || []).map(r => r.users?.email).filter(Boolean);
       }
       stats.push(await dispatch.send('task_overdue', {
         to: u, entityId: t.id, dedupe: 'level', level, cc,
@@ -113,9 +115,9 @@ async function sweepVerification(stats, brands) {
   }
 
   for (const [bId, list] of byBrand) {
-    const { data: bas } = await supabase.from('brand_admins')
-      .select('user:users(id, email, full_name)').eq('brand_id', bId);
-    const admins = (bas || []).map(r => r.user).filter(Boolean);
+    const { data: bas } = await supabase.from('staff_brand_assignments')
+      .select('users!staff_id(id, email, full_name)').contains('roles_on_brand', ['brand_admin']).eq('brand_id', bId);
+    const admins = (bas || []).map(r => r.users).filter(Boolean);
     if (!admins.length) continue;
     const bn = await brandName(bId, brands);
 
@@ -196,17 +198,17 @@ async function sweepFriday(stats) {
   if (!(dayIs(5) && hourIs(15))) return;
 
   // 5a · rate-your-team: brand admins with unrated members this week
-  const { data: bas } = await supabase.from('brand_admins')
-    .select('brand_id, user:users(id, email, full_name)');
+  const { data: bas } = await supabase.from('staff_brand_assignments')
+    .select('brand_id, users!staff_id(id, email, full_name)').contains('roles_on_brand', ['brand_admin']);
   const grouped = new Map();
   for (const r of bas || []) {
-    if (!r.user) continue;
-    if (!grouped.has(r.user.id)) grouped.set(r.user.id, { user: r.user, brandIds: [] });
-    grouped.get(r.user.id).brandIds.push(r.brand_id);
+    if (!r.users) continue;
+    if (!grouped.has(r.users.id)) grouped.set(r.users.id, { user: r.users, brandIds: [] });
+    grouped.get(r.users.id).brandIds.push(r.brand_id);
   }
   for (const { user, brandIds } of grouped.values()) {
-    const { count: teamCount } = await supabase.from('brand_staff')
-      .select('user_id', { count: 'exact', head: true }).in('brand_id', brandIds);
+    const { count: teamCount } = await supabase.from('staff_brand_assignments')
+      .select('staff_id', { count: 'exact', head: true }).in('brand_id', brandIds);
     const { count: rated } = await supabase.from('weekly_ratings')
       .select('id', { count: 'exact', head: true })
       .eq('rater_id', user.id).gte('created_at', mondayISO());
@@ -242,12 +244,12 @@ async function sweepDaily8(stats, brands) {
   const byBrand = new Map();
   for (const c of claims || []) byBrand.set(c.brand_id, (byBrand.get(c.brand_id) || 0) + 1);
   for (const [bId, count] of byBrand) {
-    const { data: bas } = await supabase.from('brand_admins')
-      .select('user:users(id, email, full_name)').eq('brand_id', bId);
+    const { data: bas } = await supabase.from('staff_brand_assignments')
+      .select('users!staff_id(id, email, full_name)').contains('roles_on_brand', ['brand_admin']).eq('brand_id', bId);
     for (const r of bas || []) {
-      if (!r.user) continue;
+      if (!r.users) continue;
       stats.push(await dispatch.send('claims_pending', {
-        to: r.user, entityId: null, dedupe: 'daily',
+        to: r.users, entityId: null, dedupe: 'daily',
         data: { name: r.user.full_name, count },
       }));
     }
@@ -327,16 +329,18 @@ async function sweepDigests(stats) {
     .select('id', { count: 'exact', head: true })
     .eq('status', 'verified').gte('verified_at', since).lt('verified_at', until);
   const { data: sats } = await supabase.from('client_satisfaction')
-    .select('rating').gte('created_at', since).lt('created_at', until);
+    .select('nps_score').gte('created_at', since).lt('created_at', until);
   const satAvg = sats?.length
-    ? (sats.reduce((s, x) => s + x.rating, 0) / sats.length).toFixed(1) + ' / 5'
+    ? (sats.reduce((s, x) => s + x.nps_score, 0) / sats.length).toFixed(1) + ' / 10'
     : 'No ratings this week';
 
+  const { redFlagsSummary } = require('./brand-status-watch.service');
+  const redFlags = await redFlagsSummary(); // null when all clear
   const leadership = await users({ roles: ['admin', 'md'] });
   for (const l of leadership) {
     stats.push(await dispatch.send('leadership_digest', {
       to: l, entityId: null, dedupe: 'weekly',
-      data: { name: l.full_name, weekLabel, verifiedTasks, satisfactionAvg: satAvg },
+      data: { name: l.full_name, weekLabel, verifiedTasks, satisfactionAvg: satAvg, redFlags },
     }));
   }
   const superAdmins = await users({ roles: ['super_admin'] });
@@ -384,6 +388,7 @@ async function runSweep() {
   const stats = [];
   const brands = new Map();
   const sweeps = [
+    ['brand_status',        () => watchBrandStatus().then(r => stats.push(...Array(r.alerts).fill({ success: true })))],
     ['task_deadlines',      () => sweepTaskDeadlines(stats, brands)],
     ['verification',        () => sweepVerification(stats, brands)],
     ['briefs',              () => sweepBriefs(stats, brands)],
@@ -393,6 +398,7 @@ async function runSweep() {
     ['satisfaction_prompt', () => sweepSatisfactionPrompt(stats)],
     ['digests',             () => sweepDigests(stats)],
     ['moments',             () => sweepMoments(stats)],
+    ['people',              () => runPeopleSweeps(stats)],
   ];
   for (const [label, fn] of sweeps) {
     try { await fn(); }

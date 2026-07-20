@@ -69,18 +69,18 @@ async function computeStaffScore(userId, weekStartDate, config) {
   if (hasClientBrands) {
     const { data: ratings } = await supabase
       .from('client_satisfaction')
-      .select('rating, brand_id, created_at')
+      .select('nps_score, brand_id, created_at')
       .in('brand_id', brandIds)
       .lte('created_at', weekEnd);
 
     const thisWeek = (ratings ?? []).filter(r => r.created_at >= weekStart && r.created_at < weekEnd);
     if (thisWeek.length > 0) {
-      satisfactionRaw = thisWeek.reduce((s, r) => s + r.rating, 0) / thisWeek.length;
+      satisfactionRaw = thisWeek.reduce((s, r) => s + r.nps_score, 0) / thisWeek.length;
     } else {
       // Carry forward most recent rating, max 3 weeks old
       const threeWeeksAgo = toDateStr(new Date(weekStartDate.getTime() - 21 * 86400000));
       const recent = (ratings ?? []).filter(r => r.created_at >= threeWeeksAgo).sort((a,b) => b.created_at.localeCompare(a.created_at));
-      if (recent.length > 0) satisfactionRaw = recent[0].rating;
+      if (recent.length > 0) satisfactionRaw = recent[0].nps_score;
     }
   }
 
@@ -126,7 +126,7 @@ async function computeStaffScore(userId, weekStartDate, config) {
     wTask += redistribute - Math.round(redistribute * 0.6);
   }
 
-  const satisfactionPoints = satisfactionRaw !== null ? (satisfactionRaw / 5) * wSat : 0;
+  const satisfactionPoints = satisfactionRaw !== null ? (satisfactionRaw / 10) * wSat : 0;
   const taskPoints = taskRate !== null ? taskRate * wTask : wTask * 0.5; // no tasks assigned → neutral (50%)
   const managerPoints = (managerRatingRaw / 5) * wMgr;
   const contribPoints = Math.min(contributionPoints, wContrib > 15 ? wContrib : 15); // cap at category weight
@@ -157,13 +157,13 @@ async function computeBrandAdminScore(userId, brandId, weekStartDate, config) {
 
   // 1. Client Satisfaction (this brand)
   const { data: ratings } = await supabase
-    .from('client_satisfaction').select('rating, created_at').eq('brand_id', brandId).lte('created_at', weekEnd);
+    .from('client_satisfaction').select('nps_score, created_at').eq('brand_id', brandId).lte('created_at', weekEnd);
   const thisWeek = (ratings ?? []).filter(r => r.created_at >= weekStart && r.created_at < weekEnd);
-  let satisfactionRaw = thisWeek.length ? thisWeek.reduce((s,r)=>s+r.rating,0)/thisWeek.length : null;
+  let satisfactionRaw = thisWeek.length ? thisWeek.reduce((s,r)=>s+r.nps_score,0)/thisWeek.length : null;
   if (satisfactionRaw === null) {
     const threeWeeksAgo = toDateStr(new Date(weekStartDate.getTime() - 21*86400000));
     const recent = (ratings??[]).filter(r=>r.created_at>=threeWeeksAgo).sort((a,b)=>b.created_at.localeCompare(a.created_at));
-    if (recent.length) satisfactionRaw = recent[0].rating;
+    if (recent.length) satisfactionRaw = recent[0].nps_score;
   }
 
   // 2. Goal Achievement Rate (this brand's active goals)
@@ -200,7 +200,7 @@ async function computeBrandAdminScore(userId, brandId, weekStartDate, config) {
   const wTeam = config.ba_team_completion_weight;
   const wRev = config.ba_revenue_weight;
 
-  const satisfactionPoints = satisfactionRaw !== null ? (satisfactionRaw/5) * wSat : wSat * 0.5;
+  const satisfactionPoints = satisfactionRaw !== null ? (satisfactionRaw/10) * wSat : wSat * 0.5;
   const goalPoints = goalRate !== null ? goalRate * wGoal : wGoal * 0.5;
   const teamPoints = teamRate !== null ? Math.max(0, (teamRate - stalePenalty)) * wTeam : wTeam * 0.5;
   const revPoints = Math.min(revenueRate, 1) * wRev;
