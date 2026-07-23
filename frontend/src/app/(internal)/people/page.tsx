@@ -13,6 +13,7 @@ import {
 } from '@/components/people/types';
 import '@/styles/people-theme.css';
 import { AgencyTopNav } from '@/components/internal';
+import { useAgencyStore } from '@/lib/store';
 
 type Tab = 'registry' | 'onboarding' | 'leave' | 'documents' | 'insights';
 const TABS: { key: Tab; label: string; emoji: string }[] = [
@@ -30,6 +31,9 @@ const ONBOARDING_STEPS: [string, string][] = [
 export default function PeoplePage() {
   const searchParams = useSearchParams();
   const initialTab = (searchParams.get('tab') as Tab) || 'registry';
+  const { user, } = useAgencyStore();
+    const role     = user?.role ?? '';
+
   const [tab, setTab] = useState<Tab>(TABS.some(t => t.key === initialTab) ? initialTab : 'registry');
 
   const [data, setData] = useState<RegistryPayload | null>(null);
@@ -82,7 +86,7 @@ export default function PeoplePage() {
           <div><div className="pp-title">People OS</div><div className="pp-subtitle">The Ledger · Sabi</div></div>
           <div style={{ flex: 1 }} />
           <button className="pp-btn pp-btn-ghost" onClick={() => setShowRequestLeave(true)}>🌴 Request leave</button>
-          {isHR && <button className="pp-btn pp-btn-primary" onClick={() => setShowAdd(true)}>+ Add person</button>}
+          {role === 'hr' || role ==='super_admin' ||  isHR && <button className="pp-btn pp-btn-primary" onClick={() => setShowAdd(true)}>+ Add person</button>}
         </div>
 
         <NarrativeHero data={data} insights={insights} />

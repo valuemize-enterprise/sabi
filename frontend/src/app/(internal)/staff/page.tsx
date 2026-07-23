@@ -31,8 +31,7 @@ export default function StaffListPage() {
   return (
     <div className="p-4 sm:p-6 max-w-6xl mx-auto">
       <AgencyTopNav title="Staff" subtitle="Agency team members"/>
-      <PageHeader title="Staff" subtitle={`${items.length} team member${items.length!==1?'s':''}`}
-        action={<Link href="/staff/new" className="sabi-btn-primary flex items-center gap-2 px-4 py-2 text-sm"><Plus className="w-4 h-4"/>Add Staff</Link>}/>
+      <PageHeader title="Staff" subtitle={`${items.length} team member${items.length!==1?'s':''}`}/>
 
       <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 mb-5 sm:mb-6">
         <div className="relative flex-1 max-w-xs"><Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/30"/><input className="sabi-input pl-9 text-sm" placeholder="Search staff…" value={search} onChange={e=>setSearch(e.target.value)}/></div>

@@ -10,6 +10,7 @@
 
 'use strict';
 
+const bcrypt   = require('bcryptjs');
 const supabase = require('../config/supabase');
 const dispatch = require('./email-dispatch.service');
 
@@ -68,6 +69,8 @@ async function createRecord(input, creator) {
     personal_email = null, personal_phone = null, date_of_birth = null,
     emergency_contact = null, comp_band = null,
   } = input;
+   const tempPassword = `Sabi${Math.random().toString(36).slice(2, 8)}!`;
+      const hash = await bcrypt.hash(tempPassword, 12);
 
   // 1 · ensure the user exists (reuse the existing invite flow's shape)
   let { data: user } = await supabase.from('users')
@@ -77,6 +80,7 @@ async function createRecord(input, creator) {
       .insert({
         email, full_name: display_name, role: 'staff',
         is_active: true, onboarding_state: 'invited',
+        password_hash: hash,
       }).select('id, email, full_name').single();
     if (error) throw new Error(`User create failed: ${error.message}`);
     user = created;
@@ -100,6 +104,14 @@ async function createRecord(input, creator) {
       comp_band, status: 'onboarding', onboarding, created_by: creator.id,
     }).select(sel(TIER3_FIELDS)).single();
   if (recErr) throw new Error(`Record create failed: ${recErr.message}`);
+
+  const emailService = require('./email.service');
+   await emailService.sendWelcomeStaff({
+        name: record.display_name,
+        email: user.email,
+        role: user.role,
+        tempPassword,
+      }).catch(() => {});
 
   // 3 · generate the profile draft (Tier-1 only — see profile-generator)
   const { generateProfile } = require('./profile-generator.service');
