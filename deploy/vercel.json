@@ -22,7 +22,7 @@
   "rewrites": [
     {
       "source": "/api/:path*",
-      "destination": "https://sabi-api.onrender.com/api/:path*"
+      "destination": "https://sabi-pg3d.onrender.com/api/:path*"
     }
   ]
 }

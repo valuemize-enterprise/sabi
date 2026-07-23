@@ -90,6 +90,9 @@ const agencyTargetsRoutes       = require('./routes/agency/agency-targets.routes
 const pulseRoutes               = require('./routes/agency/pulse.routes');
 const leaderboardRoutes         = require('./routes/agency/leaderboard.routes');
 
+  const { profileFormRouter } = require('./routes/profile-form.routes');
+   
+
 // ── People OS Routes ─────────────────────────────────────────
 const { peopleRouter, leaveRouter } = require('./routes/people.routes');
 
@@ -226,12 +229,14 @@ app.use('/api/agency/leaderboard',      leaderboardRoutes);
 // Phase 4 — People OS
 app.use('/api/people',                  peopleRouter);
 app.use('/api/leave',                   leaveRouter);
+app.use('/api/people',                  profileFormRouter);
 
 // ── 404 Handler ───────────────────────────────────────────────
 app.use('*', (req, res) => {
   res.status(404).json({
     success: false,
     error: `Route ${req.method} ${req.originalUrl} not found`,
+    data: null
   });
 });
 

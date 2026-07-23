@@ -11,7 +11,7 @@ import { useAgencyStore } from '@/lib/store';
 import { strategies as stratApi, goals as goalsApi } from '@/lib/api';
 import { isGlobalAdmin } from '@/lib/permissions';
 import { StrategyCard } from '@/components/internal/StrategyCard';
-import { StatCard } from '@/components/ui';
+import { StatCard } from '@/components/ui';import StaffRequestLeave from '@/components/Staffrequestleave';
 
 const tok = () => typeof window !== 'undefined' ? localStorage.getItem('sabi_token') : null;
 const fetchMe = (path: string) =>
@@ -21,14 +21,14 @@ const fetchMe = (path: string) =>
 
 function QuickLink({ href, icon: Icon, label, color = 'purple' }: any) {
   const s: Record<string, string> = {
-    purple:'hover:bg-purple-500/5 hover:border-purple-500/25',
+    purple: 'hover:bg-purple-500/5 hover:border-purple-500/25',
     green: 'hover:bg-green-500/5 hover:border-green-500/25',
     amber: 'hover:bg-amber-500/5 hover:border-amber-500/25',
-    blue:  'hover:bg-blue-500/5 hover:border-blue-500/25',
+    blue: 'hover:bg-blue-500/5 hover:border-blue-500/25',
   };
   const ic: Record<string, string> = {
-    purple:'text-purple-400 bg-purple-500/10', green:'text-green-400 bg-green-500/10',
-    amber:'text-amber-400 bg-amber-500/10', blue:'text-blue-400 bg-blue-500/10',
+    purple: 'text-purple-400 bg-purple-500/10', green: 'text-green-400 bg-green-500/10',
+    amber: 'text-amber-400 bg-amber-500/10', blue: 'text-blue-400 bg-blue-500/10',
   };
   return (
     <Link href={href} className={`sabi-card p-4 flex items-center gap-3 transition-all group border border-white/5 ${s[color]}`}>
@@ -58,8 +58,8 @@ async function loadStrategiesForBrands(brandIds: string[]) {
 export default function StaffDashboard() {
   const { user } = useAgencyStore();
 
-  const [myBrands, setMyBrands]     = useState<any[]>([]);
-  const [myStats, setMyStats]       = useState<any>({});
+  const [myBrands, setMyBrands] = useState<any[]>([]);
+  const [myStats, setMyStats] = useState<any>({});
   const [strategies, setStrategies] = useState<Record<string, any>>({});
   const [atRiskGoals, setAtRiskGoals] = useState<any[]>([]);
   const [toRate, setToRate] = useState<any[]>([]);
@@ -67,11 +67,16 @@ export default function StaffDashboard() {
   const [overdueVerificationCount, setOverdueVerificationCount] = useState(0);
   const [rejectingId, setRejectingId] = useState<string | null>(null);
   const [rejectReason, setRejectReason] = useState('');
-  const [ratingInputs, setRatingInputs] = useState<Record<string,{score:number;note:string}>>({});
-  const [loading, setLoading]       = useState(true);
+  const [ratingInputs, setRatingInputs] = useState<Record<string, { score: number; note: string }>>({});
+  const [loading, setLoading] = useState(true);
+  const [showRequestLeave, setShowRequestLeave] = useState(false);
 
-  const hour     = new Date().getHours();
+  const hour = new Date().getHours();
   const greeting = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening';
+
+  const load = () => {
+    return 'hello world'
+  }
 
   useEffect(() => {
     const load = async () => {
@@ -85,7 +90,7 @@ export default function StaffDashboard() {
 
       // Load active strategies for each brand
       const brandIds = brands.map((b: any) => b.id ?? b.brand_id);
-      const strats   = await loadStrategiesForBrands(brandIds);
+      const strats = await loadStrategiesForBrands(brandIds);
       setStrategies(strats);
 
       // Load at-risk goals (below 40% with upcoming deadline)
@@ -93,7 +98,7 @@ export default function StaffDashboard() {
       await Promise.all(
         brandIds.slice(0, 5).map(async (id: string) => {
           const res: any = await goalsApi.list({ brand_id: id, status: 'active', limit: '20' }).catch(() => ({ data: [] }));
-          const atRisk   = (res.data ?? []).filter((g: any) => {
+          const atRisk = (res.data ?? []).filter((g: any) => {
             const pct = (g.current_value / Math.max(g.target_value, 1)) * 100;
             return pct < 40;
           });
@@ -162,23 +167,29 @@ export default function StaffDashboard() {
   const hasStrategies = Object.keys(strategies).length > 0;
 
   return (
+    <>
     <div className="p-6 max-w-5xl mx-auto">
-      {/* Greeting */}
-      <div className="mb-8">
-        <h1 className="text-2xl font-bold text-white">
-          {greeting}, {user?.full_name?.split(' ')[0] ?? 'there'} 👋
-        </h1>
-        <p className="text-white/35 text-sm mt-1 capitalize">
-          {user?.role?.replace(/_/g, ' ')} · Cerebre Media Africa
-        </p>
+      <div className='flex items-center justify-between mb-8'>
+        <div className="">
+          <h1 className="text-2xl font-bold text-white">
+            {greeting}, {user?.full_name?.split(' ')[0] ?? 'there'} 👋
+          </h1>
+          <p className="text-white/35 text-sm mt-1 capitalize">
+            {user?.role?.replace(/_/g, ' ')} · Cerebre Media Africa
+          </p>
+        </div>
+
+        <button className="bg-sabi-purple-light  rounded-md p-2" onClick={() => setShowRequestLeave(true)}>🌴 Request leave</button>
       </div>
+      {/* Greeting */}
+
 
       {/* Stats */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-        <StatCard label="My Brands"       value={myStats?.brands_count     ?? myBrands.length} icon={Building2}   color="purple" />
-        <StatCard label="Open Tasks"      value={myStats?.open_tasks        ?? 0}              icon={Clock}       color="amber"  />
-        <StatCard label="Done This Month" value={myStats?.tasks_done_month  ?? 0}              icon={CheckCircle2}color="green"  />
-        <StatCard label="Work Logged"     value={myStats?.work_logs_month   ?? 0}              icon={PenLine}     color="blue"   />
+        <StatCard label="My Brands" value={myStats?.brands_count ?? myBrands.length} icon={Building2} color="purple" />
+        <StatCard label="Open Tasks" value={myStats?.open_tasks ?? 0} icon={Clock} color="amber" />
+        <StatCard label="Done This Month" value={myStats?.tasks_done_month ?? 0} icon={CheckCircle2} color="green" />
+        <StatCard label="Work Logged" value={myStats?.work_logs_month ?? 0} icon={PenLine} color="blue" />
       </div>
 
       {/* ── Pending Verification Queue ────────────────────────── */}
@@ -204,11 +215,11 @@ export default function StaffDashboard() {
                 <div className="flex items-center gap-2 flex-shrink-0">
                   <button onClick={() => verifyTask(t.id)}
                     className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-green-400 border border-green-500/20 rounded-lg hover:bg-green-500/8 transition-all">
-                    <Check className="w-3.5 h-3.5"/> Verify
+                    <Check className="w-3.5 h-3.5" /> Verify
                   </button>
                   <button onClick={() => { setRejectingId(t.id); setRejectReason(''); }}
                     className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-red-400 border border-red-500/20 rounded-lg hover:bg-red-500/8 transition-all">
-                    <X className="w-3.5 h-3.5"/> Reject
+                    <X className="w-3.5 h-3.5" /> Reject
                   </button>
                 </div>
               </div>
@@ -236,14 +247,13 @@ export default function StaffDashboard() {
                 <div className="flex items-center justify-between mb-2">
                   <div>
                     <p className="text-sm text-white font-medium">{t.users?.full_name}</p>
-                    <p className="text-xs text-white/35">{t.brands?.name} · {t.users?.role?.replace(/_/g,' ')}</p>
+                    <p className="text-xs text-white/35">{t.brands?.name} · {t.users?.role?.replace(/_/g, ' ')}</p>
                   </div>
                   <div className="flex items-center gap-1">
-                    {[1,2,3,4,5].map(n => (
+                    {[1, 2, 3, 4, 5].map(n => (
                       <button key={n} onClick={() => setRatingInputs(p => ({ ...p, [t.staff_id]: { ...p[t.staff_id], score: n } }))}
-                        className={`w-7 h-7 rounded-md flex items-center justify-center transition-all ${
-                          (ratingInputs[t.staff_id]?.score ?? 0) >= n ? 'bg-amber-500/20 text-amber-400' : 'bg-white/5 text-white/20'
-                        }`}>
+                        className={`w-7 h-7 rounded-md flex items-center justify-center transition-all ${(ratingInputs[t.staff_id]?.score ?? 0) >= n ? 'bg-amber-500/20 text-amber-400' : 'bg-white/5 text-white/20'
+                          }`}>
                         <Star className="w-3.5 h-3.5" fill={(ratingInputs[t.staff_id]?.score ?? 0) >= n ? 'currentColor' : 'none'} />
                       </button>
                     ))}
@@ -352,7 +362,7 @@ export default function StaffDashboard() {
                   className="sabi-card p-4 hover:border-purple-500/20 transition-all group block">
                   <div className="flex items-center gap-3">
                     <div className="w-9 h-9 rounded-xl flex items-center justify-center text-sm font-bold text-white flex-shrink-0"
-                      style={{ backgroundColor: `${b.primary_color || '#6d28d9'}28`, border:`1px solid ${b.primary_color || '#6d28d9'}40` }}>
+                      style={{ backgroundColor: `${b.primary_color || '#6d28d9'}28`, border: `1px solid ${b.primary_color || '#6d28d9'}40` }}>
                       {b.name?.[0] ?? 'B'}
                     </div>
                     <div className="flex-1 min-w-0">
@@ -389,8 +399,8 @@ export default function StaffDashboard() {
       {/* ── Quick actions ─────────────────────────────────────── */}
       <h2 className="text-xs text-white/30 font-semibold uppercase tracking-widest mb-3">Quick Actions</h2>
       <div className="grid grid-cols-2 gap-3">
-        <QuickLink href="/my-work"   icon={PenLine}  label="Log Work"       color="purple" />
-        <QuickLink href="/my-brands" icon={Building2}label="My Brands"      color="blue"   />
+        <QuickLink href="/my-work" icon={PenLine} label="Log Work" color="purple" />
+        <QuickLink href="/my-brands" icon={Building2} label="My Brands" color="blue" />
       </div>
       {/* ── REJECT MODAL ───────────────────────────────────────── */}
       {rejectingId && (
@@ -399,7 +409,7 @@ export default function StaffDashboard() {
             <h3 className="text-base font-bold text-white mb-2">Send Back for Revision</h3>
             <p className="text-xs text-white/40 mb-4">Explain what needs to be fixed. The assignee will be notified.</p>
             <textarea className="sabi-input resize-none text-sm" rows={3} placeholder="e.g. Missing deliverables, doesn't meet brief requirements..."
-              value={rejectReason} onChange={e => setRejectReason(e.target.value)}/>
+              value={rejectReason} onChange={e => setRejectReason(e.target.value)} />
             <div className="flex gap-2 mt-4">
               <button onClick={rejectTask} disabled={!rejectReason.trim()}
                 className="flex-1 py-2 text-sm rounded-lg bg-red-500/15 border border-red-500/30 text-red-400 font-medium hover:bg-red-500/25 transition-all disabled:opacity-40">
@@ -414,5 +424,9 @@ export default function StaffDashboard() {
         </div>
       )}
     </div>
+
+
+    {showRequestLeave && <StaffRequestLeave onClose={() => setShowRequestLeave(false)} onSent={() => { setShowRequestLeave(false); load(); }} />}
+    </>
   );
 }

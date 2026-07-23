@@ -49,7 +49,59 @@ async function sweepProfileReminders(stats) {
   }
 }
 
-// ── 2 · probation ending in 7 days (daily 8am) → HR + Brand Admins
+// ── 2 · profile form nag (daily 9am) — form submission nag
+async function sweepProfileFormNag(stats) {
+  if (!hourIs(9)) return;
+  const now = lagos();
+
+  // Staff who have not submitted (state is 'not_started' or 'draft')
+  const { data: records } = await supabase
+    .from('people_records')
+    .select(`
+      user_id, display_name, start_date,
+      form_submission_state,
+      users:user_id ( email, full_name, is_active )
+    `)
+    .in('form_submission_state', ['not_started', 'draft'])
+    .eq('status', 'active');
+
+  for (const r of records || []) {
+    const u = r.users;
+    if (!u?.is_active || !u?.email) continue;
+
+    const daysSince = daysBetween(new Date(r.start_date), now);
+    if (daysSince < 7) continue; // grace period
+
+    const level = daysSince >= 21 ? 3 : daysSince >= 14 ? 2 : 1;
+    const firstName = u.full_name?.split(' ')[0] || 'there';
+
+    // CC Brand Admin at level 2, MD at level 3
+    let cc = [];
+    if (level >= 2) {
+      const { data: ba } = await supabase
+        .from('brand_admins')
+        .select('users:user_id ( email )')
+        .eq('user_id_staff', r.user_id);  // ← adjust to your brand_admins join table name
+      if (ba?.length) cc = ba.map(b => b.users?.email).filter(Boolean);
+    }
+    if (level >= 3) {
+      const { data: md } = await supabase
+        .from('users').select('email').eq('role', 'md').eq('is_active', true);
+      if (md?.length) cc = [...cc, ...md.map(m => m.email).filter(Boolean)];
+    }
+
+    stats.push(await dispatch.send('profile_form_nag', {
+      to: { email: u.email, full_name: u.full_name },
+      entityId: r.user_id,
+      dedupe: 'level',
+      level,
+      cc: cc.map(email => ({ email })),
+      data: { name: firstName, daysSince, level },
+    }));
+  }
+}
+
+// ── 3 · probation ending in 7 days (daily 8am) → HR + Brand Admins
 async function sweepProbation(stats) {
   if (!hourIs(8)) return;
   const now = lagos();
@@ -74,7 +126,57 @@ async function sweepProbation(stats) {
   }
 }
 
-// ── 3 · document expiry: 30d L1, 7d L2 (daily 8am) → HR
+// ── 4 · guarantor physical form reminder (daily 9am) → HR
+async function sweepGuarantorFormReminder(stats) {
+  if (!hourIs(9)) return;
+  const now = lagos();
+
+  const { data: records } = await supabase
+    .from('people_records')
+    .select(`
+      user_id, display_name, start_date, probation_end, guarantor_form_received
+    `)
+    .eq('status', 'active')
+    .eq('guarantor_form_received', false)
+    .not('probation_end', 'is', null);
+
+  for (const r of records || []) {
+    if (!r.probation_end) continue;
+    const daysUntilProbation = daysBetween(now, new Date(r.probation_end));
+    if (daysUntilProbation > 14 || daysUntilProbation < 0) continue;
+
+    // Get guarantor details from the form submission
+    const { data: form } = await supabase
+      .from('staff_profile_submissions')
+      .select('guarantor_name, guarantor_phone, guarantor_email')
+      .eq('user_id', r.user_id)
+      .maybeSingle();
+
+    // Notify HR
+    const { data: hrs } = await supabase
+      .from('users').select('id, email, full_name').in('role', ['hr','super_admin'])
+      .eq('is_active', true);
+
+    for (const hr of hrs || []) {
+      stats.push(await dispatch.send('guarantor_form_reminder', {
+        to: { email: hr.email, full_name: hr.full_name },
+        entityId: r.user_id,
+        dedupe: 'daily',
+        data: {
+          name:             hr.full_name?.split(' ')[0],
+          staffName:        r.display_name,
+          guarantorName:    form?.guarantor_name || 'Not provided',
+          guarantorPhone:   form?.guarantor_phone || 'Not provided',
+          guarantorEmail:   form?.guarantor_email || null,
+          probationDate:    r.probation_end,
+          daysUntilProbation,
+        },
+      }));
+    }
+  }
+}
+
+// ── 5 · document expiry: 30d L1, 7d L2 (daily 8am) → HR
 async function sweepDocuments(stats) {
   if (!hourIs(8)) return;
   const now = lagos();
@@ -132,12 +234,55 @@ async function sweepCelebrations(stats) {
   }
 }
 
+// ── 7 · verification aging alert to HR (daily 10am)
+async function sweepVerificationAging(stats) {
+  if (!hourIs(10)) return;
+  const now = lagos();
+
+  const { data: pending } = await supabase
+    .from('staff_profile_submissions')
+    .select('user_id, submitted_at')
+    .eq('profile_state', 'submitted')
+    .not('submitted_at', 'is', null);
+
+  for (const s of pending || []) {
+    const daysWaiting = daysBetween(new Date(s.submitted_at), now);
+    if (daysWaiting < 3) continue;  // give HR 3 days before nagging
+
+    const { data: staffUser } = await supabase
+      .from('users').select('full_name').eq('id', s.user_id).single();
+
+    const { data: hrs } = await supabase
+      .from('users').select('id, email, full_name').in('role', ['hr','super_admin'])
+      .eq('is_active', true);
+
+    for (const hr of hrs || []) {
+      // Reuse the profile_form_submitted template with a modified subject via level flag
+      stats.push(await dispatch.send('profile_form_submitted', {
+        to:       { email: hr.email, full_name: hr.full_name },
+        entityId: s.user_id,
+        dedupe:   'daily',
+        data: {
+          name:        hr.full_name?.split(' ')[0],
+          staffName:   staffUser?.full_name || 'A staff member',
+          staffEmail:  '',
+          reviewUrl:   `${process.env.APP_URL}/people?tab=registry`,
+          submittedAt: `${daysWaiting} days ago — still pending verification`,
+        },
+      }));
+    }
+  }
+}
+
 async function runPeopleSweeps(stats = []) {
   const sweeps = [
-    ['profile_reminders', () => sweepProfileReminders(stats)],
-    ['probation',         () => sweepProbation(stats)],
-    ['documents',         () => sweepDocuments(stats)],
-    ['celebrations',      () => sweepCelebrations(stats)],
+    ['profile_reminders',        () => sweepProfileReminders(stats)],
+    ['profile_form_nag',         () => sweepProfileFormNag(stats)],
+    ['guarantor_form_reminder',  () => sweepGuarantorFormReminder(stats)],
+    ['verification_aging',       () => sweepVerificationAging(stats)],
+    ['probation',                () => sweepProbation(stats)],
+    ['documents',                () => sweepDocuments(stats)],
+    ['celebrations',             () => sweepCelebrations(stats)],
   ];
   for (const [label, fn] of sweeps) {
     try { await fn(); }

@@ -162,7 +162,7 @@ async function setOnboardingStep(userId, step, done = true) {
 async function registry(caller) {
   const fields = HR_ROLES.has(caller.role) || T3_AUDITED_ROLES.has(caller.role)
     ? TIER2_FIELDS : TIER1_FIELDS;
-  const [{ data: records }, { data: profiles }, { data: leaves }, { data: docs }] =
+  const [{ data: records }, { data: profiles }, { data: leaves, error:leaveError }, { data: docs }] =
     await Promise.all([
       supabase.from('people_records').select(sel(fields)).neq('status', 'exited')
         .order('display_name'),
@@ -172,6 +172,7 @@ async function registry(caller) {
       supabase.from('people_documents').select('user_id, expiry_date')
         .not('expiry_date', 'is', null),
     ]);
+
 
   const profByUser = new Map((profiles || []).map(p => [p.user_id, p]));
   const today = new Date();

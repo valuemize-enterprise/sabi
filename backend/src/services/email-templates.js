@@ -1060,4 +1060,122 @@ T.offboarding_started = (d) => ({
     `Offboarding notices are critical and bypass email preferences by design.`),
 });
 
+// 44 · Profile form submitted — notify HR (high priority, not mutable)
+T.profile_form_submitted = (d) => ({
+  category: 'people',
+  tone: 'informational',
+  subject: `📋 ${esc(d.staffName)}'s staff profile is ready for review`,
+  preheader: `Submitted ${esc(d.submittedAt)} — verify it in People OS.`,
+  html: base(C.volt, '📋', 'Staff Profile Submitted', esc(d.staffName),
+    greeting(d.name || 'HR') +
+    p(`<strong>${esc(d.staffName)}</strong> has completed and submitted their Staff Profile Form. The record is now waiting for HR review and verification.`) +
+    infoBox('Staff email', esc(d.staffEmail)) +
+    infoBox('Submitted at', esc(d.submittedAt)) +
+    p('Once you\'ve verified the information is accurate, mark it as verified in People OS. If there are issues, you can reject it with a note explaining what needs to be corrected.', true) +
+    cta('Review in People OS →', `${APP}/people?tab=registry`, C.volt),
+    `Profile awaiting verification: ${d.staffName}`),
+});
+
+// 45 · Acknowledgement to staff — their form was received
+T.profile_form_submitted_ack = (d) => ({
+  category: 'people',
+  tone: 'informational',
+  subject: `✅ Your staff profile has been submitted`,
+  preheader: `HR has been notified and will verify your details shortly.`,
+  html: base(C.moss, '✅', 'Profile submitted', 'Your record is with HR',
+    greeting(d.name) +
+    p(`Your Staff Profile Form has been successfully submitted. HR has been notified and will verify your details.`) +
+    p('While you wait:', true) +
+    steps('What happens next', [
+      'HR will review your form — typically within 2 business days',
+      'You\'ll receive an email once it\'s verified (or if anything needs correcting)',
+      'Your guarantor must return the signed physical Guarantor\'s Form to HR before your probation review',
+    ]) +
+    p(`Meanwhile, you can publish your bio profile so clients can see you on your brand\'s Team page.`, true) +
+    cta('Publish my profile →', `${APP}/my-profile`, C.moss),
+    `Your profile is submitted. HR will be in touch.`),
+});
+
+// 46 · Profile verified — HR has approved the form
+T.profile_form_verified = (d) => ({
+  category: 'people',
+  tone: 'informational',
+  subject: `✅ Your staff profile has been verified`,
+  preheader: `HR has reviewed and approved your record.`,
+  html: base(C.moss, '✅', 'Profile verified', 'Cerebre Media Africa',
+    greeting(d.name) +
+    p(`HR has reviewed your Staff Profile Form and everything checks out. Your official record is now on file.`) +
+    (d.hrNotes ? infoBox('Note from HR', esc(d.hrNotes)) : '') +
+    p('Your profile is now part of Cerebre\'s official records. If you ever need to update your contact details, next of kin, or any other personal information in the future, you can do so from your profile page.', true) +
+    cta('View my profile →', `${APP}/my-profile`, C.moss),
+    `Your record has been verified. Welcome to the ledger.`),
+});
+
+// 47 · Profile rejected — HR found issues, staff must revise
+T.profile_form_rejected = (d) => ({
+  category: 'people',
+  tone: 'urgency',
+  subject: `⚠️ Your staff profile needs a correction`,
+  preheader: `HR has reviewed your form and flagged something that needs fixing.`,
+  html: base(C.amber, '⚠️', 'Profile needs a correction', 'Action required',
+    greeting(d.name) +
+    p(`HR has reviewed your Staff Profile Form and found something that needs to be corrected before your record can be verified.`) +
+    infoBox('Reason from HR', esc(d.reason)) +
+    p('Please go to My Profile, update the information flagged above, and re-submit your form. Your previous entries will still be there — you only need to fix what was flagged.', true) +
+    cta('Fix and resubmit →', esc(d.editUrl), C.amber),
+    `Please correct your profile and resubmit. HR is waiting on your update.`),
+});
+
+// 48 · Profile form nag — sent by sweeper to staff who haven't submitted
+//      Level 1 (day 7): gentle reminder
+//      Level 2 (day 14): firmer, CCs Brand Admin
+//      Level 3 (day 21): urgent, CCs MD
+T.profile_form_nag = (d) => ({
+  category: 'people',
+  tone: d.level >= 3 ? 'urgency' : 'nudge',
+  subject: d.level >= 3
+    ? `🔴 OVERDUE: Your staff profile form is ${d.daysSince} days late`
+    : `📋 Reminder: Complete your staff profile form`,
+  preheader: d.level >= 2
+    ? `Your official HR record is incomplete — this is holding up your full onboarding.`
+    : `It only takes about 10 minutes to complete.`,
+  html: base(
+    d.level >= 3 ? C.red : d.level >= 2 ? C.amber : C.volt,
+    '📋',
+    d.level >= 3 ? 'Profile form overdue' : 'Complete your profile',
+    'Staff Record · Sabi',
+    greeting(d.name) +
+    (d.level === 1
+      ? p(`You joined Cerebre ${d.daysSince} days ago — your official Staff Profile Form is ready and waiting for you. It covers your personal details, qualifications, work history, and medical information that HR keeps on file.`)
+      : d.level === 2
+      ? p(`Your Staff Profile Form has been pending for <strong>${d.daysSince} days</strong>. Without it, HR cannot complete your official record. This is now affecting your onboarding status.`)
+      : p(`<strong>Your Staff Profile Form is ${d.daysSince} days overdue.</strong> This is now flagged at leadership level. HR needs your completed form to finalise your employment record.`)) +
+    p('The form covers: personal details, family & next of kin, medical information (confidential), education, languages, work history, and your guarantor details.', true) +
+    impactStrip(
+      'An incomplete record means HR cannot contact the right person in an emergency.',
+      d.level >= 2 ? 'Your probation review cannot proceed without a complete record on file.' : 'It blocks your onboarding from being marked complete.',
+      'A verified record = a proper start at Cerebre.'
+    ) +
+    cta('Complete my profile now →', `${APP}/my-profile`, d.level >= 3 ? C.red : C.volt),
+    `${d.level >= 3 ? '🔴 OVERDUE: ' : ''}Please complete your staff profile form.`),
+});
+
+// 49 · Guarantor physical form reminder — HR: still outstanding near probation
+T.guarantor_form_reminder = (d) => ({
+  category: 'people',
+  tone: 'urgency',
+  subject: `⚠️ Guarantor form not yet received: ${esc(d.staffName)}`,
+  preheader: `Probation review is ${d.daysUntilProbation} days away — chase the guarantor now.`,
+  html: base(C.amber, '🤝', 'Guarantor form outstanding', esc(d.staffName),
+    greeting(d.name || 'HR') +
+    p(`The physical Guarantor's Form for <strong>${esc(d.staffName)}</strong> has not yet been received. Their probation review is in <strong>${d.daysUntilProbation} days</strong>.`) +
+    infoBox('Guarantor', esc(d.guarantorName)) +
+    infoBox('Guarantor phone', esc(d.guarantorPhone)) +
+    infoBox('Guarantor email', d.guarantorEmail ? esc(d.guarantorEmail) : 'Not provided') +
+    infoBox('Probation review date', esc(d.probationDate)) +
+    p('The form must be physically signed, returned to HR, and filed before the probation review can proceed. Chase the guarantor now to avoid delaying the review.', true) +
+    cta('Mark as received (once in hand) →', `${APP}/people`, C.amber),
+    `Guarantor form outstanding for ${d.staffName} — probation in ${d.daysUntilProbation} days.`),
+});
+
 module.exports = { T, base, C };
