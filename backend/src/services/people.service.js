@@ -80,7 +80,7 @@ async function createRecord(input, creator) {
       .insert({
         email, full_name: display_name, role: 'staff',
         is_active: true, onboarding_state: 'invited',
-        password_hash: hash,
+        password_hash: hash, must_reset_password: true,
       }).select('id, email, full_name').single();
     if (error) throw new Error(`User create failed: ${error.message}`);
     user = created;
@@ -197,7 +197,6 @@ async function registry(caller) {
     const exp = new Date(d.expiry_date);
     if (exp <= soon) expiringByUser.set(d.user_id, (expiringByUser.get(d.user_id) || 0) + 1);
   }
-
   const people = (records || []).map(r => {
     const prof = profByUser.get(r.user_id);
     const draftDays = prof?.state === 'draft' && prof.generated_at

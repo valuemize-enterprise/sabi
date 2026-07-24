@@ -167,9 +167,29 @@ async function getOwnForm(userId) {
 
   if (error) throw new Error(error.message);
 
+  const { data: record, error: recordError } = await supabase
+    .from('people_records')
+    .select('start_date, role_title')
+    .eq('user_id', userId)
+    .maybeSingle();
+
+  if (recordError) throw new Error(recordError.message);
+
   // Return null-safe defaults for array columns
-  if (!data) return { profile_state: 'not_started', user_id: userId };
-  return normaliseArrays(data);
+  if (!data) {
+    return {
+      profile_state: 'not_started',
+      user_id: userId,
+      start_date: record?.start_date ?? null,
+      role_title: record?.role_title ?? null,
+    };
+  }
+
+  return {
+    ...normaliseArrays(data),
+    start_date: record?.start_date ?? null,
+    role_title: record?.role_title ?? null,
+  };
 }
 
 /**

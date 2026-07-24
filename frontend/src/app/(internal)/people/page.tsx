@@ -76,6 +76,8 @@ export default function PeoplePage() {
     setDecliningId(null); setDeclineNote(''); load();
   };
 
+  console.log('people', people)
+
   return (
     <div>
       <div className='px-4 md:hidden'><AgencyTopNav /></div>

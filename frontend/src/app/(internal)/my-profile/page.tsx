@@ -51,6 +51,8 @@ type State = Partial<StaffProfileFull> & {
   declaration_1: boolean;
   declaration_2: boolean;
   secondary_education: any
+  start_date: string,
+  role_title: string,
 };
 
 const initialState: State = {
@@ -60,6 +62,9 @@ const initialState: State = {
   professional_qualifications: [blankEdu()],
   has_criminal_record: false, guarantor_form_acknowledged: false,
   declaration_1: false, declaration_2: false,
+  start_date: "",
+  role_title:"",
+  
 };
 
 type Action = { type: 'SET'; key: string; value: unknown }
@@ -133,8 +138,10 @@ export default function MyProfilePage() {
   }, [state]);
 
   const submit = async () => {
-    const method = hasExistingProfile ? 'PUT' : 'POST';
-    const res = await apiFetch('/api/people/me/profile', { ...state, profile_state: 'submitted', submitted_at: new Date().toISOString() }, method);
+    const { start_date, role_title, ...rest } = state;
+    const payload = { ...rest };
+
+    const res = await apiFetch('/api/people/me/profile', { ...payload, profile_state: 'submitted', submitted_at: new Date().toISOString() }, 'post');
     if (res.success) { 
       setDone(new Set(SECTIONS)); 
       setSubmitted(true); 
@@ -177,6 +184,9 @@ export default function MyProfilePage() {
           setHasExistingProfile(true);
           if (data.form.profile_state === 'submitted') {
             setSubmitted(true);
+          }
+          if (data.form.profile_state === 'not_started') {
+            setHasExistingProfile(false)
           }
           
           // Mark all sections as done if profile is submitted
@@ -235,7 +245,7 @@ export default function MyProfilePage() {
     );
   }
 
-  if (submitted && !isEditMode) return <SuccessScreen onEdit={() => setIsEditMode(true)} profileData={state} />;
+  if (!isEditMode && (submitted || hasExistingProfile)) return <SuccessScreen onEdit={() => setIsEditMode(true)} profileData={state}/>;
 
   return (
     <div className="min-h-screen bg-[#0d0d1a]">
@@ -384,7 +394,7 @@ function PersonalSection({ state, s, next }: { state: State; s: ReturnType<typeo
         <div className="text-sm text-white/60 max-w-2xl leading-relaxed">Your official details. Employment facts like your role and start date are managed by HR — everything else is yours to fill.</div>
       </div>
       <Card title="From your employment record">
-        <G2><Locked label="Designation / Role" value="Content Strategist" /><Locked label="Date of Employment" value="July 1, 2026" /></G2>
+        <G2><Locked label="Designation / Role" value={state.role_title} /><Locked label="Date of Employment" value={state.start_date} /></G2>
       </Card>
       <Card title="Full name">
         <G3>

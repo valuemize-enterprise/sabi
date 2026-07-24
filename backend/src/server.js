@@ -96,6 +96,10 @@ const leaderboardRoutes         = require('./routes/agency/leaderboard.routes');
 // ── People OS Routes ─────────────────────────────────────────
 const { peopleRouter, leaveRouter } = require('./routes/people.routes');
 
+// ── Task Import (add before existing /api/tasks route) ──
+const taskImportRouter = require('./routes/task-import.routes');
+
+
 
 // ── Middleware ────────────────────────────────────────────────
 const { errorHandler }  = require('./middleware/error.middleware');
@@ -230,6 +234,9 @@ app.use('/api/agency/leaderboard',      leaderboardRoutes);
 app.use('/api/people',                  peopleRouter);
 app.use('/api/leave',                   leaveRouter);
 app.use('/api/people',                  profileFormRouter);
+
+// ── Task Import
+app.use('/api/task-import', taskImportRouter);
 
 // ── 404 Handler ───────────────────────────────────────────────
 app.use('*', (req, res) => {

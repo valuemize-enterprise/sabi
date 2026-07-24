@@ -20,14 +20,18 @@
     "lucide-react": "^0.383.0",
     "markdown-it": "^14.3.0",
     "next": "14.2.5",
+    "papaparse": "^5.5.4",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "react-hot-toast": "^2.6.0",
+    "react-icons": "^5.7.0",
     "recharts": "^2.12.7",
+    "xlsx": "^0.18.5",
     "zustand": "^4.5.4"
   },
   "devDependencies": {
     "@types/node": "^20.14.11",
+    "@types/papaparse": "^5.5.2",
     "@types/react": "^18.3.3",
     "@types/react-dom": "^18.3.0",
     "autoprefixer": "^10.4.19",
