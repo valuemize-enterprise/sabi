@@ -34,6 +34,7 @@ const BRAND_ROLES = [
   'community_manager',
   'contributor',
   'brand_admin',
+  'art_director'
 ];
 
 const ADMIN_ROLES = [
