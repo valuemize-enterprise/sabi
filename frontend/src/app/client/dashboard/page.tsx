@@ -121,7 +121,7 @@ export default function ClientDashboardPage() {
   const recentReports= (data?.recentReports ?? []) as any[];
   const hour         = new Date().getHours();
   const greeting     = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening';
-
+   console.log('score', brand.clarity_score_breakdown)
   // Calculate goal health
   const atRisk = activeGoals.filter((g: any) => {
     const pct = (g.current_value / Math.max(g.target_value, 1)) * 100;
@@ -207,22 +207,25 @@ export default function ClientDashboardPage() {
             )}
           </div>
 
-          {/* Score breakdown if available */}
-          {brand.clarity_score_breakdown && (
-            <div className="hidden md:block w-48 space-y-1.5">
-              {Object.entries(brand.clarity_score_breakdown as Record<string, number>).slice(0, 5).map(([k, v]) => (
-                <div key={k}>
-                  <div className="flex items-center justify-between mb-0.5">
-                    <p className="text-[10px] text-white/30 capitalize">{k.replace(/_/g,' ')}</p>
-                    <p className="text-[10px] text-white/50 font-mono">{Math.round(v * 100)}%</p>
-                  </div>
-                  <div className="w-full bg-white/5 rounded-full h-1">
-                    <div className="h-1 rounded-full bg-purple-500" style={{ width: `${v * 100}%` }} />
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
+         {/* Score breakdown if available */}
+{brand.clarity_score_breakdown && (
+  <div className="hidden md:block w-48 space-y-1.5">
+    {Object.entries(brand.clarity_score_breakdown as Record<string, number>).slice(0, 5).map(([k, v]) => {
+      const pct = Math.max(0, Math.min(100, Math.round(v)));
+      return (
+        <div key={k}>
+          <div className="flex items-center justify-between mb-0.5">
+            <p className="text-[10px] text-white/30 capitalize">{k.replace(/_/g, ' ')}</p>
+            <p className="text-[10px] text-white/50 font-mono">{pct}%</p>
+          </div>
+          <div className="w-full bg-white/5 rounded-full h-1">
+            <div className="h-1 rounded-full bg-purple-500" style={{ width: `${pct}%` }} />
+          </div>
+        </div>
+      );
+    })}
+  </div>
+)}
         </div>
       </div>
 
