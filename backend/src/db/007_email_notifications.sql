@@ -36,7 +36,7 @@ CREATE INDEX IF NOT EXISTS email_log_entity_idx ON email_log (entity_id);
 
 CREATE TABLE IF NOT EXISTS email_preferences (
   user_id    UUID NOT NULL,
-  category   VARCHAR(32) NOT NULL,   -- tasks | scores | briefs | financial | digests | celebrations
+  category   VARCHAR(32) NOT NULL,   -- tasks | scores | briefs | financial | digests | celebrations | people
   enabled    BOOLEAN NOT NULL DEFAULT true,
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   PRIMARY KEY (user_id, category)

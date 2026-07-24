@@ -15,9 +15,10 @@ import { useState } from 'react';
 import { useAgencyStore } from '@/lib/store';
 import { useMobileSidebar } from '@/lib/MobileSidebarContext';
 
-const ADMIN_ROLES = ['super_admin','ceo','managing_director','creative_director','strategy_director','account_director','brand_admin','hr'];
+const ADMIN_ROLES = ['super_admin','ceo','managing_director','creative_director','strategy_director','account_director','brand_admin'];
 const isAdmin = (role: string) => ADMIN_ROLES.includes(role);
 const isSA    = (role: string) => role === 'super_admin';
+const isHR    = (role: string) => role === 'hr';
 
 const SHARED_NAV = [
   { href:'/dashboard',      label:'Dashboard',     icon:LayoutDashboard },
@@ -140,7 +141,16 @@ export function InternalSidebar() {
           </>
         )}
 
-        {!admin && (
+        {isHR(role) && (
+          <>
+            <div className="pt-3 pb-1">
+              <p className="text-[10px] text-white/20 font-semibold uppercase tracking-widest px-3">HR</p>
+            </div>
+            <NavLink href="/people" label="People" icon={Users} />
+          </>
+        )}
+
+        {!admin && !isHR(role) && (
           <>
             <div className="pt-3 pb-1">
               <p className="text-[10px] text-white/20 font-semibold uppercase tracking-widest px-3">My Work</p>
@@ -149,30 +159,36 @@ export function InternalSidebar() {
           </>
         )}
 
-        {admin && (
+        {(admin || isHR(role)) && (
           <div className="pt-2">
-            <button onClick={() => setSettingsOpen(o => !o)}
-              className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-white/40 hover:text-white hover:bg-white/5 transition-all">
-              <Settings className="w-4 h-4 text-white/25" />
-              <span className="flex-1 text-left">Settings</span>
-              {settingsOpen
-                ? <ChevronDown className="w-3.5 h-3.5" />
-                : <ChevronRight className="w-3.5 h-3.5" />}
-            </button>
-            {settingsOpen && (
-              <div className="ml-4 pl-3 border-l border-white/5 mt-1 space-y-0.5">
-                {SETTINGS_SUB.filter(s => (!s.saOnly || sa) && (!s.roles || s.roles.includes(role))).map(s => (
-                  <Link key={s.href} href={s.href}
-                    onClick={close}
-                    className={`block px-3 py-1.5 text-xs rounded-lg transition-all ${
-                      pathname === s.href
-                        ? 'text-purple-400 bg-purple-500/10'
-                        : 'text-white/35 hover:text-white hover:bg-white/5'
-                    }`}>
-                    {s.label}
-                  </Link>
-                ))}
-              </div>
+            {isHR(role) ? (
+              <NavLink href="/my-profile" label="My Profile" icon={Settings} />
+            ) : (
+              <>
+                <button onClick={() => setSettingsOpen(o => !o)}
+                  className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-white/40 hover:text-white hover:bg-white/5 transition-all">
+                  <Settings className="w-4 h-4 text-white/25" />
+                  <span className="flex-1 text-left">Settings</span>
+                  {settingsOpen
+                    ? <ChevronDown className="w-3.5 h-3.5" />
+                    : <ChevronRight className="w-3.5 h-3.5" />}
+                </button>
+                {settingsOpen && (
+                  <div className="ml-4 pl-3 border-l border-white/5 mt-1 space-y-0.5">
+                    {SETTINGS_SUB.filter(s => (!s.saOnly || sa) && (!s.roles || s.roles.includes(role))).map(s => (
+                      <Link key={s.href} href={s.href}
+                        onClick={close}
+                        className={`block px-3 py-1.5 text-xs rounded-lg transition-all ${
+                          pathname === s.href
+                            ? 'text-purple-400 bg-purple-500/10'
+                            : 'text-white/35 hover:text-white hover:bg-white/5'
+                        }`}>
+                        {s.label}
+                      </Link>
+                    ))}
+                  </div>
+                )}
+              </>
             )}
           </div>
         )}
