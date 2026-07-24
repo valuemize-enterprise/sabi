@@ -5,7 +5,7 @@ import StampAvatar from './StampAvatar';
 import { createPerson } from './types';
 
 const ROLES: { key: string; label: string; emoji: string }[] = [
-  { key: 'designer', label: 'Designer', emoji: '🎨' },
+  { key: 'art_director', label: 'Art Director', emoji: '🎨' },
   { key: 'copywriter', label: 'Copywriter', emoji: '✍️' },
   { key: 'strategist', label: 'Strategist', emoji: '🧭' },
   { key: 'account_manager', label: 'Account Manager', emoji: '🤝' },
@@ -17,7 +17,7 @@ const ROLES: { key: string; label: string; emoji: string }[] = [
   { key: 'photographer', label: 'Photographer', emoji: '📷' },
   { key: 'media_buyer', label: 'Media Buyer', emoji: '📈' },
   { key: 'pr_specialist', label: 'PR Specialist', emoji: '📣' },
-  { key: 'seo_specialist', label: 'SEO Specialist', emoji: '🔍' },
+  { key: 'Executive', label: 'Executive', emoji: '🔍' },
   { key: 'accountant', label: 'Accountant', emoji: '🧮' },
   { key: 'operations', label: 'Operations', emoji: '⚙️' },
 ];

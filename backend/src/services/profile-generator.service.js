@@ -40,7 +40,7 @@ const ROLE_SKILLS = {
   developer:          ['Front-End Development', 'Web Performance', 'React'],
   media_buyer:        ['Media Buying', 'Campaign Optimisation', 'ROI Tracking'],
   pr_specialist:      ['PR', 'Media Relations', 'Press Releases'],
-  seo_specialist:     ['SEO', 'Content Strategy', 'Keyword Research'],
+  Executive:     ['SEO', 'Content Strategy', 'Keyword Research'],
   accountant:         ['Financial Reporting', 'Budgeting', 'Reconciliation'],
   operations:         ['Operations', 'Process Improvement', 'Vendor Management'],
 };
