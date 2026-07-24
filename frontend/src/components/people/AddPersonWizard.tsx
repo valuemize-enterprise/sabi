@@ -9,7 +9,7 @@ const ROLES: { key: string; label: string; emoji: string }[] = [
   { key: 'copywriter', label: 'Copywriter', emoji: '✍️' },
   { key: 'strategist', label: 'Strategist', emoji: '🧭' },
   { key: 'account_manager', label: 'Account Manager', emoji: '🤝' },
-  { key: 'community_manager', label: 'Community Manager', emoji: '💬' },
+  { key: 'brand_manager', label: 'Brand Manager', emoji: '💬' },
   { key: 'cinematographer', label: 'Cinematographer', emoji: '🎬' },
   { key: 'video_editor', label: 'Video Editor', emoji: '🎞️' },
   { key: 'analyst', label: 'Analyst', emoji: '📊' },
@@ -121,7 +121,7 @@ export default function AddPersonWizard({ onClose, onCreated }: { onClose: () =>
   }
 
   return (
-    <Modal onClose={onClose}>
+    <Modal onClose={onClose} >
       <div className="pp-wiz-head">
         <div className="pp-wiz-title-row">
           <div className="pp-wiz-title">Add person</div>

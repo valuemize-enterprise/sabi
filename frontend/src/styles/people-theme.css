@@ -127,7 +127,24 @@
 
 /* ═══════════════ WIZARD (Add Person) ═══════════════ */
 .pp-wiz-overlay{position:fixed;inset:0;background:rgba(33,28,22,.45);z-index:50;display:flex;align-items:center;justify-content:center;padding:20px}
-.pp-wiz-modal{background:var(--card);border-radius:20px;width:100%;max-width:640px;max-height:92vh;display:flex;flex-direction:column;box-shadow:0 40px 80px -24px rgba(0,0,0,.35);overflow:hidden}
+.pp-wiz-modal {
+  background: var(--card);
+  border-radius: 20px;
+  width: 100%;
+  max-width: 640px;
+  max-height: 92vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 40px 80px -24px rgba(0,0,0,.35);
+  overflow-y: auto;   /* was overflow: hidden */
+  overflow-x: hidden;
+}
+
+.pp-wiz-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+}
 .pp-wiz-head{padding:20px 26px 0}
 .pp-wiz-title-row{display:flex;align-items:center;gap:10px;margin-bottom:16px}
 .pp-wiz-title{font-family:var(--display);font-weight:700;font-size:17px}
