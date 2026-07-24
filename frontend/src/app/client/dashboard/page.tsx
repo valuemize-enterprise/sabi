@@ -12,11 +12,11 @@ import { useClientStore } from '@/lib/store';
 
 // ── Sub-components ────────────────────────────────────────────
 function ClarityDonut({ score }: { score: number }) {
-  const pct  = Math.min(100, Math.round((score / 1000) * 100));
-  const r    = 44;
+  const pct = Math.min(100, Math.round((score / 1000) * 100));
+  const r = 44;
   const circ = 2 * Math.PI * r;
   const dash = (pct / 100) * circ;
-  const grade = score >= 850 ? ['S','#FCD34D'] : score >= 700 ? ['A','#34D399'] : score >= 550 ? ['B','#60A5FA'] : score >= 400 ? ['C','#FBBF24'] : ['D','#F87171'];
+  const grade = score >= 850 ? ['S', '#FCD34D'] : score >= 700 ? ['A', '#34D399'] : score >= 550 ? ['B', '#60A5FA'] : score >= 400 ? ['C', '#FBBF24'] : ['D', '#F87171'];
 
   return (
     <div className="relative w-28 h-28">
@@ -36,17 +36,17 @@ function ClarityDonut({ score }: { score: number }) {
 
 function QuickLink({ href, icon: Icon, label, color = 'purple' }: { href: string; icon: any; label: string; color?: string }) {
   const c: Record<string, string> = {
-    purple:'from-purple-600/20 to-purple-600/5 border-purple-500/20 hover:border-purple-500/40',
+    purple: 'from-purple-600/20 to-purple-600/5 border-purple-500/20 hover:border-purple-500/40',
     green: 'from-green-600/20 to-green-600/5 border-green-500/20 hover:border-green-500/40',
-    blue:  'from-blue-600/20 to-blue-600/5 border-blue-500/20 hover:border-blue-500/40',
+    blue: 'from-blue-600/20 to-blue-600/5 border-blue-500/20 hover:border-blue-500/40',
     amber: 'from-amber-600/20 to-amber-600/5 border-amber-500/20 hover:border-amber-500/40',
-    teal:  'from-teal-600/20 to-teal-600/5 border-teal-500/20 hover:border-teal-500/40',
-    red:   'from-red-600/20 to-red-600/5 border-red-500/20 hover:border-red-500/40',
+    teal: 'from-teal-600/20 to-teal-600/5 border-teal-500/20 hover:border-teal-500/40',
+    red: 'from-red-600/20 to-red-600/5 border-red-500/20 hover:border-red-500/40',
   };
   const ic: Record<string, string> = {
-    purple:'text-purple-400 bg-purple-500/15', green:'text-green-400 bg-green-500/15',
-    blue:'text-blue-400 bg-blue-500/15', amber:'text-amber-400 bg-amber-500/15',
-    teal:'text-teal-400 bg-teal-500/15', red:'text-red-400 bg-red-500/15',
+    purple: 'text-purple-400 bg-purple-500/15', green: 'text-green-400 bg-green-500/15',
+    blue: 'text-blue-400 bg-blue-500/15', amber: 'text-amber-400 bg-amber-500/15',
+    teal: 'text-teal-400 bg-teal-500/15', red: 'text-red-400 bg-red-500/15',
   };
   return (
     <Link href={href}
@@ -61,7 +61,7 @@ function QuickLink({ href, icon: Icon, label, color = 'purple' }: { href: string
 
 export default function ClientDashboardPage() {
   const { client } = useClientStore();
-  const [data, setData]   = useState<any>(null);
+  const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [showSatisfactionPrompt, setShowSatisfactionPrompt] = useState(false);
@@ -86,7 +86,7 @@ export default function ClientDashboardPage() {
       headers: { Authorization: `Bearer ${tok}` },
     }).then(r => r.json()).then((r: any) => {
       setShowSatisfactionPrompt(!r.data?.submittedThisWeek);
-    }).catch(() => {});
+    }).catch(() => { });
   }, []);
 
   const refresh = () => { setRefreshing(true); load(); };
@@ -115,13 +115,12 @@ export default function ClientDashboardPage() {
     </div>
   );
 
-  const brand        = data?.brand || {};
-  const score        = brand.clarity_score ?? 0;
-  const activeGoals  = (data?.activeGoals ?? []) as any[];
-  const recentReports= (data?.recentReports ?? []) as any[];
-  const hour         = new Date().getHours();
-  const greeting     = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening';
-   console.log('score', brand.clarity_score_breakdown)
+  const brand = data?.brand || {};
+  const score = brand.clarity_score ?? 0;
+  const activeGoals = (data?.activeGoals ?? []) as any[];
+  const recentReports = (data?.recentReports ?? []) as any[];
+  const hour = new Date().getHours();
+  const greeting = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening';
   // Calculate goal health
   const atRisk = activeGoals.filter((g: any) => {
     const pct = (g.current_value / Math.max(g.target_value, 1)) * 100;
@@ -156,26 +155,25 @@ export default function ClientDashboardPage() {
               <p className="text-xs text-white/40 mt-0.5">Your honest rating helps your Cerebre team stay accountable</p>
             </div>
             <button onClick={() => setShowSatisfactionPrompt(false)} className="text-white/20 hover:text-white transition-colors">
-              <X className="w-4 h-4"/>
+              <X className="w-4 h-4" />
             </button>
           </div>
           <div className="flex items-center gap-2 mb-3">
-            {[1,2,3,4,5].map(n => (
+            {[1, 2, 3, 4, 5].map(n => (
               <button key={n} onClick={() => setSatisfactionScore(n)}
-                className={`w-11 h-11 rounded-xl flex items-center justify-center transition-all ${
-                  satisfactionScore >= n ? 'bg-amber-500/25 text-amber-400' : 'bg-white/5 text-white/20'
-                }`}>
-                <Star className="w-5 h-5" fill={satisfactionScore >= n ? 'currentColor' : 'none'}/>
+                className={`w-11 h-11 rounded-xl flex items-center justify-center transition-all ${satisfactionScore >= n ? 'bg-amber-500/25 text-amber-400' : 'bg-white/5 text-white/20'
+                  }`}>
+                <Star className="w-5 h-5" fill={satisfactionScore >= n ? 'currentColor' : 'none'} />
               </button>
             ))}
           </div>
           {satisfactionScore > 0 && (
             <>
               <input className="sabi-input text-sm mb-3" placeholder="Anything specific? (optional)"
-                value={satisfactionComment} onChange={e => setSatisfactionComment(e.target.value)}/>
+                value={satisfactionComment} onChange={e => setSatisfactionComment(e.target.value)} />
               <button onClick={submitSatisfaction} disabled={submittingSatisfaction}
                 className="sabi-btn-primary flex items-center gap-2 px-4 py-2 text-sm disabled:opacity-50">
-                {submittingSatisfaction ? <Loader2 className="w-4 h-4 animate-spin"/> : 'Submit'}
+                {submittingSatisfaction ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Submit'}
               </button>
             </>
           )}
@@ -195,37 +193,37 @@ export default function ClientDashboardPage() {
             </div>
             <p className="text-sm text-white/40">
               {score >= 850 ? 'Exceptional — your brand is firing on all cylinders.' :
-               score >= 700 ? 'Strong — minor optimisations will push you to the top tier.' :
-               score >= 550 ? 'Growing — consistent execution will drive your score up.' :
-               score >= 400 ? 'Building — your team is working to improve your brand health.' :
-                              'Early stage — strong foundations being laid for your brand.'}
+                score >= 700 ? 'Strong — minor optimisations will push you to the top tier.' :
+                  score >= 550 ? 'Growing — consistent execution will drive your score up.' :
+                    score >= 400 ? 'Building — your team is working to improve your brand health.' :
+                      'Early stage — strong foundations being laid for your brand.'}
             </p>
             {brand.clarity_score_updated_at && (
               <p className="text-xs text-white/20 mt-2">
-                Last updated: {new Date(brand.clarity_score_updated_at).toLocaleDateString('en-NG', { day:'numeric', month:'short', year:'numeric' })}
+                Last updated: {new Date(brand.clarity_score_updated_at).toLocaleDateString('en-NG', { day: 'numeric', month: 'short', year: 'numeric' })}
               </p>
             )}
           </div>
 
-         {/* Score breakdown if available */}
-{brand.clarity_score_breakdown && (
-  <div className="hidden md:block w-48 space-y-1.5">
-    {Object.entries(brand.clarity_score_breakdown as Record<string, number>).slice(0, 5).map(([k, v]) => {
-      const pct = Math.max(0, Math.min(100, Math.round(v)));
-      return (
-        <div key={k}>
-          <div className="flex items-center justify-between mb-0.5">
-            <p className="text-[10px] text-white/30 capitalize">{k.replace(/_/g, ' ')}</p>
-            <p className="text-[10px] text-white/50 font-mono">{pct}%</p>
-          </div>
-          <div className="w-full bg-white/5 rounded-full h-1">
-            <div className="h-1 rounded-full bg-purple-500" style={{ width: `${pct}%` }} />
-          </div>
-        </div>
-      );
-    })}
-  </div>
-)}
+          {/* Score breakdown if available */}
+          {brand.clarity_score_breakdown && (
+            <div className="hidden md:block w-48 space-y-1.5">
+              {Object.entries(brand.clarity_score_breakdown as Record<string, number>).slice(0, 5).map(([k, v]) => {
+                const pct = Math.max(0, Math.min(100, Math.round(v)));
+                return (
+                  <div key={k}>
+                    <div className="flex items-center justify-between mb-0.5">
+                      <p className="text-[10px] text-white/30 capitalize">{k.replace(/_/g, ' ')}</p>
+                      <p className="text-[10px] text-white/50 font-mono">{pct}%</p>
+                    </div>
+                    <div className="w-full bg-white/5 rounded-full h-1">
+                      <div className="h-1 rounded-full bg-purple-500" style={{ width: `${pct}%` }} />
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </div>
       </div>
 
@@ -317,14 +315,14 @@ export default function ClientDashboardPage() {
       {/* Quick navigation grid */}
       <h2 className="text-xs text-white/30 font-semibold uppercase tracking-widest mb-3">Quick Access</h2>
       <div className="grid grid-cols-4 md:grid-cols-8 gap-2 sm:gap-3 mb-5">
-        <QuickLink href="/client/ask"          icon={Brain}     label="Ask ARIA"       color="purple" />
-        <QuickLink href="/client/reports"      icon={FileText}  label="Reports"        color="blue"   />
-        <QuickLink href="/client/goals"        icon={Target}    label="Goals"          color="green"  />
-        <QuickLink href="/client/competitors"  icon={Swords}    label="Competitors"    color="red"    />
-        <QuickLink href="/client/strategies"   icon={Lightbulb} label="Strategies"     color="amber"  />
-        <QuickLink href="/client/moments"      icon={Calendar}  label="MomentMap™"    color="teal"   />
-        <QuickLink href="/client/value"        icon={Trophy}    label="Proof of Value" color="amber"  />
-        <QuickLink href="/client/platforms"    icon={Smartphone}label="Platforms"      color="blue"   />
+        <QuickLink href="/client/ask" icon={Brain} label="Ask ARIA" color="purple" />
+        <QuickLink href="/client/reports" icon={FileText} label="Reports" color="blue" />
+        <QuickLink href="/client/goals" icon={Target} label="Goals" color="green" />
+        <QuickLink href="/client/competitors" icon={Swords} label="Competitors" color="red" />
+        <QuickLink href="/client/strategies" icon={Lightbulb} label="Strategies" color="amber" />
+        <QuickLink href="/client/moments" icon={Calendar} label="MomentMap™" color="teal" />
+        <QuickLink href="/client/value" icon={Trophy} label="Proof of Value" color="amber" />
+        <QuickLink href="/client/platforms" icon={Smartphone} label="Platforms" color="blue" />
       </div>
 
       {/* Bottom row: Team + Satisfaction CTA */}
@@ -333,7 +331,7 @@ export default function ClientDashboardPage() {
         <Link href="/client/team"
           className="sabi-card p-5 hover:border-purple-500/20 transition-all group flex items-center gap-4">
           <div className="flex -space-x-2">
-            {['K','A','T','C'].map((l, i) => (
+            {['K', 'A', 'T', 'C'].map((l, i) => (
               <div key={i} className="w-8 h-8 rounded-full bg-purple-500/30 border-2 border-[#12122a] flex items-center justify-center text-xs font-bold text-purple-300">
                 {l}
               </div>
@@ -350,7 +348,7 @@ export default function ClientDashboardPage() {
         <Link href="/client/satisfaction"
           className="sabi-card p-5 hover:border-amber-500/20 transition-all group flex items-center gap-4">
           <div className="flex items-center gap-0.5">
-            {[1,2,3,4,5].map(n => (
+            {[1, 2, 3, 4, 5].map(n => (
               <Star key={n} className={`w-5 h-5 ${n <= 4 ? 'text-amber-400 fill-amber-400' : 'text-white/10'}`} />
             ))}
           </div>
