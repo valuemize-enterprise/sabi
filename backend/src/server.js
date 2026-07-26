@@ -99,6 +99,9 @@ const { peopleRouter, leaveRouter } = require('./routes/people.routes');
 // ── Task Import (add before existing /api/tasks route) ──
 const taskImportRouter = require('./routes/task-import.routes');
 
+// goal generator
+const goalRouter = require('./routes/goal-generator.routes');
+
 
 
 // ── Middleware ────────────────────────────────────────────────
@@ -237,6 +240,9 @@ app.use('/api/people',                  profileFormRouter);
 
 // ── Task Import
 app.use('/api/task-import', taskImportRouter);
+// goal generator
+
+app.use('/api/goals', goalRouter);
 
 // ── 404 Handler ───────────────────────────────────────────────
 app.use('*', (req, res) => {

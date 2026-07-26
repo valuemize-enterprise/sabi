@@ -142,6 +142,42 @@ export const goals = {
 };
 
 // ─────────────────────────────────────────────────────────────
+// Goal Generator (AI-powered OKR goals)
+// ─────────────────────────────────────────────────────────────
+export const goalGeneratorApi = {
+  generateGoals: (formData: FormData) => {
+    const token = typeof window !== 'undefined' ? localStorage.getItem('sabi_token') : null;
+    return fetch(`${BASE_URL}/api/goals/generate`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}` },
+      body: formData, // multipart/form-data
+    }).then(async res => {
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to generate goals');
+      return data;
+    });
+  },
+  saveGoals: (body: Record<string, unknown>) =>
+    agencyFetch('/api/goals/save', { method: 'POST', body: JSON.stringify(body) }),
+  getBrandGoals: (brandId: string) =>
+    agencyFetch(`/api/goals/${brandId}`),
+  editGoal: (goalId: string, updates: Record<string, unknown>) =>
+    agencyFetch(`/api/goals/${goalId}`, { method: 'PATCH', body: JSON.stringify(updates) }),
+  deleteGoal: (goalId: string) =>
+    agencyFetch(`/api/goals/${goalId}`, { method: 'DELETE' }),
+  updateKeyResult: (goalId: string, krId: string, currentValue: number) =>
+    agencyFetch(`/api/goals/${goalId}/kr`, { method: 'PATCH', body: JSON.stringify({ kr_id: krId, current_value: currentValue }) }),
+  submitChangeRequest: (goalId: string, requestType: 'edit' | 'delete', reason: string, proposedChanges?: Record<string, unknown>) =>
+    agencyFetch(`/api/goals/${goalId}/change-request`, { method: 'POST', body: JSON.stringify({ request_type: requestType, reason, proposed_changes: proposedChanges }) }),
+  getChangeRequests: (brandId: string) =>
+    agencyFetch(`/api/goals/change-requests/${brandId}`),
+  getMyRequests: () =>
+    agencyFetch('/api/goals/change-requests/mine'),
+  decideChangeRequest: (requestId: string, approve: boolean, denialReason?: string) =>
+    agencyFetch(`/api/goals/change-requests/${requestId}/decide`, { method: 'PATCH', body: JSON.stringify({ approve, denial_reason: denialReason }) }),
+};
+
+// ─────────────────────────────────────────────────────────────
 // Agency — Competitors
 // ─────────────────────────────────────────────────────────────
 export const competitors = {

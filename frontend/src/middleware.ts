@@ -20,9 +20,9 @@ export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   // Redirect root to agency login
-  if (pathname === '/') {
-    return NextResponse.redirect(new URL('/login', request.url));
-  }
+  // if (pathname === '/') {
+  //   return NextResponse.redirect(new URL('/login', request.url));
+  // }
 
   const response = NextResponse.next();
 

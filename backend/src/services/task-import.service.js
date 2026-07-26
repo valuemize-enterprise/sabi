@@ -17,6 +17,9 @@
 'use strict';
 
 const supabase = require("../config/supabase");
+const notify = require("../services/notification-triggers.service");
+
+
 
  // ← adjust to your db helper path
 
@@ -171,7 +174,7 @@ async function resolveBrandUsers(brandId) {
 }
 
 // ── Main bulk import ──────────────────────────────────────────────
-async function bulkImportTasks({ brandId, tasks, callerId }) {
+async function bulkImportTasks({ brandId, tasks, callerId, callerName }) {
   const resolver = await resolveBrandUsers(brandId);
 
   const toInsert  = [];
@@ -182,7 +185,6 @@ async function bulkImportTasks({ brandId, tasks, callerId }) {
     const t = tasks[i];
     const rowNum = i + 1;
 
-    // Skip empty-title rows
     const title = (t.title || '').trim();
     if (!title) {
       skipped.push({ row: rowNum, reason: 'No task title' });
@@ -226,9 +228,16 @@ async function bulkImportTasks({ brandId, tasks, callerId }) {
 
   const { data, error } = await supabase.from('tasks')
     .insert(toInsert)
-    .select('id, title, assignee_id, priority, due_date, status');
+    .select('id, title, assignee_id, priority, due_date, status, brand_id, strategy_id');
 
   if (error) throw new Error(`Database insert failed: ${error.message}`);
+
+  // Fire notifications for every task that got an assignee.
+  // Don't await sequentially — fire in parallel, and don't let a notify
+  // failure block the response (safe() already swallows errors internally).
+  (data || [])
+    .filter(task => task.assignee_id)
+    .forEach(task => notify.onTaskAssigned(task, callerName));
 
   return {
     created:         (data || []).length,

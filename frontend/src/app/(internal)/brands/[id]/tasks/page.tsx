@@ -96,7 +96,7 @@ export default function BrandTasksPage() {
           brand_id: brandId,
           title: form.title, description: form.description || null,
           priority: form.priority, due_date: form.due_date || null,
-          assignee_id: form.assignee_id || null,
+          assigned_to: form.assignee_id || null,
           strategy_id: form.strategy_id || null,
           goal_id: form.goal_id || null,
           estimated_hours: form.estimated_hours ? parseFloat(form.estimated_hours) : null,
@@ -153,14 +153,14 @@ export default function BrandTasksPage() {
   const tasksByStatus = (status: string) => visibleTasks.filter(t => t.status === status);
 
   if (loading) return <LoadingPage label="Loading tasks…" />;
-if (importOpen) {
-  return (
-    <ImportTasksModal
-      open={importOpen}
-      onClose={() => setImportOpen(false)}
-    />
-  );
-}
+  if (importOpen) {
+    return (
+      <ImportTasksModal
+        open={importOpen}
+        onClose={() => setImportOpen(false)}
+      />
+    );
+  }
 
 
   return (
@@ -213,296 +213,296 @@ if (importOpen) {
 
             <button onClick={() => setImportOpen(true)} className="text-xs border p-2 rounded-md flex items-center gap-2">
               <Image
-  src="/excel.svg"
-  alt="Excel"
-  width={16}
-  height={16}
-/> Upload tasks sheets
-        </button>
-
-        <button
-          onClick={() => {
-            setShowForm(true);
-            setError('');
-            setForm({ ...EMPTY_FORM });
-          }}
-          className="sabi-btn-primary flex items-center gap-2 px-4 py-2 text-sm"
-        >
-          <Plus className="w-4 h-4" /> New Task
-        </button>
-      </div>
-    </div>
-      </div >
-
-    {/* Filters */ }
-    < div className = "flex items-center gap-3 mb-5" >
-      <select className="sabi-input w-44 text-sm" value={filterAssignee} onChange={e => setFA(e.target.value)}>
-        <option className='bg-black' value="">All assignees</option>
-        {teamMembers.map(m => <option className='bg-black' key={m.id} value={m.id}>{m.full_name}</option>)}
-      </select>
-      </div >
-
-    {/* Create task modal */ }
-  {
-    showForm && (
-      <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-        <div className="bg-[#12122a] border border-purple-500/20 rounded-2xl w-full max-w-lg max-h-[90vh] flex flex-col">
-          <div className="flex items-center justify-between p-6 border-b border-white/5">
-            <h2 className="text-base font-bold text-white">New Task</h2>
-            <button onClick={() => setShowForm(false)} className="text-white/30 hover:text-white transition-colors"><X className="w-5 h-5" /></button>
-          </div>
-          <div className="flex-1 overflow-y-auto p-6 space-y-4">
-            {error && <div className="bg-red-500/10 border border-red-500/20 rounded-lg p-3 text-red-400 text-sm">{error}</div>}
-
-            <div>
-              <label className="text-xs text-white/50 mb-1.5 block">Task Title *</label>
-              <input className="sabi-input" required placeholder="e.g. Write 10 Instagram captions for Eid campaign"
-                value={form.title} onChange={e => setF('title', e.target.value)} autoFocus />
-            </div>
-            <div>
-              <label className="text-xs text-white/50 mb-1.5 block">Description</label>
-              <textarea className="sabi-input resize-none" rows={3} placeholder="What needs to be done, and how…"
-                value={form.description} onChange={e => setF('description', e.target.value)} />
-            </div>
-
-            {/* Assignee — key feature */}
-            <div>
-              <label className="text-xs text-white/50 mb-1.5 block flex items-center gap-1.5">
-                <User className="w-3.5 h-3.5" /> Assign to
-              </label>
-              <select className="sabi-input text-sm" value={form.assignee_id} onChange={e => setF('assignee_id', e.target.value)}>
-                <option className='bg-black' value="">Unassigned</option>
-                {teamMembers.map(m => <option className="bg-black" key={m.id} value={m.id}>{m.full_name} — {m.roles_on_brand?.[0]?.replace(/_/g, ' ') ?? m.role?.replace(/_/g, ' ')}</option>)}
-              </select>
-              {form.assignee_id && <p className="text-xs text-green-400/70 mt-1.5">✓ They will be notified when you save this task</p>}
-            </div>
-
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="text-xs text-white/50 mb-1.5 block">Priority</label>
-                <div className="space-y-1.5">
-                  {Object.entries(PRIORITY_META).map(([v, m]) => (
-                    <button type="button" key={v} onClick={() => setF('priority', v)}
-                      className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg border text-xs transition-all ${form.priority === v ? `${m.color} border-current bg-current/10` : 'border-white/5 text-white/40 hover:border-white/10'}`}>
-                      <div className={`w-2 h-2 rounded-full flex-shrink-0 ${m.dot}`} />
-                      {m.label}
-                      {form.priority === v && <Check className="w-3 h-3 ml-auto" />}
-                    </button>
-                  ))}
-                </div>
-              </div>
-              <div className="space-y-3">
-                <div>
-                  <label className="text-xs text-white/50 mb-1.5 block">Due Date</label>
-                  <input type="date" className="sabi-input text-sm" value={form.due_date} onChange={e => setF('due_date', e.target.value)} />
-                </div>
-                <div>
-                  <label className="text-xs text-white/50 mb-1.5 block">Est. Hours</label>
-                  <input type="number" min="0" step="0.5" className="sabi-input text-sm" placeholder="e.g. 3"
-                    value={form.estimated_hours} onChange={e => setF('estimated_hours', e.target.value)} />
-                </div>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="text-xs text-white/50 mb-1.5 block">Strategy</label>
-                <select className="sabi-input text-sm" value={form.strategy_id} onChange={e => setF('strategy_id', e.target.value)}>
-                  <option className="bg-black" value="">No strategy</option>
-                  {strategies.map(s => <option className="bg-black" key={s.id} value={s.id}>{s.title}</option>)}
-                </select>
-              </div>
-              <div>
-                <label className="text-xs text-white/50 mb-1.5 block">Goal</label>
-                <select className="sabi-input text-sm" value={form.goal_id} onChange={e => setF('goal_id', e.target.value)}>
-                  <option className="bg-black" value="">No goal</option>
-                  {goals.map(g => <option className="bg-black" key={g.id} value={g.id}>{g.title}</option>)}
-                </select>
-              </div>
-            </div>
-          </div>
-          <div className="flex gap-3 p-6 border-t border-white/5">
-            <button onClick={createTask} disabled={saving || !form.title}
-              className="sabi-btn-primary flex-1 flex items-center justify-center gap-2 py-2.5 text-sm disabled:opacity-50">
-              {saving ? <><Loader2 className="w-4 h-4 animate-spin" />Creating…</> : <><Check className="w-4 h-4" />Create Task</>}
+                src="/excel.svg"
+                width={16}
+                height={16}
+                alt="excel_icon"
+              /> Upload tasks sheets
             </button>
-            <button onClick={() => setShowForm(false)} className="px-4 text-sm text-white/40 hover:text-white transition-colors">Cancel</button>
+
+            <button
+              onClick={() => {
+                setShowForm(true);
+                setError('');
+                setForm({ ...EMPTY_FORM });
+              }}
+              className="sabi-btn-primary flex items-center gap-2 px-4 py-2 text-sm"
+            >
+              <Plus className="w-4 h-4" /> New Task
+            </button>
           </div>
         </div>
-      </div>
-    )
-  }
+      </div >
 
-  {/* ── KANBAN VIEW ────────────────────────────────────────── */ }
-  {
-    view === 'kanban' && (
-      <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
-        {COLUMNS.map(col => {
-          const colTasks = tasksByStatus(col.key);
-          return (
-            <div key={col.key} className={`rounded-2xl border p-4 min-h-48 ${col.color}`}>
-              <div className="flex items-center gap-2 mb-4">
-                <div className={`w-2 h-2 rounded-full flex-shrink-0 ${col.dot}`} />
-                <p className="text-xs font-semibold text-white">{col.label}</p>
-                <span className="text-xs text-white/30 ml-auto">{colTasks.length}</span>
+      {/* Filters */}
+      < div className="flex items-center gap-3 mb-5" >
+        <select className="sabi-input w-44 text-sm" value={filterAssignee} onChange={e => setFA(e.target.value)}>
+          <option className='bg-black' value="">All assignees</option>
+          {teamMembers.map(m => <option className='bg-black' key={m.id} value={m.id}>{m.full_name}</option>)}
+        </select>
+      </div >
+
+      {/* Create task modal */}
+      {
+        showForm && (
+          <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+            <div className="bg-[#12122a] border border-purple-500/20 rounded-2xl w-full max-w-lg max-h-[90vh] flex flex-col">
+              <div className="flex items-center justify-between p-6 border-b border-white/5">
+                <h2 className="text-base font-bold text-white">New Task</h2>
+                <button onClick={() => setShowForm(false)} className="text-white/30 hover:text-white transition-colors"><X className="w-5 h-5" /></button>
               </div>
-              <div className="space-y-2">
-                {colTasks.map(t => {
-                  const pri = PRIORITY_META[t.priority ?? 'medium'];
-                  const assignee = teamMembers.find(m => m.id === t.assignee_id);
-                  return (
-                    <div key={t.id} className="bg-[#12122a] border border-white/6 rounded-xl p-3 cursor-pointer hover:border-white/15 transition-all group">
-                      <div className="flex items-start justify-between gap-2 mb-2">
-                        <p className="text-xs font-medium text-white leading-snug">{t.title}</p>
-                        <div className={`w-2 h-2 rounded-full flex-shrink-0 mt-1 ${pri.dot}`} title={pri.label} />
-                      </div>
-                      <div className="flex items-center gap-2 flex-wrap">
-                        {t.due_date && (
-                          <span className="text-[10px] text-white/30 flex items-center gap-0.5">
-                            <Clock className="w-2.5 h-2.5" />{t.due_date}
-                          </span>
-                        )}
-                        {t.strategies && (
-                          <span className="text-[10px] text-purple-400/60 flex items-center gap-0.5 truncate max-w-[80px]">
-                            <Lightbulb className="w-2.5 h-2.5 flex-shrink-0" />{t.strategies.title}
-                          </span>
-                        )}
-                      </div>
-                      {assignee && (
-                        <div className="flex items-center gap-1.5 mt-2">
-                          <div className="w-5 h-5 rounded-full bg-purple-500/30 flex items-center justify-center text-[10px] font-bold text-purple-300">
-                            {assignee.full_name?.[0]}
-                          </div>
-                          <span className="text-[10px] text-white/40 truncate">{assignee.full_name}</span>
-                        </div>
-                      )}
-                      {t.status === 'done' && perms.canManage && (
-                        <div className="flex gap-1.5 mt-2">
-                          <button onClick={() => verifyTask(t.id)}
-                            className="flex-1 flex items-center justify-center gap-1.5 text-[10px] py-1.5 rounded-lg bg-green-500/10 border border-green-500/25 text-green-400 hover:bg-green-500/20 transition-all font-medium">
-                            <Check className="w-3 h-3" /> Verify
-                          </button>
-                          <button onClick={() => { setRejectingId(t.id); setRejectReason(''); }}
-                            className="flex-1 flex items-center justify-center gap-1.5 text-[10px] py-1.5 rounded-lg bg-red-500/10 border border-red-500/25 text-red-400 hover:bg-red-500/20 transition-all font-medium">
-                            <X className="w-3 h-3" /> Reject
-                          </button>
-                        </div>
-                      )}
-                      {/* Status change — only admin/brand admin can move task out of Verified */}
-                      {(t.status !== 'verified' || perms.canManage) && (
-                        <select className="w-full mt-2 text-[10px] bg-black border border-white/8 rounded-lg px-2 py-1 text-white/50 hover:text-white cursor-pointer transition-all opacity-0 group-hover:opacity-100"
-                          value={t.status} onChange={e => updateStatus(t.id, e.target.value)}>
-                          {COLUMNS.filter(c => c.key !== 'verified').map(c => <option className='bg-black' key={c.key} value={c.key}>{c.label}</option>)}
-                        </select>
-                      )}
+              <div className="flex-1 overflow-y-auto p-6 space-y-4">
+                {error && <div className="bg-red-500/10 border border-red-500/20 rounded-lg p-3 text-red-400 text-sm">{error}</div>}
+
+                <div>
+                  <label className="text-xs text-white/50 mb-1.5 block">Task Title *</label>
+                  <input className="sabi-input" required placeholder="e.g. Write 10 Instagram captions for Eid campaign"
+                    value={form.title} onChange={e => setF('title', e.target.value)} autoFocus />
+                </div>
+                <div>
+                  <label className="text-xs text-white/50 mb-1.5 block">Description</label>
+                  <textarea className="sabi-input resize-none" rows={3} placeholder="What needs to be done, and how…"
+                    value={form.description} onChange={e => setF('description', e.target.value)} />
+                </div>
+
+                {/* Assignee — key feature */}
+                <div>
+                  <label className="text-xs text-white/50 mb-1.5 block flex items-center gap-1.5">
+                    <User className="w-3.5 h-3.5" /> Assign to
+                  </label>
+                  <select className="sabi-input text-sm" value={form.assignee_id} onChange={e => setF('assignee_id', e.target.value)}>
+                    <option className='bg-black' value="">Unassigned</option>
+                    {teamMembers.map(m => <option className="bg-black" key={m.id} value={m.id}>{m.full_name} — {m.roles_on_brand?.[0]?.replace(/_/g, ' ') ?? m.role?.replace(/_/g, ' ')}</option>)}
+                  </select>
+                  {form.assignee_id && <p className="text-xs text-green-400/70 mt-1.5">✓ They will be notified when you save this task</p>}
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-xs text-white/50 mb-1.5 block">Priority</label>
+                    <div className="space-y-1.5">
+                      {Object.entries(PRIORITY_META).map(([v, m]) => (
+                        <button type="button" key={v} onClick={() => setF('priority', v)}
+                          className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg border text-xs transition-all ${form.priority === v ? `${m.color} border-current bg-current/10` : 'border-white/5 text-white/40 hover:border-white/10'}`}>
+                          <div className={`w-2 h-2 rounded-full flex-shrink-0 ${m.dot}`} />
+                          {m.label}
+                          {form.priority === v && <Check className="w-3 h-3 ml-auto" />}
+                        </button>
+                      ))}
                     </div>
-                  );
-                })}
-                {colTasks.length === 0 && (
-                  <div className="text-center py-6 text-white/15 text-xs">No tasks here</div>
-                )}
+                  </div>
+                  <div className="space-y-3">
+                    <div>
+                      <label className="text-xs text-white/50 mb-1.5 block">Due Date</label>
+                      <input type="date" className="sabi-input text-sm" value={form.due_date} onChange={e => setF('due_date', e.target.value)} />
+                    </div>
+                    <div>
+                      <label className="text-xs text-white/50 mb-1.5 block">Est. Hours</label>
+                      <input type="number" min="0" step="0.5" className="sabi-input text-sm" placeholder="e.g. 3"
+                        value={form.estimated_hours} onChange={e => setF('estimated_hours', e.target.value)} />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-xs text-white/50 mb-1.5 block">Strategy</label>
+                    <select className="sabi-input text-sm" value={form.strategy_id} onChange={e => setF('strategy_id', e.target.value)}>
+                      <option className="bg-black" value="">No strategy</option>
+                      {strategies.map(s => <option className="bg-black" key={s.id} value={s.id}>{s.title}</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="text-xs text-white/50 mb-1.5 block">Goal</label>
+                    <select className="sabi-input text-sm" value={form.goal_id} onChange={e => setF('goal_id', e.target.value)}>
+                      <option className="bg-black" value="">No goal</option>
+                      {goals.map(g => <option className="bg-black" key={g.id} value={g.id}>{g.title}</option>)}
+                    </select>
+                  </div>
+                </div>
+              </div>
+              <div className="flex gap-3 p-6 border-t border-white/5">
+                <button onClick={createTask} disabled={saving || !form.title}
+                  className="sabi-btn-primary flex-1 flex items-center justify-center gap-2 py-2.5 text-sm disabled:opacity-50">
+                  {saving ? <><Loader2 className="w-4 h-4 animate-spin" />Creating…</> : <><Check className="w-4 h-4" />Create Task</>}
+                </button>
+                <button onClick={() => setShowForm(false)} className="px-4 text-sm text-white/40 hover:text-white transition-colors">Cancel</button>
               </div>
             </div>
-          );
-        })}
-      </div>
-    )
-  }
-
-  {/* ── LIST VIEW ──────────────────────────────────────────── */ }
-  {
-    view === 'list' && (
-      tasks.length === 0 ? (
-        <EmptyState icon={AlertCircle} title="No tasks yet"
-          description="Create tasks, assign them to staff, and track progress."
-          action={{ label: 'Create First Task', onClick: () => setShowForm(true) }} />
-      ) : (
-        <div className="sabi-card overflow-hidden">
-          <table className="w-full">
-            <thead>
-              <tr className="border-b border-white/5">
-                {['Task', 'Assignee', 'Priority', 'Strategy', 'Due', 'Status'].map(h => (
-                  <th key={h} className="px-4 py-3 text-left text-xs text-white/30 font-medium uppercase tracking-wider first:pl-5 last:pr-5">{h}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {visibleTasks.map((t, i) => {
-                const pri = PRIORITY_META[t.priority ?? 'medium'];
-                const assignee = teamMembers.find(m => m.id === t.assignee_id);
-                const statusCol = { todo: 'gray', in_progress: 'blue', in_review: 'amber', done: 'green', blocked: 'red' } as const;
-                return (
-                  <tr key={t.id} className={`border-b border-white/3 hover:bg-white/2 transition-all ${i % 2 === 0 ? '' : 'bg-white/1'}`}>
-                    <td className="px-4 py-3 pl-5">
-                      <p className="text-sm text-white font-medium">{t.title}</p>
-                      {t.strategies && <p className="text-xs text-purple-400/60 mt-0.5 flex items-center gap-1"><Lightbulb className="w-3 h-3" />{t.strategies.title}</p>}
-                    </td>
-                    <td className="px-4 py-3">
-                      {assignee ? (
-                        <div className="flex items-center gap-1.5">
-                          <div className="w-6 h-6 rounded-full bg-purple-500/25 flex items-center justify-center text-[10px] font-bold text-purple-300 flex-shrink-0">{assignee.full_name?.[0]}</div>
-                          <span className="text-xs text-white/60">{assignee.full_name}</span>
-                        </div>
-                      ) : <span className="text-xs text-white/20">Unassigned</span>}
-                    </td>
-                    <td className="px-4 py-3">
-                      <span className={`text-xs font-medium flex items-center gap-1 ${pri.color}`}>
-                        <div className={`w-1.5 h-1.5 rounded-full ${pri.dot}`} />{pri.label}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3 text-xs text-white/40 max-w-[120px] truncate">{t.strategies?.title ?? '—'}</td>
-                    <td className="px-4 py-3 text-xs text-white/35">{t.due_date ?? '—'}</td>
-                    <td className="px-4 py-3 pr-5">
-                      {t.status === 'done' && perms.canManage ? (
-                        <div className="flex items-center gap-2">
-                          <button onClick={() => verifyTask(t.id)}
-                            className="text-xs text-green-400 hover:text-green-300 transition-colors flex items-center gap-1">
-                            <Check className="w-3 h-3" /> Verify
-                          </button>
-                          <button onClick={() => { setRejectingId(t.id); setRejectReason(''); }}
-                            className="text-xs text-red-400 hover:text-red-300 transition-colors flex items-center gap-1">
-                            <X className="w-3 h-3" /> Reject
-                          </button>
-                        </div>
-                      ) : (t.status !== 'verified' || perms.canManage) ? (
-                        <select className="text-xs bg-white/5 border border-white/10 rounded-lg px-2 py-1 text-white/50 hover:text-white cursor-pointer transition-all"
-                          value={t.status} onChange={e => updateStatus(t.id, e.target.value)}>
-                          {COLUMNS.filter(c => c.key !== 'verified').map(c => <option key={c.key} className='bg-black ' value={c.key}>{c.label}</option>)}
-                        </select>
-                      ) : null}
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
-      )
-    )
-  }
-  {/* ── REJECT MODAL ───────────────────────────────────────── */ }
-  {
-    rejectingId && (
-      <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-        <div className="bg-[#12122a] border border-red-500/20 rounded-2xl w-full max-w-md p-6">
-          <h3 className="text-base font-bold text-white mb-2">Send Back for Revision</h3>
-          <p className="text-xs text-white/40 mb-4">Explain what needs to be fixed. The assignee will be notified.</p>
-          <textarea className="sabi-input resize-none text-sm" rows={3} placeholder="e.g. Missing deliverables, doesn't meet brief requirements..."
-            value={rejectReason} onChange={e => setRejectReason(e.target.value)} />
-          <div className="flex gap-2 mt-4">
-            <button onClick={rejectTask} disabled={!rejectReason.trim()}
-              className="flex-1 py-2 text-sm rounded-lg bg-red-500/15 border border-red-500/30 text-red-400 font-medium hover:bg-red-500/25 transition-all disabled:opacity-40">
-              Send Back
-            </button>
-            <button onClick={() => { setRejectingId(null); setRejectReason(''); }}
-              className="px-4 py-2 text-sm text-white/40 hover:text-white transition-colors">
-              Cancel
-            </button>
           </div>
-        </div>
-      </div>
-    )
-  }
+        )
+      }
+
+      {/* ── KANBAN VIEW ────────────────────────────────────────── */}
+      {
+        view === 'kanban' && (
+          <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
+            {COLUMNS.map(col => {
+              const colTasks = tasksByStatus(col.key);
+              return (
+                <div key={col.key} className={`rounded-2xl border p-4 min-h-48 ${col.color}`}>
+                  <div className="flex items-center gap-2 mb-4">
+                    <div className={`w-2 h-2 rounded-full flex-shrink-0 ${col.dot}`} />
+                    <p className="text-xs font-semibold text-white">{col.label}</p>
+                    <span className="text-xs text-white/30 ml-auto">{colTasks.length}</span>
+                  </div>
+                  <div className="space-y-2">
+                    {colTasks.map(t => {
+                      const pri = PRIORITY_META[t.priority ?? 'medium'];
+                      const assignee = teamMembers.find(m => m.id === t.assignee_id);
+                      return (
+                        <div key={t.id} className="bg-[#12122a] border border-white/6 rounded-xl p-3 cursor-pointer hover:border-white/15 transition-all group">
+                          <div className="flex items-start justify-between gap-2 mb-2">
+                            <p className="text-xs font-medium text-white leading-snug">{t.title}</p>
+                            <div className={`w-2 h-2 rounded-full flex-shrink-0 mt-1 ${pri.dot}`} title={pri.label} />
+                          </div>
+                          <div className="flex items-center gap-2 flex-wrap">
+                            {t.due_date && (
+                              <span className="text-[10px] text-white/30 flex items-center gap-0.5">
+                                <Clock className="w-2.5 h-2.5" />{t.due_date}
+                              </span>
+                            )}
+                            {t.strategies && (
+                              <span className="text-[10px] text-purple-400/60 flex items-center gap-0.5 truncate max-w-[80px]">
+                                <Lightbulb className="w-2.5 h-2.5 flex-shrink-0" />{t.strategies.title}
+                              </span>
+                            )}
+                          </div>
+                          {assignee && (
+                            <div className="flex items-center gap-1.5 mt-2">
+                              <div className="w-5 h-5 rounded-full bg-purple-500/30 flex items-center justify-center text-[10px] font-bold text-purple-300">
+                                {assignee.full_name?.[0]}
+                              </div>
+                              <span className="text-[10px] text-white/40 truncate">{assignee.full_name}</span>
+                            </div>
+                          )}
+                          {t.status === 'done' && perms.canManage && (
+                            <div className="flex gap-1.5 mt-2">
+                              <button onClick={() => verifyTask(t.id)}
+                                className="flex-1 flex items-center justify-center gap-1.5 text-[10px] py-1.5 rounded-lg bg-green-500/10 border border-green-500/25 text-green-400 hover:bg-green-500/20 transition-all font-medium">
+                                <Check className="w-3 h-3" /> Verify
+                              </button>
+                              <button onClick={() => { setRejectingId(t.id); setRejectReason(''); }}
+                                className="flex-1 flex items-center justify-center gap-1.5 text-[10px] py-1.5 rounded-lg bg-red-500/10 border border-red-500/25 text-red-400 hover:bg-red-500/20 transition-all font-medium">
+                                <X className="w-3 h-3" /> Reject
+                              </button>
+                            </div>
+                          )}
+                          {/* Status change — only admin/brand admin can move task out of Verified */}
+                          {(t.status !== 'verified' || perms.canManage) && (
+                            <select className="w-full mt-2 text-[10px] bg-black border border-white/8 rounded-lg px-2 py-1 text-white/50 hover:text-white cursor-pointer transition-all opacity-0 group-hover:opacity-100"
+                              value={t.status} onChange={e => updateStatus(t.id, e.target.value)}>
+                              {COLUMNS.filter(c => c.key !== 'verified').map(c => <option className='bg-black' key={c.key} value={c.key}>{c.label}</option>)}
+                            </select>
+                          )}
+                        </div>
+                      );
+                    })}
+                    {colTasks.length === 0 && (
+                      <div className="text-center py-6 text-white/15 text-xs">No tasks here</div>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )
+      }
+
+      {/* ── LIST VIEW ──────────────────────────────────────────── */}
+      {
+        view === 'list' && (
+          tasks.length === 0 ? (
+            <EmptyState icon={AlertCircle} title="No tasks yet"
+              description="Create tasks, assign them to staff, and track progress."
+              action={{ label: 'Create First Task', onClick: () => setShowForm(true) }} />
+          ) : (
+            <div className="sabi-card overflow-hidden">
+              <table className="w-full">
+                <thead>
+                  <tr className="border-b border-white/5">
+                    {['Task', 'Assignee', 'Priority', 'Strategy', 'Due', 'Status'].map(h => (
+                      <th key={h} className="px-4 py-3 text-left text-xs text-white/30 font-medium uppercase tracking-wider first:pl-5 last:pr-5">{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {visibleTasks.map((t, i) => {
+                    const pri = PRIORITY_META[t.priority ?? 'medium'];
+                    const assignee = teamMembers.find(m => m.id === t.assignee_id);
+                    const statusCol = { todo: 'gray', in_progress: 'blue', in_review: 'amber', done: 'green', blocked: 'red' } as const;
+                    return (
+                      <tr key={t.id} className={`border-b border-white/3 hover:bg-white/2 transition-all ${i % 2 === 0 ? '' : 'bg-white/1'}`}>
+                        <td className="px-4 py-3 pl-5">
+                          <p className="text-sm text-white font-medium">{t.title}</p>
+                          {t.strategies && <p className="text-xs text-purple-400/60 mt-0.5 flex items-center gap-1"><Lightbulb className="w-3 h-3" />{t.strategies.title}</p>}
+                        </td>
+                        <td className="px-4 py-3">
+                          {assignee ? (
+                            <div className="flex items-center gap-1.5">
+                              <div className="w-6 h-6 rounded-full bg-purple-500/25 flex items-center justify-center text-[10px] font-bold text-purple-300 flex-shrink-0">{assignee.full_name?.[0]}</div>
+                              <span className="text-xs text-white/60">{assignee.full_name}</span>
+                            </div>
+                          ) : <span className="text-xs text-white/20">Unassigned</span>}
+                        </td>
+                        <td className="px-4 py-3">
+                          <span className={`text-xs font-medium flex items-center gap-1 ${pri.color}`}>
+                            <div className={`w-1.5 h-1.5 rounded-full ${pri.dot}`} />{pri.label}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 text-xs text-white/40 max-w-[120px] truncate">{t.strategies?.title ?? '—'}</td>
+                        <td className="px-4 py-3 text-xs text-white/35">{t.due_date ?? '—'}</td>
+                        <td className="px-4 py-3 pr-5">
+                          {t.status === 'done' && perms.canManage ? (
+                            <div className="flex items-center gap-2">
+                              <button onClick={() => verifyTask(t.id)}
+                                className="text-xs text-green-400 hover:text-green-300 transition-colors flex items-center gap-1">
+                                <Check className="w-3 h-3" /> Verify
+                              </button>
+                              <button onClick={() => { setRejectingId(t.id); setRejectReason(''); }}
+                                className="text-xs text-red-400 hover:text-red-300 transition-colors flex items-center gap-1">
+                                <X className="w-3 h-3" /> Reject
+                              </button>
+                            </div>
+                          ) : (t.status !== 'verified' || perms.canManage) ? (
+                            <select className="text-xs bg-white/5 border border-white/10 rounded-lg px-2 py-1 text-white/50 hover:text-white cursor-pointer transition-all"
+                              value={t.status} onChange={e => updateStatus(t.id, e.target.value)}>
+                              {COLUMNS.filter(c => c.key !== 'verified').map(c => <option key={c.key} className='bg-black ' value={c.key}>{c.label}</option>)}
+                            </select>
+                          ) : null}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )
+        )
+      }
+      {/* ── REJECT MODAL ───────────────────────────────────────── */}
+      {
+        rejectingId && (
+          <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+            <div className="bg-[#12122a] border border-red-500/20 rounded-2xl w-full max-w-md p-6">
+              <h3 className="text-base font-bold text-white mb-2">Send Back for Revision</h3>
+              <p className="text-xs text-white/40 mb-4">Explain what needs to be fixed. The assignee will be notified.</p>
+              <textarea className="sabi-input resize-none text-sm" rows={3} placeholder="e.g. Missing deliverables, doesn't meet brief requirements..."
+                value={rejectReason} onChange={e => setRejectReason(e.target.value)} />
+              <div className="flex gap-2 mt-4">
+                <button onClick={rejectTask} disabled={!rejectReason.trim()}
+                  className="flex-1 py-2 text-sm rounded-lg bg-red-500/15 border border-red-500/30 text-red-400 font-medium hover:bg-red-500/25 transition-all disabled:opacity-40">
+                  Send Back
+                </button>
+                <button onClick={() => { setRejectingId(null); setRejectReason(''); }}
+                  className="px-4 py-2 text-sm text-white/40 hover:text-white transition-colors">
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </div>
+        )
+      }
     </div >
   );
 }

@@ -42,7 +42,7 @@ router.post('/', authenticate, async (req, res, next) => {
 
     const { data, error } = await supabase.from('tasks').insert({
       brand_id, goal_id, title, description,
-      assigned_to: assigned_to || (req.user.role !== 'super_admin' ? req.user.id : null),
+      assignee_id: assigned_to || (req.user.role !== 'super_admin' ? req.user.id : null),
       priority: priority || 'medium', due_date,
     }).select().single();
 

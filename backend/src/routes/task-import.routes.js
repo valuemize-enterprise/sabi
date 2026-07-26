@@ -75,6 +75,7 @@ router.post('/', authenticate, async (req, res) => {
       brandId:  brand_id,
       tasks,
       callerId: req.user.role !== 'super_admin' ? req.user.id : null,
+      callerName: req.user.full_name
     });
 
     res.status(201).json({ success: true, ...result });

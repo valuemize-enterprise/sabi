@@ -1,60 +1,125 @@
 'use client';
 import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { ArrowLeft, Target, Plus, Brain, Loader2, AlertCircle } from 'lucide-react';
+import { ArrowLeft, Target, Plus, Brain, Loader2, AlertCircle, Edit, Trash2 } from 'lucide-react';
 import { goals as goalsApi } from '@/lib/api';
 import { LoadingPage, EmptyState, Badge, PageHeader } from '@/components/ui';
+import { useAgencyStore } from '@/lib/store';
+import GoalGeneratorPanel from '@/components/goals/GoalGeneratorPanel';
+import GoalChangeRequestModal from '@/components/goals/GoalChangeRequestModal';
+import { goalGeneratorApi } from '@/lib/api';
 
 const METRIC_TYPES = ['revenue', 'followers', 'engagement_rate', 'leads', 'conversions', 'impressions', 'reach', 'clicks', 'views', 'custom'];
 
 export default function BrandGoalsPage() {
   const { id: brandId } = useParams<{ id: string }>();
+  const { user } = useAgencyStore();
   const [items, setItems] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
-  const [error, setError]=useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [brand, setBrand] = useState<any>(null);
 
   const router = useRouter();
-  const [form, setForm] = useState({ title:'', metric_type:'', target_value:'', unit:'', description:'', deadline:'' });
+  const [form, setForm] = useState({ title: '', metric_type: '', target_value: '', unit: '', description: '', deadline: '' });
   const [saving, setSaving] = useState(false);
 
-  const [tracking, setTracking] = useState<string|null>(null);
+  const [tracking, setTracking] = useState<string | null>(null);
+  const [changeRequestOpen, setChangeRequestOpen] = useState(false);
+  const [selectedGoal, setSelectedGoal] = useState<any>(null);
+  const [changeRequestType, setChangeRequestType] = useState<'edit' | 'delete'>('edit');
+
+  const refetch = () => {
+    setError(null);
+    setLoading(true);
+    goalsApi.list({ brand_id: brandId, limit: '50' }).then((r: any) => setItems(r.data ?? [])).catch((e: any) => setError(e.message || 'Failed to load goals')).finally(() => setLoading(false));
+  };
 
   useEffect(() => {
-    setError(null);
-    goalsApi.list({ brand_id: brandId, limit:'50' }).then((r:any)=>setItems(r.data??[])).catch((e:any)=>setError(e.message||'Failed to load goals')).finally(()=>setLoading(false));
+    refetch();
+    // Fetch brand details
+    fetch(`/api/agency/brands/${brandId}`, {
+      headers: { 'Authorization': `Bearer ${localStorage.getItem('sabi_token')}` }
+    })
+      .then(res => res.json())
+      .then(data => setBrand(data.data?.brand))
+      .catch(() => {});
   }, [brandId]);
 
   const create = async () => {
     if (!form.title.trim() || !form.metric_type || !form.target_value) return;
     setSaving(true); setError(null);
     try {
-      const res:any = await goalsApi.create({
+      const res: any = await goalsApi.create({
         brand_id: brandId, title: form.title, metric_type: form.metric_type,
         target_value: parseFloat(form.target_value), unit: form.unit || '#',
         description: form.description || undefined, deadline: form.deadline || undefined,
       });
       setItems(p => [res.data.goal, ...p]);
-      setForm({ title:'', metric_type:'', target_value:'', unit:'', description:'', deadline:'' });
+      setForm({ title: '', metric_type: '', target_value: '', unit: '', description: '', deadline: '' });
       setShowForm(false);
-    } catch (e:any) { setError(e.message||'Failed to create goal'); } finally { setSaving(false); }
+    } catch (e: any) { setError(e.message || 'Failed to create goal'); } finally { setSaving(false); }
   };
 
   const trackVelocity = async (id: string) => {
     setTracking(id); setError(null);
     try {
-      const res:any = await goalsApi.trackVelocity(id);
-      setItems(p=>p.map(g=>g.id===id?{...g,velocity_score:res.data.velocityScore,velocity_data:res.data}:g));
-    } catch (e:any) { setError(e.message||'Failed to track velocity'); } finally { setTracking(null); }
+      const res: any = await goalsApi.trackVelocity(id);
+      setItems(p => p.map(g => g.id === id ? { ...g, velocity_score: res.data.velocityScore, velocity_data: res.data } : g));
+    } catch (e: any) { setError(e.message || 'Failed to track velocity'); } finally { setTracking(null); }
   };
 
-  const STATUS_COLOR: Record<string,string> = { active:'purple', achieved:'green', missed:'red', paused:'gray' };
+  const handleEdit = async (goal: any) => {
+    const isSuperAdmin = user?.role === 'super_admin';
+    if (goal.locked && !isSuperAdmin) {
+      // Open change request modal
+      setSelectedGoal(goal);
+      setChangeRequestType('edit');
+      setChangeRequestOpen(true);
+    } else {
+      // Direct edit for Super Admin
+      // TODO: Implement direct edit UI
+      console.log('Direct edit:', goal);
+    }
+  };
+
+  const handleDelete = async (goal: any) => {
+    const isSuperAdmin = user?.role === 'super_admin';
+    if (goal.locked && !isSuperAdmin) {
+      // Open change request modal
+      setSelectedGoal(goal);
+      setChangeRequestType('delete');
+      setChangeRequestOpen(true);
+    } else {
+      // Direct delete for Super Admin
+      if (!confirm('Delete this goal permanently?')) return;
+      try {
+        await goalGeneratorApi.deleteGoal(goal.id);
+        setItems(p => p.filter(g => g.id !== goal.id));
+      } catch (e: any) {
+        setError(e.message || 'Failed to delete goal');
+      }
+    }
+  };
+
+  const STATUS_COLOR: Record<string, string> = { active: 'purple', achieved: 'green', missed: 'red', paused: 'gray' };
 
   return (
     <div className="p-4 sm:p-6 max-w-4xl mx-auto">
-      <button onClick={() => router.back()} className="flex items-center gap-2 text-xs text-white/30 hover:text-white mb-5 transition-colors w-fit"><ArrowLeft className="w-3.5 h-3.5"/>Back</button>
+      <button onClick={() => router.back()} className="flex items-center gap-2 text-xs text-white/30 hover:text-white mb-5 transition-colors w-fit"><ArrowLeft className="w-3.5 h-3.5" />Back</button>
       <PageHeader title="Goals" subtitle="KPIs and performance targets for this brand"
-        action={<button className="sabi-btn-primary flex items-center gap-2 px-4 py-2 text-sm" onClick={() => setShowForm(true)}><Plus className="w-4 h-4"/>Add Goal</button>}/>
+        action={
+          <div className="flex items-center gap-3">
+            <button className="sabi-btn-primary flex items-center gap-2 px-4 py-2 text-sm" onClick={() => setShowForm(true)}><Plus className="w-4 h-4" />Add Goal</button>
+            {brand && user && (
+              <GoalGeneratorPanel
+                brandId={brand.id}
+                brandName={brand.name}
+                onGoalsSaved={refetch}
+                userRole={user.role}
+              />
+            )}
+          </div>} />
 
       {error && (
         <div className="flex items-center gap-2 bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-3 mb-5">
@@ -67,18 +132,18 @@ export default function BrandGoalsPage() {
       {showForm && (
         <div className="sabi-card p-5 mb-6 space-y-3">
           <div className="grid grid-cols-2 gap-3">
-            <input className="sabi-input text-sm col-span-2" placeholder="Goal title…" value={form.title} onChange={e=>setForm(p=>({...p,title:e.target.value}))} autoFocus />
-            <select className="sabi-input text-sm" value={form.metric_type} onChange={e=>setForm(p=>({...p,metric_type:e.target.value}))}>
-              <option  className='bg-black'  value="">Metric type…</option>
-              {METRIC_TYPES.map(m=><option className='bg-black' key={m} value={m}>{m.replace(/_/g,' ')}</option>)}
+            <input className="sabi-input text-sm col-span-2" placeholder="Goal title…" value={form.title} onChange={e => setForm(p => ({ ...p, title: e.target.value }))} autoFocus />
+            <select className="sabi-input text-sm" value={form.metric_type} onChange={e => setForm(p => ({ ...p, metric_type: e.target.value }))}>
+              <option className='bg-black' value="">Metric type…</option>
+              {METRIC_TYPES.map(m => <option className='bg-black' key={m} value={m}>{m.replace(/_/g, ' ')}</option>)}
             </select>
-            <input className="sabi-input text-sm" type="number" placeholder="Target value" value={form.target_value} onChange={e=>setForm(p=>({...p,target_value:e.target.value}))} />
-            <input className="sabi-input text-sm" placeholder="Unit (#)" value={form.unit} onChange={e=>setForm(p=>({...p,unit:e.target.value}))} />
-            <input className="sabi-input text-sm" type="date" placeholder="Deadline" value={form.deadline} onChange={e=>setForm(p=>({...p,deadline:e.target.value}))} />
+            <input className="sabi-input text-sm" type="number" placeholder="Target value" value={form.target_value} onChange={e => setForm(p => ({ ...p, target_value: e.target.value }))} />
+            <input className="sabi-input text-sm" placeholder="Unit (#)" value={form.unit} onChange={e => setForm(p => ({ ...p, unit: e.target.value }))} />
+            <input className="sabi-input text-sm" type="date" placeholder="Deadline" value={form.deadline} onChange={e => setForm(p => ({ ...p, deadline: e.target.value }))} />
           </div>
-          <textarea className="sabi-input text-sm w-full" rows={2} placeholder="Description (optional)…" value={form.description} onChange={e=>setForm(p=>({...p,description:e.target.value}))} />
+          <textarea className="sabi-input text-sm w-full" rows={2} placeholder="Description (optional)…" value={form.description} onChange={e => setForm(p => ({ ...p, description: e.target.value }))} />
           <div className="flex items-center gap-2 justify-end">
-            <button onClick={()=>{setShowForm(false);setForm({title:'',metric_type:'',target_value:'',unit:'',description:'',deadline:''})}} className="text-xs text-white/30 hover:text-white transition-colors px-3">Cancel</button>
+            <button onClick={() => { setShowForm(false); setForm({ title: '', metric_type: '', target_value: '', unit: '', description: '', deadline: '' }) }} className="text-xs text-white/30 hover:text-white transition-colors px-3">Cancel</button>
             <button onClick={create} disabled={saving} className="sabi-btn-primary px-4 py-2 text-sm flex items-center gap-2">
               {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Plus className="w-3.5 h-3.5" />} Create Goal
             </button>
@@ -86,26 +151,52 @@ export default function BrandGoalsPage() {
         </div>
       )}
 
-      {loading?<LoadingPage/>:items.length===0?<EmptyState icon={Target} title="No goals yet" description="Set goals for this brand to track performance and power VelocityTracker™."/>:(
+      {loading ? <LoadingPage /> : items.length === 0 ? <EmptyState icon={Target} title="No goals yet" description="Set goals for this brand to track performance and power VelocityTracker™." /> : (
         <div className="space-y-4">
-          {items.map(g=>{
-            const pct=Math.min(100,Math.round((g.current_value/Math.max(g.target_value,1))*100));
-            const vel=g.velocity_data;
+          {items.map(g => {
+            const pct = Math.min(100, Math.round((g.current_value / Math.max(g.target_value, 1)) * 100));
+            const vel = g.velocity_data;
             return (
               <div key={g.id} className="sabi-card p-5">
                 <div className="flex items-start justify-between gap-4 flex-wrap mb-4">
-                  <div>
+                  <div className="flex-1">
                     <div className="flex items-center gap-2 mb-1 flex-wrap">
                       <p className="font-semibold text-white">{g.title}</p>
-                      <Badge label={g.status} color={STATUS_COLOR[g.status]??'gray'}/>
+                      <Badge label={g.status} color={STATUS_COLOR[g.status] ?? 'gray'} />
+                      {g.locked && <Badge label="locked" color="amber" />}
                     </div>
-                    <p className="text-xs text-white/40">{g.metric_type} · Target: {g.target_value} {g.unit}{g.deadline?` · Due: ${g.deadline}`:''}</p>
+                    <p className="text-xs text-white/40">{g.metric_type} · Target: {g.target_value} {g.unit}{g.deadline ? ` · Due: ${g.deadline}` : ''}</p>
                   </div>
-                  <button onClick={()=>trackVelocity(g.id)} disabled={tracking===g.id}
-                    className="flex items-center gap-1.5 text-xs text-purple-400 hover:text-purple-300 transition-colors disabled:opacity-50 flex-shrink-0">
-                    {tracking===g.id?<Loader2 className="w-3.5 h-3.5 animate-spin"/>:<Brain className="w-3.5 h-3.5"/>}
-                    {tracking===g.id?'Analysing…':'Track Velocity'}
-                  </button>
+                  <div className="flex items-center gap-2 flex-shrink-0">
+                    {g.locked && user?.role !== 'super_admin' ? (
+                      <>
+                        <button onClick={() => handleEdit(g)}
+                          className="flex items-center gap-1.5 text-xs text-blue-400 hover:text-blue-300 transition-colors px-2 py-1 rounded-lg border border-blue-500/20 hover:bg-blue-500/10">
+                          <Edit className="w-3.5 h-3.5" />Request Edit
+                        </button>
+                        <button onClick={() => handleDelete(g)}
+                          className="flex items-center gap-1.5 text-xs text-red-400 hover:text-red-300 transition-colors px-2 py-1 rounded-lg border border-red-500/20 hover:bg-red-500/10">
+                          <Trash2 className="w-3.5 h-3.5" />Request Delete
+                        </button>
+                      </>
+                    ) : user?.role === 'super_admin' && (
+                      <>
+                        <button onClick={() => handleEdit(g)}
+                          className="flex items-center gap-1.5 text-xs text-white/60 hover:text-white transition-colors">
+                          <Edit className="w-3.5 h-3.5" />Edit
+                        </button>
+                        <button onClick={() => handleDelete(g)}
+                          className="flex items-center gap-1.5 text-xs text-red-400 hover:text-red-300 transition-colors">
+                          <Trash2 className="w-3.5 h-3.5" />Delete
+                        </button>
+                      </>
+                    )}
+                    <button onClick={() => trackVelocity(g.id)} disabled={tracking === g.id}
+                      className="flex items-center gap-1.5 text-xs text-purple-400 hover:text-purple-300 transition-colors disabled:opacity-50">
+                      {tracking === g.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Brain className="w-3.5 h-3.5" />}
+                      {tracking === g.id ? 'Analysing…' : 'Track Velocity'}
+                    </button>
+                  </div>
                 </div>
                 <div className="flex items-center gap-4">
                   <div className="flex-1">
@@ -113,18 +204,31 @@ export default function BrandGoalsPage() {
                       <span>{g.current_value} {g.unit}</span><span>Target: {g.target_value}</span>
                     </div>
                     <div className="w-full bg-white/8 rounded-full h-2">
-                      <div className={`h-2 rounded-full ${pct>=100?'bg-green-500':pct>=60?'bg-purple-500':'bg-amber-500'}`} style={{width:`${pct}%`}}/>
+                      <div className={`h-2 rounded-full ${pct >= 100 ? 'bg-green-500' : pct >= 60 ? 'bg-purple-500' : 'bg-amber-500'}`} style={{ width: `${pct}%` }} />
                     </div>
                   </div>
-                  <span className={`text-xl font-black flex-shrink-0 ${pct>=100?'text-green-400':'text-white'}`}>{pct}%</span>
+                  <span className={`text-xl font-black flex-shrink-0 ${pct >= 100 ? 'text-green-400' : 'text-white'}`}>{pct}%</span>
                 </div>
-                {vel&&<div className={`mt-3 text-xs flex items-center gap-2 px-3 py-2 rounded-lg ${vel.trajectoryLabel==='On Track'||vel.trajectoryLabel==='Accelerating'?'bg-green-500/5 text-green-400':'bg-red-500/5 text-red-400'}`}>
-                  <Brain className="w-3.5 h-3.5 flex-shrink-0"/><strong>{vel.trajectoryLabel}</strong>{vel.recommendation&&<span className="text-white/40 ml-1">— {vel.recommendation}</span>}
+                {vel && <div className={`mt-3 text-xs flex items-center gap-2 px-3 py-2 rounded-lg ${vel.trajectoryLabel === 'On Track' || vel.trajectoryLabel === 'Accelerating' ? 'bg-green-500/5 text-green-400' : 'bg-red-500/5 text-red-400'}`}>
+                  <Brain className="w-3.5 h-3.5 flex-shrink-0" /><strong>{vel.trajectoryLabel}</strong>{vel.recommendation && <span className="text-white/40 ml-1">— {vel.recommendation}</span>}
                 </div>}
               </div>
             );
           })}
         </div>
+      )}
+
+      {changeRequestOpen && selectedGoal && (
+        <GoalChangeRequestModal
+          goal={selectedGoal}
+          requestType={changeRequestType}
+          onClose={() => setChangeRequestOpen(false)}
+          onRequestSent={() => {
+            setChangeRequestOpen(false);
+            setError(null);
+            alert('Request sent to Super Admin for approval');
+          }}
+        />
       )}
     </div>
   );

@@ -167,11 +167,18 @@ async function computeBrandAdminScore(userId, brandId, weekStartDate, config) {
   }
 
   // 2. Goal Achievement Rate (this brand's active goals)
-  const { data: goals } = await supabase.from('goals').select('current_value, target_value').eq('brand_id', brandId).eq('status', 'active');
+  // Updated to use brand_goals with current_progress and status fields
+  const { data: goals } = await supabase
+    .from('brand_goals')
+    .select('current_progress, status')
+    .eq('brand_id', brandId)
+    .in('status', ['on_track', 'at_risk', 'achieved']);
+  
   let goalRate = null;
   if (goals && goals.length > 0) {
-    const onTrack = goals.filter(g => (g.current_value / Math.max(g.target_value,1)) >= 0.7).length;
-    goalRate = onTrack / goals.length;
+    // Calculate achievement rate based on achieved goals
+    const achieved = goals.filter(g => g.status === 'achieved').length;
+    goalRate = achieved / goals.length;
   }
 
   // 3. Team Verified Task Completion (this brand)

@@ -64,21 +64,26 @@ async function getClientContacts(brandId) {
 
 /** Call after a task is assigned (tasks routes + brief convert-task). */
 const onTaskAssigned = safe(async function onTaskAssigned(task, assignedByName) {
-  if (!task.assignee_id) return;
+  if (!task.assignee_id)  if (!task.assignee_id) return;
   const [user, brand] = await Promise.all([getUser(task.assignee_id), getBrand(task.brand_id)]);
-  if (!user) return;
+
+  if (!user) {
+    return;
+  }
   let strategyTitle = null;
   if (task.strategy_id) {
     const { data: s } = await supabase.from('strategies').select('title').eq('id', task.strategy_id).single();
     strategyTitle = s?.title;
   }
-  await dispatch.send('task_assigned', {
+
+  const result =  await dispatch.send('task_assigned', {
     to: user, entityId: task.id, dedupe: 'once',
     data: {
       name: user.full_name, taskTitle: task.title, brandName: brand?.name || 'your brand',
       assignedBy: assignedByName, dueDate: task.due_date, strategyTitle,
     },
   });
+
 });
 
 /** Call when done → verified. */
