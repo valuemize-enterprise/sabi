@@ -12,7 +12,7 @@
 
 const router           = require('express').Router();
 const supabase         = require('../../config/supabase');
-const { authenticate, requirePermission } = require('../../middleware/auth.middleware');
+const { authenticate, requirePermission, requireBrandAdminOrPermission } = require('../../middleware/auth.middleware');
 const { sendSuccess, sendError, sendPaginated } = require('../../utils/response.utils');
 const { auditLog }     = require('../../middleware/logger.middleware');
 const velocityService  = require('../../services/aria/velocity-tracker.service');
@@ -34,7 +34,7 @@ router.get('/', authenticate, async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
-router.post('/', authenticate, requirePermission('CREATE_GOAL'), async (req, res, next) => {
+router.post('/', authenticate, requireBrandAdminOrPermission('CREATE_GOAL'), async (req, res, next) => {
   try {
     const { brand_id, title, description, metric_type, target_value, unit, deadline } = req.body;
     if (!brand_id || !title || !metric_type || target_value === undefined) {
@@ -69,7 +69,7 @@ router.get('/:id', authenticate, async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
-router.put('/:id', authenticate, requirePermission('EDIT_GOAL'), async (req, res, next) => {
+router.put('/:id', authenticate, requireBrandAdminOrPermission('EDIT_GOAL'), async (req, res, next) => {
   try {
     const allowed = ['title', 'description', 'target_value', 'current_value', 'unit', 'deadline', 'status'];
     const updates = {};

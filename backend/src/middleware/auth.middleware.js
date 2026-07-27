@@ -128,6 +128,40 @@ function requirePermission(permission) {
   };
 }
 
+
+function requireBrandAdminOrPermission(permission) {
+  return async (req, res, next) => {
+    const role = req.user?.role;
+    if (!role) return sendError(res, 401, 'Not authenticated');
+
+    // Super admin / admin / md — global permission passes straight through
+    if (hasPermission(role, permission)) return next();
+
+    // For staff — check if they are a brand admin on THIS specific brand
+    const brandId = req.body?.brand_id || req.params?.brand_id || req.params?.id;
+    if (!brandId) {
+      return sendError(res, 400, 'brand_id is required to verify brand admin access');
+    }
+
+    const { data } = await supabase
+      .from('staff_brand_assignments')
+      .select('role_on_brand')
+      .eq('staff_id', req.user.id)
+      .eq('brand_id', brandId)
+      .eq('role_on_brand', 'brand_admin')
+      .single();
+
+    if (!data) {
+      return sendError(res, 403, 'You must be a Brand Admin for this brand to perform this action');
+    }
+
+    // Attach so downstream handlers know they are acting as brand admin
+    req.actingAsBrandAdmin = true;
+    next();
+  };
+}
+
+
 // ── Role Guard ────────────────────────────────────────────────
 function requireRole(...roles) {
   return (req, res, next) => {
@@ -146,4 +180,5 @@ module.exports = {
   authenticateSuperAdmin,
   requirePermission,
   requireRole,
+  requireBrandAdminOrPermission
 };

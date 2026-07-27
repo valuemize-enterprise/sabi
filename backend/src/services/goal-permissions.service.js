@@ -15,7 +15,7 @@
 const { supabase } = require('../config/supabase');
 const APP = process.env.NEXT_PUBLIC_APP_URL || 'https://sabi.cerebre.media';
 
-const SUPER_ROLES = new Set(['super_admin', 'admin', 'md']);
+const SUPER_ROLES = new Set(['super_admin', 'admin', 'md', 'brand_admin']);
 
 // ── Helper: audit log ─────────────────────────────────────────────────────────
 async function audit({ goalId, brandId, actorId, action, summary, before, after, crId }) {

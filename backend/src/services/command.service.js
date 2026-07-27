@@ -383,7 +383,6 @@ async function computeCommand({ brandAdminUserId = null } = {}) {
   data.adminByBrand = groupBy(data.brandAdmins, 'brand_id');
   data.leaveUserIds = new Set(data.leave.map(l => l.staff_id));
 
-  console.log('stfid', data.brandAdmins)
   // latest rolling_avg per user (rows pre-sorted desc by week_start)
   data.scoreByUser = new Map();
   for (const s of data.scores) {

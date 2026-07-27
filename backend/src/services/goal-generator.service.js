@@ -12,7 +12,7 @@
 
 'use strict';
 
-const { supabase }   = require('../config/supabase');
+const supabase       = require('../config/supabase');
 const { v4: uuidv4 } = require('uuid');
 
 const ANTHROPIC_API  = 'https://api.anthropic.com/v1/messages';
@@ -158,8 +158,7 @@ function parseClaudeResponse(text) {
 // ── Generate goals from parsed documents ──────────────────────────────────────
 async function generateGoals({ brandId, brandName, parsedDocs }) {
   // Fetch existing active goals for duplicate detection
-  const { data: existingGoals } = await supabase
-    .from('brand_goals')
+  const { data: existingGoals } = await supabase.from('brand_goals')
     .select('id, title, objective')
     .eq('brand_id', brandId)
     .in('status', ['on_track', 'at_risk']);
@@ -188,10 +187,10 @@ async function saveGoals({ brandId, goals, sourceDocumentId, callerId }) {
   if (!goals || goals.length === 0) throw new Error('No goals to save.');
 
   const rows = goals
-    .filter(g => g.selected !== false) // respect deselected goals from review UI
+    .filter(g => g.selected !== false)
     .map(goal => ({
       brand_id:           brandId,
-      title:              goal.objective, // title = objective for display compatibility
+      title:              goal.objective,
       objective:          goal.objective,
       framework:          goal.framework || 'OKR',
       key_results:        goal.key_results || [],
@@ -200,10 +199,10 @@ async function saveGoals({ brandId, goals, sourceDocumentId, callerId }) {
       source_insight:     goal.source_insight,
       is_ai_generated:    true,
       source_document_id: sourceDocumentId || null,
-      status:             'on_track', // trigger will recompute from KRs
-      locked:             true,       // require SA permission to edit/delete
-      created_by:         callerId,
-      last_edited_by:     callerId,
+      status:             'on_track',
+      locked:              true,
+      created_by:          callerId,
+      last_edited_by:      callerId,
     }));
 
   const { data, error } = await supabase
@@ -213,25 +212,34 @@ async function saveGoals({ brandId, goals, sourceDocumentId, callerId }) {
 
   if (error) throw new Error(`Failed to save goals: ${error.message}`);
 
-  // Write to audit log
+  // Write to audit log — non-blocking, but now we actually see failures
   for (const goal of data) {
-    await supabase.from('goal_audit_log').insert({
-      goal_id:        goal.id,
-      brand_id:       brandId,
-      actor_id:       callerId,
-      action:         'ai_generated',
-      change_summary: `AI generated from ${sourceDocumentId ? 'uploaded document' : 'unknown source'}`,
-      after_state:    goal,
-    }).catch(() => {}); // audit failure is non-blocking
+    try {
+      const { error: auditError } = await supabase.from('goal_audit_log').insert({
+        goal_id:        goal.id,
+        brand_id:       brandId,
+        actor_id:       callerId,
+        action:         'ai_generated',
+        change_summary: `AI generated from ${sourceDocumentId ? 'uploaded document' : 'unknown source'}`,
+        after_state:    goal,
+      });
+      if (auditError) console.error('[saveGoals] audit log insert failed:', auditError.message);
+    } catch (err) {
+      console.error('[saveGoals] audit log insert threw:', err.message);
+    }
   }
 
-  // Update goals_generated count on the source document
+  // Update goals_generated count on the source document — also non-blocking
   if (sourceDocumentId) {
-    await supabase
-      .from('goal_source_documents')
-      .update({ goals_generated: data.length })
-      .eq('id', sourceDocumentId)
-      .catch(() => {});
+    try {
+      const { error: updateError } = await supabase
+        .from('goal_source_documents')
+        .update({ goals_generated: data.length })
+        .eq('id', sourceDocumentId);
+      if (updateError) console.error('[saveGoals] goals_generated update failed:', updateError.message);
+    } catch (err) {
+      console.error('[saveGoals] goals_generated update threw:', err.message);
+    }
   }
 
   return data;
