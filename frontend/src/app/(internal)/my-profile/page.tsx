@@ -66,8 +66,8 @@ const initialState: State = {
   has_criminal_record: false, guarantor_form_acknowledged: false,
   declaration_1: false, declaration_2: false,
   start_date: "",
-  role_title:"",
-  
+  role_title: "",
+
 };
 
 type Action = { type: 'SET'; key: string; value: unknown }
@@ -116,6 +116,8 @@ export default function MyProfilePage() {
   const [error, setError] = useState<string | null>(null);
   const [isEditMode, setIsEditMode] = useState(false);
   const [hasExistingProfile, setHasExistingProfile] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [status, setStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
   const s = set(dispatch);
 
   const pct = Math.round((done.size / SECTIONS.length) * 100);
@@ -135,21 +137,25 @@ export default function MyProfilePage() {
   const prev = (key: SectionKey) => goTo(key);
 
   const save = useCallback(async () => {
-    setSaving(true);
+    setStatus('saving');
     try {
       await safeApiCall(`${API}/api/people/me/profile/save`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json', ...(token() ? { Authorization: `Bearer ${token()}` } : {}) },
         body: JSON.stringify(state)
       });
+      setStatus('saved');
+      setTimeout(() => setStatus('idle'), 1500);
     } catch (err) {
+      setStatus('idle');
       handleError(err, 'Failed to save profile');
-    } finally {
-      setSaving(false);
     }
   }, [state]);
 
   const submit = async () => {
+    if (isSubmitting) return; // guard against double-fire
+    setIsSubmitting(true);
+
     const { start_date, role_title, ...rest } = state;
     const payload = { ...rest };
 
@@ -159,15 +165,17 @@ export default function MyProfilePage() {
         headers: { 'Content-Type': 'application/json', ...(token() ? { Authorization: `Bearer ${token()}` } : {}) },
         body: JSON.stringify({ ...payload, profile_state: 'submitted', submitted_at: new Date().toISOString() })
       });
-      if (res && res.success) { 
-        setDone(new Set(SECTIONS)); 
-        setSubmitted(true); 
+      if (res && res.success) {
+        setDone(new Set(SECTIONS));
+        setSubmitted(true);
         setIsEditMode(false);
         setHasExistingProfile(true);
         toast.success('Profile submitted successfully!');
       }
     } catch (err) {
       handleError(err, 'Failed to submit profile');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -203,7 +211,10 @@ export default function MyProfilePage() {
           if (data.form.profile_state === 'not_started') {
             setHasExistingProfile(false)
           }
-          
+          if (data.form.profile_state === 'draft') {
+            setHasExistingProfile(false)
+          }
+
           // Mark all sections as done if profile is submitted
           if (data.form.profile_state === 'submitted') {
             setDone(new Set(SECTIONS));
@@ -262,7 +273,7 @@ export default function MyProfilePage() {
     );
   }
 
-  if (!isEditMode && (submitted || hasExistingProfile)) return <SuccessScreen onEdit={() => setIsEditMode(true)} profileData={state}/>;
+  if (!isEditMode && (submitted || hasExistingProfile)) return <SuccessScreen onEdit={() => setIsEditMode(true)} profileData={state} />;
 
   return (
     <div className="min-h-screen bg-[#0d0d1a]">
@@ -303,11 +314,11 @@ export default function MyProfilePage() {
 
           {/* Save button */}
           <button
-            className="px-3 sm:px-4 py-2 text-xs sm:text-sm font-semibold text-white/60 hover:text-white transition-colors"
+            className="px-3 sm:px-4 py-2 text-xs sm:text-sm font-semibold text-white/60 hover:text-white transition-colors disabled:cursor-not-allowed"
             onClick={save}
-            disabled={saving}
+            disabled={status === 'saving'}
           >
-            {saving ? '✓ Saved' : 'Save'}
+            {status === 'saving' ? 'Saving…' : status === 'saved' ? '✓ Saved' : 'Save'}
           </button>
         </div>
       </header>
@@ -394,7 +405,7 @@ export default function MyProfilePage() {
           {section === 'languages' && <LanguagesSection state={state} dispatch={dispatch} next={() => next('experience')} prev={() => prev('education')} />}
           {section === 'experience' && <ExperienceSection state={state} s={s} dispatch={dispatch} next={() => next('guarantor')} prev={() => prev('languages')} />}
           {section === 'guarantor' && <GuarantorSection state={state} s={s} next={() => next('declaration')} prev={() => prev('experience')} />}
-          {section === 'declaration' && <DeclarationSection state={state} s={s} done={done} onSubmit={submit} canSubmit={!!canSubmit} prev={() => prev('guarantor')} />}
+          {section === 'declaration' && <DeclarationSection state={state} s={s} done={done} onSubmit={submit} canSubmit={!!canSubmit} prev={() => prev('guarantor')} isSubmitting={isSubmitting} />}
         </main>
       </div>
     </div>
@@ -830,7 +841,7 @@ const SECTION_LABELS: Record<string, string> = {
   education: 'Education & Qualifications', languages: 'Language Skills', experience: 'Work Experience',
   guarantor: 'Guarantor Details',
 };
-function DeclarationSection({ state, s, done, onSubmit, canSubmit, prev }: any) {
+function DeclarationSection({ state, s, done, onSubmit, canSubmit, prev, isSubmitting, }: any) {
   const fullName = [state.first_name, state.surname].filter(Boolean).join(' ') || '[ your full name ]';
   return (
     <div>
@@ -867,10 +878,23 @@ function DeclarationSection({ state, s, done, onSubmit, canSubmit, prev }: any) 
         <button
           className="sabi-btn-primary flex items-center gap-2 px-5 py-2.5 text-sm font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
           onClick={onSubmit}
-          disabled={!canSubmit}
+          disabled={!canSubmit || isSubmitting}
         >
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M20 6L9 17l-5-5" /></svg>
-          Submit My Profile
+          {isSubmitting ? (
+            <>
+              <svg className="animate-spin" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                <path d="M12 2a10 10 0 0 1 10 10" strokeLinecap="round" />
+              </svg>
+              Submitting...
+            </>
+          ) : (
+            <>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                <path d="M20 6L9 17l-5-5" />
+              </svg>
+              Submit My Profile
+            </>
+          )}
         </button>
       </div>
     </div>
@@ -889,7 +913,7 @@ function SuccessScreen({ onEdit, profileData }: { onEdit: () => void; profileDat
         </div>
         <div className="text-2xl sm:text-3xl font-bold text-white mb-2">Profile submitted</div>
         <div className="text-sm text-white/60 mb-6">Your record is with HR. You'll receive a confirmation email shortly.</div>
-        
+
         {/* Edit Button */}
         <button
           className="mb-8 px-6 py-2.5 text-sm font-semibold text-purple-500 border border-purple-500/30 rounded-lg hover:bg-purple-500/10 transition-all"

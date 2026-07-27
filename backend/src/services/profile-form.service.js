@@ -267,8 +267,6 @@ async function submitForm(userId, input) {
 
   const now = new Date().toISOString();
 
-  
-
   const { data, error } = await supabase
     .from('staff_profile_submissions')
     .upsert({
@@ -290,17 +288,18 @@ async function submitForm(userId, input) {
 
   // The trigger fn_sync_form_state handles people_records + users updates.
   // Belt-and-suspenders for environments where triggers may be disabled:
-  const { data: peopledata, error: peopleerror } = await supabase.from('people_records')
-    .update({ form_submission_state: 'submitted', form_submitted_at: now })
-    .eq('user_id', userId)
-    .then(() => {}, () => {});
+ const { data: peopledata, error: peopleerror } = await supabase
+  .from('people_records')
+  .update({ form_submission_state: 'submitted', form_submitted_at: now })
+  .eq('user_id', userId)
+  .select();
 
-    if (peopleerror) {
-    console.error('Supabase error peopledata:', peopleerror);
-    throw new Error(error.message);
+if (peopleerror) {
+  console.error('Supabase error peopledata:', peopleerror);
+  throw new Error(peopleerror.message); // also fix: this was throwing `error.message`, the wrong variable, referencing the earlier upsert's error
 }
 
-  console.log('peoples data from supabase:', peopledata)
+  // console.log('peoples data from supabase:', peopledata)
 
   await appendHistory(userId, userId, 'submitted', null, {
     digital_signature: clean.digital_signature,
