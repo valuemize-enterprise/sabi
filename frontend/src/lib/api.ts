@@ -6,6 +6,8 @@
  * Uses sabi_token (agency) and sabi_client_token (client).
  */
 
+import { formatErrorMessage } from './errorHandler';
+
 const BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
 
 // ─────────────────────────────────────────────────────────────
@@ -20,31 +22,43 @@ async function sabiRequest<T = unknown>(
   options: SabiOptions = {},
   tokenKey: 'sabi_token' | 'sabi_client_token' | 'sabi_sa_token' = 'sabi_token'
 ): Promise<T> {
-  const token = typeof window !== 'undefined' ? localStorage.getItem(tokenKey) : null;
+  try {
+    const token = typeof window !== 'undefined' ? localStorage.getItem(tokenKey) : null;
 
-  const headers: HeadersInit = {
-    'Content-Type': 'application/json',
-    ...(token ? { Authorization: `Bearer ${token}` } : {}),
-    ...((options.headers as Record<string, string>) || {}),
-  };
+    const headers: HeadersInit = {
+      'Content-Type': 'application/json',
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      ...((options.headers as Record<string, string>) || {}),
+    };
 
-  const res = await fetch(`${BASE_URL}${endpoint}`, { ...options, headers });
+    const res = await fetch(`${BASE_URL}${endpoint}`, { ...options, headers });
 
-  // Handle 401 — clear token and redirect to login (skip for login endpoints)
-  if (res.status === 401 && !options.skipAuthRedirect) {
-    if (typeof window !== 'undefined') {
-      localStorage.removeItem(tokenKey);
-      const loginPath = tokenKey === 'sabi_client_token' ? '/client/login'
-        : tokenKey === 'sabi_sa_token' ? '/login'
-        : '/login';
-      window.location.href = loginPath;
+    // Handle 401 — clear token and redirect to login (skip for login endpoints)
+    if (res.status === 401 && !options.skipAuthRedirect) {
+      if (typeof window !== 'undefined') {
+        localStorage.removeItem(tokenKey);
+        const loginPath = tokenKey === 'sabi_client_token' ? '/client/login'
+          : tokenKey === 'sabi_sa_token' ? '/login'
+          : '/login';
+        window.location.href = loginPath;
+      }
+      throw new Error('Session expired. Please log in again.');
     }
-    throw new Error('Session expired. Please log in again.');
-  }
 
-  const data = await res.json();
-  if (!res.ok) throw new Error(data.error || `Request failed: ${res.status}`);
-  return data;
+    const data = await res.json();
+    if (!res.ok) {
+      const errorMessage = data.error || data.message || `Request failed: ${res.status}`;
+      throw new Error(errorMessage);
+    }
+    return data;
+  } catch (error) {
+    // Handle network errors (Failed to fetch)
+    if (error instanceof TypeError && error.message === 'Failed to fetch') {
+      throw new Error('Network connection issue. Please check your internet connection and try again.');
+    }
+    // Re-throw other errors with formatted message
+    throw error;
+  }
 }
 
 export function agencyFetch<T>(endpoint: string, options?: RequestInit) {
@@ -145,17 +159,25 @@ export const goals = {
 // Goal Generator (AI-powered OKR goals)
 // ─────────────────────────────────────────────────────────────
 export const goalGeneratorApi = {
-  generateGoals: (formData: FormData) => {
-    const token = typeof window !== 'undefined' ? localStorage.getItem('sabi_token') : null;
-    return fetch(`${BASE_URL}/api/goals/generate`, {
-      method: 'POST',
-      headers: { Authorization: `Bearer ${token}` },
-      body: formData, // multipart/form-data
-    }).then(async res => {
+  generateGoals: async (formData: FormData) => {
+    try {
+      const token = typeof window !== 'undefined' ? localStorage.getItem('sabi_token') : null;
+      const res = await fetch(`${BASE_URL}/api/goals/generate`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+        body: formData, // multipart/form-data
+      });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Failed to generate goals');
+      if (!res.ok) {
+        throw new Error(data.error || data.message || 'Failed to generate goals');
+      }
       return data;
-    });
+    } catch (error) {
+      if (error instanceof TypeError && error.message === 'Failed to fetch') {
+        throw new Error('Network connection issue. Please check your internet connection and try again.');
+      }
+      throw error;
+    }
   },
   saveGoals: (body: Record<string, unknown>) =>
     agencyFetch('/api/goals/save', { method: 'POST', body: JSON.stringify(body) }),
@@ -322,12 +344,24 @@ export const clientPortalExtended = {
 };
 
 // ── Deliverables (internal) ───────────────────────────────────
-const agFetch = (path: string, opts?: RequestInit) => {
-  const token = typeof window !== 'undefined' ? localStorage.getItem('sabi_token') : null;
-  return fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000'}${path}`, {
-    ...opts,
-    headers: { 'Content-Type':'application/json', Authorization:`Bearer ${token}`, ...(opts?.headers ?? {}) },
-  }).then(async r => { const b = await r.json(); if (!r.ok) throw new Error(b.message); return b; });
+const agFetch = async (path: string, opts?: RequestInit) => {
+  try {
+    const token = typeof window !== 'undefined' ? localStorage.getItem('sabi_token') : null;
+    const r = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000'}${path}`, {
+      ...opts,
+      headers: { 'Content-Type':'application/json', Authorization:`Bearer ${token}`, ...(opts?.headers ?? {}) },
+    });
+    const b = await r.json();
+    if (!r.ok) {
+      throw new Error(b.error || b.message || `Request failed: ${r.status}`);
+    }
+    return b;
+  } catch (error) {
+    if (error instanceof TypeError && error.message === 'Failed to fetch') {
+      throw new Error('Network connection issue. Please check your internet connection and try again.');
+    }
+    throw error;
+  }
 };
 
 export const deliverables = {

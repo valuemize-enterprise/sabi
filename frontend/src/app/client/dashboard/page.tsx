@@ -9,6 +9,9 @@ import {
 } from 'lucide-react';
 import { clientPortal } from '@/lib/api';
 import { useClientStore } from '@/lib/store';
+import { handleError } from '@/lib/errorHandler';
+import { safeApiCall } from '@/lib/safeRequest';
+import toast from 'react-hot-toast';
 
 // ── Sub-components ────────────────────────────────────────────
 function ClarityDonut({ score }: { score: number }) {
@@ -74,7 +77,7 @@ export default function ClientDashboardPage() {
       const res: any = await clientPortal.dashboard();
       setData(res.data);
     } catch (error) {
-      console.error(error);
+      handleError(error, 'Failed to load dashboard data');
     } finally { setLoading(false); setRefreshing(false); }
   };
 
@@ -82,10 +85,11 @@ export default function ClientDashboardPage() {
 
   useEffect(() => {
     const tok = typeof window !== 'undefined' ? localStorage.getItem('sabi_client_token') : null;
-    fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000'}/api/client/satisfaction/prompt-status`, {
-      headers: { Authorization: `Bearer ${tok}` },
-    }).then(r => r.json()).then((r: any) => {
-      setShowSatisfactionPrompt(!r.data?.submittedThisWeek);
+    safeApiCall(
+      `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000'}/api/client/satisfaction/prompt-status`,
+      { headers: { Authorization: `Bearer ${tok}` } }
+    ).then((r: any) => {
+      if (r) setShowSatisfactionPrompt(!r.data?.submittedThisWeek);
     }).catch(() => { });
   }, []);
 
@@ -96,14 +100,18 @@ export default function ClientDashboardPage() {
     setSubmittingSatisfaction(true);
     try {
       const tok = typeof window !== 'undefined' ? localStorage.getItem('sabi_client_token') : null;
-      await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000'}/api/client/satisfaction`, {
+      await safeApiCall(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000'}/api/client/satisfaction`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${tok}` },
         body: JSON.stringify({ nps_score: satisfactionScore, comment: satisfactionComment || null }),
-      }).then(async r => { const b = await r.json(); if (!r.ok) throw new Error(b.error || b.message); });
+      });
       setShowSatisfactionPrompt(false);
-    } catch (err) { console.error(err); }
-    finally { setSubmittingSatisfaction(false); }
+      toast.success('Thank you for your feedback!');
+    } catch (err) {
+      handleError(err, 'Failed to submit satisfaction score');
+    } finally { 
+      setSubmittingSatisfaction(false); 
+    }
   };
 
   if (loading) return (

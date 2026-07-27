@@ -110,7 +110,7 @@ router.post('/:id/deactivate', authenticate, requirePermission('MANAGE_USERS'), 
 
 router.post('/:id/assign-brands', authenticate, requirePermission('MANAGE_USERS'), async (req, res, next) => {
   try {
-    const { brand_ids, role_on_brand = 'contributor' } = req.body;
+    const { brand_ids, role_on_brand } = req.body;
     if (!brand_ids?.length) return sendError(res, 400, 'brand_ids array required');
 
     await supabase.from('staff_brand_assignments').delete().eq('staff_id', req.params.id);

@@ -2,10 +2,11 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { Building2, Users, FileText, Target, TrendingUp, PenLine, Clock, CheckCircle2, AlertCircle, ChevronRight, BarChart3, Loader2, Calendar, RefreshCw } from 'lucide-react';
+import { Building2, Users, FileText, Target, TrendingUp, PenLine, Clock, CheckCircle2, AlertCircle, ChevronRight, BarChart3, Loader2, Calendar, RefreshCw, Menu } from 'lucide-react';
 import { useAgencyStore } from '@/lib/store';
 import { analytics, brands as brandsApi, staff as staffApi } from '@/lib/api';
 import { StatCard, Badge } from '@/components/ui';
+import { useMobileSidebar } from '@/lib/MobileSidebarContext';
 
 const ADMIN_ROLES = ['super_admin','ceo','managing_director','creative_director','strategy_director','account_director'];
 
@@ -28,6 +29,7 @@ function QuickAction({ href, icon: Icon, label, color='purple' }: any) {
 
 export default function DashboardPage() {
   const { user } = useAgencyStore();
+  const { toggle } = useMobileSidebar();
   const isAdmin = ADMIN_ROLES.includes(user?.role ?? '');
   const isSA    = user?.role === 'super_admin';
 
@@ -80,9 +82,18 @@ export default function DashboardPage() {
     <div className="p-4 sm:p-6 max-w-6xl mx-auto">
       {/* Header */}
       <div className="mb-6 sm:mb-8">
-        <h1 className="text-xl sm:text-2xl font-bold text-white">
-          {greeting}, {user?.full_name?.split(' ')[0]} 👋
-        </h1>
+        <div className="flex items-center gap-3 mb-2">
+          <button 
+            onClick={toggle}
+            className="md:hidden p-2 -ml-2 rounded-lg text-white/40 hover:text-white hover:bg-white/5 transition-all"
+            aria-label="Toggle menu"
+          >
+            <Menu className="w-5 h-5" />
+          </button>
+          <h1 className="text-xl sm:text-2xl font-bold text-white">
+            {greeting}, {user?.full_name?.split(' ')[0]} 👋
+          </h1>
+        </div>
         <p className="text-white/35 text-sm mt-1 capitalize">
           {user?.role === 'super_admin' ? 'Super Admin' : user?.role?.replace(/_/g,' ')} · Cerebre Media Africa
         </p>

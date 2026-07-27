@@ -109,6 +109,7 @@ async function fetchAll() {
       .order('week_start', { ascending: false })
       .limit(1000),
   ]);
+  // console.log('brandAdminsQ', brandAdminsQ)
 
   const err = [brandsQ, brandAdminsQ, brandStaffQ, leaveQ, invoicesQ, strategiesQ,
                tasksQ, briefsQ, goalsQ, satisfactionQ, scoresQ].find(q => q.error);
@@ -329,6 +330,8 @@ function assembleBrand(b, data) {
   const staffIds = (data.staffByBrand.get(b.id) || []).map(r => r.staff_id);
   const adminRow = (data.adminByBrand.get(b.id) || [])[0] || null;
 
+  console.log('adminRow', adminRow)
+
   const domains = {
     financial:    ruleFinancial(invoices, now),
     strategy:     ruleStrategy(strategies, tasks, briefs, ageDays, now),
@@ -379,6 +382,8 @@ async function computeCommand({ brandAdminUserId = null } = {}) {
   data.staffByBrand = groupBy(data.brandStaff, 'brand_id');
   data.adminByBrand = groupBy(data.brandAdmins, 'brand_id');
   data.leaveUserIds = new Set(data.leave.map(l => l.staff_id));
+
+  console.log('stfid', data.brandAdmins)
   // latest rolling_avg per user (rows pre-sorted desc by week_start)
   data.scoreByUser = new Map();
   for (const s of data.scores) {
@@ -386,11 +391,13 @@ async function computeCommand({ brandAdminUserId = null } = {}) {
   }
 
   let brandList = data.brands;
+
   if (brandAdminUserId) {
     const mine = new Set(
       data.brandAdmins.filter(r => r.users?.id === brandAdminUserId).map(r => r.brand_id));
     brandList = brandList.filter(b => mine.has(b.id));
   }
+
 
   const brands = brandList.map(b => assembleBrand(b, data));
   // worst-first, then retainer tier weight, then name

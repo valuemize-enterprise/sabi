@@ -50,6 +50,7 @@ export default function CommandCenterPage() {
     return list;
   }, [data, filter, query]);
 
+
   if (error) throw new Error(error);
 
   const s = data?.summary;

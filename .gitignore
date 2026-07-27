@@ -37,3 +37,10 @@ logs/
 # ── Misc ─────────────────────────────────────────────────────
 coverage/
 .nyc_output/
+
+
+ERROR_HANDLING_GUIDE.md
+ERROR_HANDLING_README.md
+ERROR_HANDLING_SUMMARY.md
+FIXES_COMPLETED.md
+QUICK_REFERENCE.md

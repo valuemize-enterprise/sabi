@@ -11,7 +11,11 @@ import { useAgencyStore } from '@/lib/store';
 import { strategies as stratApi, goals as goalsApi } from '@/lib/api';
 import { isGlobalAdmin } from '@/lib/permissions';
 import { StrategyCard } from '@/components/internal/StrategyCard';
-import { StatCard } from '@/components/ui';import StaffRequestLeave from '@/components/Staffrequestleave';
+import { StatCard } from '@/components/ui';
+import StaffRequestLeave from '@/components/Staffrequestleave';
+import { handleError, formatErrorMessage } from '@/lib/errorHandler';
+import { safeApiCall } from '@/lib/safeRequest';
+import toast from 'react-hot-toast';
 
 const tok = () => typeof window !== 'undefined' ? localStorage.getItem('sabi_token') : null;
 const fetchMe = (path: string) =>
@@ -124,38 +128,50 @@ export default function StaffDashboard() {
   const submitRating = async (staffId: string, brandId: string) => {
     const r = ratingInputs[staffId];
     if (!r?.score) return;
-    if (r.score <= 2 && !r.note?.trim()) { alert('A note is required for ratings of 2 or below'); return; }
+    if (r.score <= 2 && !r.note?.trim()) { 
+      toast.error('A note is required for ratings of 2 or below'); 
+      return; 
+    }
     try {
-      await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000'}/api/agency/weekly-ratings`, {
+      await safeApiCall(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000'}/api/agency/weekly-ratings`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${tok()}` },
         body: JSON.stringify({ staff_id: staffId, brand_id: brandId, score: r.score, note: r.note || null }),
-      }).then(async r2 => { const b = await r2.json(); if (!r2.ok) throw new Error(b.error || b.message); });
+      });
       setToRate(p => p.filter(t => !(t.staff_id === staffId && t.brand_id === brandId)));
-    } catch (err: any) { alert(err.message); }
+      toast.success('Rating submitted successfully');
+    } catch (err: any) { 
+      handleError(err, 'Failed to submit rating');
+    }
   };
 
   const verifyTask = async (taskId: string) => {
     try {
-      await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000'}/api/agency/tasks/${taskId}/verify`, {
+      await safeApiCall(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000'}/api/agency/tasks/${taskId}/verify`, {
         method: 'PUT',
         headers: { Authorization: `Bearer ${tok()}` },
-      }).then(async r => { const b = await r.json(); if (!r.ok) throw new Error(b.error || b.message); });
+      });
       setPendingVerification(p => p.filter(t => t.id !== taskId));
-    } catch (err: any) { alert(err.message); }
+      toast.success('Task verified successfully');
+    } catch (err: any) { 
+      handleError(err, 'Failed to verify task');
+    }
   };
 
   const rejectTask = async () => {
     if (!rejectingId || !rejectReason.trim()) return;
     try {
-      await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000'}/api/agency/tasks/${rejectingId}/reject-verification`, {
+      await safeApiCall(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000'}/api/agency/tasks/${rejectingId}/reject-verification`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${tok()}` },
         body: JSON.stringify({ reason: rejectReason.trim() }),
-      }).then(async r => { const b = await r.json(); if (!r.ok) throw new Error(b.error || b.message); });
+      });
       setPendingVerification(p => p.filter(t => t.id !== rejectingId));
       setRejectingId(null); setRejectReason('');
-    } catch (err: any) { alert(err.message); }
+      toast.success('Task rejected');
+    } catch (err: any) { 
+      handleError(err, 'Failed to reject task');
+    }
   };
 
   if (loading) return (

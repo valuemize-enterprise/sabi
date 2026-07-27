@@ -96,7 +96,7 @@ router.post('/', authenticate, async (req, res, next) => {
       return sendError(res, 403, 'Only admins can assign staff to brands');
     }
 
-    const { staff_id, role_on_brand = 'contributor' } = req.body;
+    const { staff_id, role_on_brand } = req.body;
     if (!staff_id) return sendError(res, 400, 'staff_id is required');
     if (!BRAND_ROLES.includes(role_on_brand)) {
       return sendError(res, 400, `role_on_brand must be one of: ${BRAND_ROLES.join(', ')}`);
@@ -106,7 +106,7 @@ router.post('/', authenticate, async (req, res, next) => {
     const { data, error } = await supabase
       .from('staff_brand_assignments')
       .upsert(
-        { staff_id, brand_id: req.params.brandId, role_on_brand },
+        { staff_id, brand_id: req.params.brandId, role_on_brand, roles_on_brand: role_on_brand },
         { onConflict: 'staff_id,brand_id' }
       )
       .select()
@@ -131,14 +131,13 @@ router.patch('/:staffId', authenticate, async (req, res, next) => {
       return sendError(res, 403, 'Only admins can change brand roles');
     }
 
-    const { role_on_brand } = req.body;
     if (!BRAND_ROLES.includes(role_on_brand)) {
       return sendError(res, 400, `Invalid role. Must be one of: ${BRAND_ROLES.join(', ')}`);
     }
 
     const { data, error } = await supabase
       .from('staff_brand_assignments')
-      .update({ role_on_brand })
+     .update({ role_on_brand, roles_on_brand: [role_on_brand] })
       .eq('brand_id', req.params.brandId)
       .eq('staff_id', req.params.staffId)
       .select()

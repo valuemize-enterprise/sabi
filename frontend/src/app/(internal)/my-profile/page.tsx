@@ -17,6 +17,9 @@ import {
   Field, Locked, Seg, Reveal, Card, ConfCard, InfoNote,
   G1, G2, G3, SecFoot, DelBtn, AddRowBtn, ProficiencyPicker, CheckRow,
 } from '@/components/profile/ProfilePrimitives';
+import { handleError, formatErrorMessage } from '@/lib/errorHandler';
+import { safeApiCall } from '@/lib/safeRequest';
+import toast from 'react-hot-toast';
 
 /* ── sections ─────────────────────────────────────────── */
 const SECTIONS = ['personal', 'family', 'medical', 'education', 'languages', 'experience', 'guarantor', 'declaration'] as const;
@@ -133,20 +136,38 @@ export default function MyProfilePage() {
 
   const save = useCallback(async () => {
     setSaving(true);
-    await apiFetch('/api/people/me/profile/save', state, 'PUT').catch(() => { });
-    setSaving(false);
+    try {
+      await safeApiCall(`${API}/api/people/me/profile/save`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', ...(token() ? { Authorization: `Bearer ${token()}` } : {}) },
+        body: JSON.stringify(state)
+      });
+    } catch (err) {
+      handleError(err, 'Failed to save profile');
+    } finally {
+      setSaving(false);
+    }
   }, [state]);
 
   const submit = async () => {
     const { start_date, role_title, ...rest } = state;
     const payload = { ...rest };
 
-    const res = await apiFetch('/api/people/me/profile', { ...payload, profile_state: 'submitted', submitted_at: new Date().toISOString() }, 'post');
-    if (res.success) { 
-      setDone(new Set(SECTIONS)); 
-      setSubmitted(true); 
-      setIsEditMode(false);
-      setHasExistingProfile(true);
+    try {
+      const res = await safeApiCall(`${API}/api/people/me/profile`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...(token() ? { Authorization: `Bearer ${token()}` } : {}) },
+        body: JSON.stringify({ ...payload, profile_state: 'submitted', submitted_at: new Date().toISOString() })
+      });
+      if (res && res.success) { 
+        setDone(new Set(SECTIONS)); 
+        setSubmitted(true); 
+        setIsEditMode(false);
+        setHasExistingProfile(true);
+        toast.success('Profile submitted successfully!');
+      }
+    } catch (err) {
+      handleError(err, 'Failed to submit profile');
     }
   };
 
@@ -158,7 +179,7 @@ export default function MyProfilePage() {
       setLoading(true);
       setError(null);
       try {
-        const response = await fetch(`${API}/api/people/me/profile`, {
+        const data = await safeApiCall(`${API}/api/people/me/profile`, {
           method: 'GET',
           headers: {
             'Content-Type': 'application/json',
@@ -166,13 +187,7 @@ export default function MyProfilePage() {
           },
         });
 
-        if (!response.ok) {
-          throw new Error(`Failed to fetch profile: ${response.statusText}`);
-        }
-
-        const data = await response.json();
-
-        if (data.success && data.form) {
+        if (data && data.success && data.form) {
           // Populate form with existing data
           Object.keys(data.form).forEach((key) => {
             if (data.form[key] !== null && data.form[key] !== undefined) {
@@ -195,7 +210,9 @@ export default function MyProfilePage() {
           }
         }
       } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to load profile');
+        const errorMsg = formatErrorMessage(err);
+        setError(errorMsg);
+        handleError(err, 'Failed to load profile');
       } finally {
         setLoading(false);
       }

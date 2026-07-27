@@ -3,6 +3,8 @@
 import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { Eye, EyeOff, Loader2, Check, Shield, AlertTriangle } from 'lucide-react';
+import { formatErrorMessage } from '@/lib/errorHandler';
+import { safeApiCall } from '@/lib/safeRequest';
 
 const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
 
@@ -33,14 +35,16 @@ function AcceptInviteContent() {
   // Validate token on load
   useEffect(() => {
     if (!token) { setError('Invalid invitation link.'); setLoading(false); return; }
-    fetch(`${API}/api/auth/invite/${token}`)
-      .then(r => r.json())
+    safeApiCall(`${API}/api/auth/invite/${token}`)
       .then(res => {
-        if (!res.success) throw new Error(res.error || 'Invalid or expired invitation');
-        setInvite(res.data);
-        setFullName(res.data.full_name || '');
+        if (res && res.success) {
+          setInvite(res.data);
+          setFullName(res.data.full_name || '');
+        } else {
+          setError(res?.error || 'Invalid or expired invitation');
+        }
       })
-      .catch(err => setError(err.message))
+      .catch(err => setError(formatErrorMessage(err)))
       .finally(() => setLoading(false));
   }, [token]);
 
@@ -51,17 +55,19 @@ function AcceptInviteContent() {
 
     setSubmitting(true); setError('');
     try {
-      const res = await fetch(`${API}/api/auth/invite/accept`, {
+      const body = await safeApiCall(`${API}/api/auth/invite/accept`, {
         method:  'POST',
         headers: { 'Content-Type': 'application/json' },
         body:    JSON.stringify({ token, password, full_name: fullName, phone }),
       });
-      const body = await res.json();
-      if (!body.success) throw new Error(body.error || 'Failed to create account');
-      setDone(true);
-      setTimeout(() => router.replace(invite.invite_type === 'client' ? '/client/login' : '/login'), 2500);
+      if (body && body.success) {
+        setDone(true);
+        setTimeout(() => router.replace(invite.invite_type === 'client' ? '/client/login' : '/login'), 2500);
+      } else {
+        setError(body?.error || 'Failed to create account');
+      }
     } catch (err: any) {
-      setError(err.message);
+      setError(formatErrorMessage(err));
     } finally {
       setSubmitting(false);
     }

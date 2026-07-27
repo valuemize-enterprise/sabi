@@ -7,6 +7,9 @@ import {
 } from 'lucide-react';
 import { superAdmin } from '@/lib/api';
 import { brands as brandsApi } from '@/lib/api';
+import { handleError } from '@/lib/errorHandler';
+import { safeApiCall } from '@/lib/safeRequest';
+import toast from 'react-hot-toast';
 
 // ── Shared helpers ────────────────────────────────────────────
 const SA_TOKEN = () =>
@@ -14,7 +17,7 @@ const SA_TOKEN = () =>
 
 const saFetch = async (path: string, opts?: RequestInit) => {
   const base = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
-  const res  = await fetch(`${base}${path}`, {
+  return safeApiCall(`${base}${path}`, {
     ...opts,
     headers: {
       'Content-Type': 'application/json',
@@ -22,9 +25,6 @@ const saFetch = async (path: string, opts?: RequestInit) => {
       ...(opts?.headers ?? {}),
     },
   });
-  const body = await res.json();
-  if (!res.ok) throw new Error(body.message || `Error ${res.status}`);
-  return body;
 };
 
 const ROLES = [
@@ -159,14 +159,14 @@ export default function SuperAdminUsersPage() {
       let data: any[], count = 0;
       if (tab === 'clients') {
         const res: any = await saFetch(`/api/super-admin/clients?limit=50`);
-        data  = res.data ?? [];
-        count = res.pagination?.total ?? data.length;
+        data  = res?.data ?? [];
+        count = res?.pagination?.total ?? data.length;
       } else {
         const p: Record<string, string> = { type: 'staff', limit: '50' };
         if (role) p.role = role;
         const res: any = await superAdmin.users(p);
-        data  = res.data ?? [];
-        count = res.pagination?.total ?? data.length;
+        data  = res?.data ?? [];
+        count = res?.pagination?.total ?? data.length;
       }
       const filtered = search ? data.filter((u: any) =>
         u.full_name?.toLowerCase().includes(search.toLowerCase()) ||
@@ -174,7 +174,11 @@ export default function SuperAdminUsersPage() {
       ) : data;
       setItems(filtered);
       setTotal(count);
-    } catch {} finally { setLoading(false); }
+    } catch (err) {
+      handleError(err, 'Failed to load users');
+    } finally { 
+      setLoading(false); 
+    }
   }, [tab, role, search]);
 
   useEffect(() => { load(); }, [load]);
@@ -186,11 +190,17 @@ export default function SuperAdminUsersPage() {
     setCreating(true);
     try {
       const res: any = await superAdmin.createUser(staffForm);
-      setCreateResult({ ...res.data, isClient: false });
-      setItems(p => [res.data.user, ...p]);
-      setStaffForm({ email:'', full_name:'', role:'', department:'' });
-    } catch (err: any) { setError(err.message || 'Failed to create staff account'); }
-    finally { setCreating(false); }
+      if (res && res.data) {
+        setCreateResult({ ...res.data, isClient: false });
+        setItems(p => [res.data.user, ...p]);
+        setStaffForm({ email:'', full_name:'', role:'', department:'' });
+        toast.success('Staff account created successfully');
+      }
+    } catch (err: any) { 
+      handleError(err, 'Failed to create staff account');
+    } finally { 
+      setCreating(false); 
+    }
   };
 
   // ── Create client ─────────────────────────────────────────
@@ -203,11 +213,17 @@ export default function SuperAdminUsersPage() {
         method: 'POST',
         body: JSON.stringify(clientForm),
       });
-      setCreateResult({ ...res.data, isClient: true });
-      setItems(p => [res.data.client, ...p]);
-      setClientForm({ email:'', full_name:'', brand_id:'', job_title:'', phone:'', company_name:'' });
-    } catch (err: any) { setError(err.message || 'Failed to create client account'); }
-    finally { setCreating(false); }
+      if (res && res.data) {
+        setCreateResult({ ...res.data, isClient: true });
+        setItems(p => [res.data.client, ...p]);
+        setClientForm({ email:'', full_name:'', brand_id:'', job_title:'', phone:'', company_name:'' });
+        toast.success('Client account created successfully');
+      }
+    } catch (err: any) { 
+      handleError(err, 'Failed to create client account');
+    } finally { 
+      setCreating(false); 
+    }
   };
 
   // ── Table actions ─────────────────────────────────────────
@@ -218,16 +234,24 @@ export default function SuperAdminUsersPage() {
       if (action === 'deactivate') {
         await saFetch(`/api/super-admin/${table}/${id}/deactivate`, { method: 'PUT' });
         setItems(p => p.map(u => u.id === id ? { ...u, is_active: false } : u));
+        toast.success('User deactivated');
       } else if (action === 'activate') {
         await saFetch(`/api/super-admin/${table}/${id}/activate`, { method: 'PUT' });
         setItems(p => p.map(u => u.id === id ? { ...u, is_active: true } : u));
+        toast.success('User activated');
       } else {
         const res: any = await saFetch(`/api/super-admin/${table}/${id}/reset-password`, { method: 'PUT' });
-        const u = items.find(i => i.id === id);
-        setPwResetResult({ name: u?.full_name || u?.email || 'User', temp: res.data.temp_password });
+        if (res && res.data) {
+          const u = items.find(i => i.id === id);
+          setPwResetResult({ name: u?.full_name || u?.email || 'User', temp: res.data.temp_password });
+          toast.success('Password reset successfully');
+        }
       }
-    } catch (err: any) { setError(err.message); }
-    finally { setActionLoading(null); }
+    } catch (err: any) { 
+      handleError(err, `Failed to ${action} user`);
+    } finally { 
+      setActionLoading(null); 
+    }
   };
 
   const closeModal = () => { setShowCreate(false); setCreateResult(null); };

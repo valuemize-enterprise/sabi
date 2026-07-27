@@ -90,18 +90,28 @@ export interface GoalChangeRequest {
 const API = process.env.NEXT_PUBLIC_API_URL || '';
 
 async function authFetch(path: string, init?: RequestInit) {
-  const token = typeof window !== 'undefined' ? localStorage.getItem('sabi_token') : null;
-  const res   = await fetch(`${API}${path}`, {
-    ...init,
-    headers: {
-      ...(init?.headers || {}),
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-    },
-    cache: 'no-store',
-  });
-  const body = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error(body?.error || `Request failed (${res.status})`);
-  return body;
+  try {
+    const token = typeof window !== 'undefined' ? localStorage.getItem('sabi_token') : null;
+    const res   = await fetch(`${API}${path}`, {
+      ...init,
+      headers: {
+        ...(init?.headers || {}),
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+      cache: 'no-store',
+    });
+    const body = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      throw new Error(body?.error || body?.message || `Request failed (${res.status})`);
+    }
+    return body;
+  } catch (error) {
+    // Handle network errors
+    if (error instanceof TypeError && error.message === 'Failed to fetch') {
+      throw new Error('Network connection issue. Please check your internet connection and try again.');
+    }
+    throw error;
+  }
 }
 
 // ── Goal generator API ─────────────────────────────────────────────────────────
