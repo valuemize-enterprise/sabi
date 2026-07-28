@@ -38,11 +38,13 @@ router.get('/', authenticate, async (req, res, next) => {
 });
 
 // ── PATCH /api/agency/brands/:id/identity ────────────────────
-router.patch('/', authenticate, async (req, res, next) => {
+const multer = require('multer');
+const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 5 * 1024 * 1024 } });
+
+router.patch('/', authenticate, upload.single('logo'), async (req, res, next) => {
   try {
     const ADMIN_ROLES = ['super_admin','ceo','managing_director','creative_director','strategy_director','account_director'];
 
-    // Brand admins can also update identity
     let canEdit = ADMIN_ROLES.includes(req.user.role);
     if (!canEdit) {
       const { data: assignment } = await supabase
@@ -56,7 +58,7 @@ router.patch('/', authenticate, async (req, res, next) => {
     if (!canEdit) return sendError(res, 403, 'Only admins and brand admins can update brand identity');
 
     const allowed = [
-      'logo_url','tagline','mission_statement','brand_story',
+      'tagline','mission_statement','brand_story',
       'brand_archetype','brand_voice','target_audience',
       'brand_colors','brand_fonts','dos_and_donts',
       'brand_guidelines_url','brand_assets','social_handles',
@@ -65,6 +67,27 @@ router.patch('/', authenticate, async (req, res, next) => {
 
     const updates = { updated_at: new Date().toISOString() };
     allowed.forEach(k => { if (req.body[k] !== undefined) updates[k] = req.body[k]; });
+
+    // Handle logo upload
+    if (req.file) {
+      const ext      = req.file.originalname.split('.').pop();
+      const path     = `logos/${req.params.id}-${Date.now()}.${ext}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('brand-assets')
+        .upload(path, req.file.buffer, {
+          contentType: req.file.mimetype,
+          upsert: true,
+        });
+
+      if (uploadError) throw uploadError;
+
+      const { data: urlData } = supabase.storage
+        .from('brand-assets')
+        .getPublicUrl(path);
+
+      updates.logo_url = urlData.publicUrl;
+    }
 
     if (updates.brand_archetype && !VALID_ARCHETYPES.includes(updates.brand_archetype)) {
       return sendError(res, 400, `brand_archetype must be one of: ${VALID_ARCHETYPES.join(', ')}`);

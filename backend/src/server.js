@@ -203,6 +203,9 @@ app.use('/api/agency/command', require('./routes/command.routes'));
 // ── System Notifications (sweep + test) ──────────────────────
 app.use('/api/system/notifications',  systemNotifications);
 
+// ── Push Notifications (PWA) ────────────────────────────────
+app.use('/api/push-notifications', require('./routes/push-notifications.routes'));
+
 
 app.use('/api/agency/briefs',           agencyBriefs);
 app.use('/api/agency/tasks',            agencyTasksV2);      // replaces old agencyTasks

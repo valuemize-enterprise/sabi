@@ -5,7 +5,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import {
   LayoutDashboard, Building2, Users, FileText, Brain,
   Calendar, Bell, ClipboardList, Settings, LogOut,
-  Briefcase, PenLine, BarChart3, Mail, Shield,
+  PenLine, BarChart3, Mail, Shield,
   ChevronDown, ChevronRight,
   DollarSign,
   Activity,

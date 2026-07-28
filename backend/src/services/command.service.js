@@ -330,7 +330,7 @@ function assembleBrand(b, data) {
   const staffIds = (data.staffByBrand.get(b.id) || []).map(r => r.staff_id);
   const adminRow = (data.adminByBrand.get(b.id) || [])[0] || null;
 
-  console.log('adminRow', adminRow)
+  // console.log('adminRow', adminRow)
 
   const domains = {
     financial:    ruleFinancial(invoices, now),
