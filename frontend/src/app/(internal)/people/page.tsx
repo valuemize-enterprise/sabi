@@ -10,6 +10,7 @@ import RequestLeaveForm from '@/components/people/RequestLeaveForm';
 import {
   getRegistry, getInsights, getPendingLeave, decideLeave,
   type RegistryPayload, type PersonRow as PersonRowType, type InsightsPayload, type LeaveRequestRow,
+  StaffProfile,
 } from '@/components/people/types';
 import '@/styles/people-theme.css';
 import { AgencyTopNav } from '@/components/internal';
@@ -47,10 +48,13 @@ export default function PeoplePage() {
   const [isHR, setIsHR] = useState(false);
   const [decliningId, setDecliningId] = useState<string | null>(null);
   const [declineNote, setDeclineNote] = useState('');
+  const [staffProfile, setStaffProfile] = useState<StaffProfile[]>()
+  const [profileSubmittedStaff, setProfileSubmittedStaff] = useState<StaffProfile | null>(null)
 
   const load = useCallback(async () => {
     try {
       const reg = await getRegistry();
+      setStaffProfile(reg.staff_profile)
       setData(reg);
       setIsHR(reg.people.some(p => p.employment_type !== undefined));
       const [ins, pen] = await Promise.allSettled([getInsights(), getPendingLeave()]);
@@ -76,7 +80,14 @@ export default function PeoplePage() {
     setDecliningId(null); setDeclineNote(''); load();
   };
 
-  console.log('people', people)
+  // console.log('people', people)
+
+  const handlePersonById = (p: PersonRowType) => {
+    setSelected(p);
+    setProfileSubmittedStaff(
+      staffProfile?.find((sfp) => sfp.user_id === p.user_id) ?? null
+    );
+  };
 
   return (
     <div>
@@ -115,7 +126,7 @@ export default function PeoplePage() {
                     <input placeholder="Name or role…" value={query} onChange={(e) => setQuery(e.target.value)} />
                   </div>
                 </div>
-                {people.map(p => <PersonRow key={p.user_id} p={p} onOpen={() => setSelected(p)} />)}
+                {people.map(p => <PersonRow key={p.user_id} p={p} onOpen={() => handlePersonById(p)} />)}
               </>
             )}
 
@@ -211,7 +222,7 @@ export default function PeoplePage() {
           </div>
         </div>
 
-        {selected && <PersonFile person={selected} isHR={isHR} onClose={() => setSelected(null)} onChanged={load} />}
+        {selected && <PersonFile person={selected} isHR={isHR} onClose={() => setSelected(null)} onChanged={load} Staff={profileSubmittedStaff} />}
         {showAdd && <AddPersonWizard onClose={() => setShowAdd(false)} onCreated={() => { setShowAdd(false); load(); }} />}
         {showRequestLeave && <RequestLeaveForm onClose={() => setShowRequestLeave(false)} onSent={() => { setShowRequestLeave(false); load(); }} />}
       </div>

@@ -163,6 +163,10 @@
 .pp-wiz-body{padding:6px 26px 20px;overflow-y:auto;flex:1}
 .pp-wiz-step-title{font-family:var(--display);font-size:19px;font-weight:600;margin-bottom:4px}
 .pp-wiz-step-sub{font-size:12.5px;color:var(--soft);margin-bottom:20px}
+.pp-btn-ghost:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
 
 .pp-field{margin-bottom:16px}
 .pp-field label{display:block;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--soft);margin-bottom:6px}

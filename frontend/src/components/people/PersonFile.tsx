@@ -6,14 +6,17 @@ import AddDocumentForm from './AddDocumentForm';
 import {
   getPersonFile, offboardPerson, regenerateProfile, addDocument,
   type PersonFilePayload, type PersonRow,
+  StaffProfile,
+  updateRole,
 } from './types';
+import { Check, Loader2, SquarePen, X } from 'lucide-react';
 
 const Fact = ({ label, value }: { label: string; value: React.ReactNode }) => (
   <div className="pp-dr-fact"><span>{label}</span><b>{value ?? '—'}</b></div>
 );
 
-export default function PersonFile({ person, isHR, onClose, onChanged }: {
-  person: PersonRow; isHR: boolean; onClose: () => void; onChanged: () => void;
+export default function PersonFile({ person, isHR, onClose, onChanged, Staff }: {
+  person: PersonRow; isHR: boolean; onClose: () => void; onChanged: () => void; Staff: StaffProfile | null;
 }) {
   const [file, setFile] = useState<PersonFilePayload | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -21,6 +24,52 @@ export default function PersonFile({ person, isHR, onClose, onChanged }: {
   const [busy, setBusy] = useState(false);
   const [showAddDoc, setShowAddDoc] = useState(false);
   const [visible, setVisible] = useState(false);
+  const [mode, setMode] = useState<'view' | 'edit'>('view');
+
+  const r = file?.record;
+
+
+  const [draft, setDraft] = useState({
+    start_date: r?.start_date ?? '',
+    employment_type: r?.employment_type ?? '',
+    role_title: r?.role_title ?? '',
+    spark_line: r?.spark_line ?? '',
+  });
+  const [saving, setSaving] = useState(false);
+
+  const startEdit = () => {
+    setDraft({
+      start_date: r?.start_date ?? '',
+      employment_type: r?.employment_type ?? '',
+      role_title: r?.role_title ?? '',
+      spark_line: r?.spark_line ?? '',
+    });
+    setMode('edit');
+  };
+
+  const cancelEdit = () => setMode('view');
+
+  const handleSave = async () => {
+     setError("")
+    const payload = {
+      userId: person.user_id,
+      start_date: draft.start_date,
+      employment_type: draft.employment_type,
+      role_title: draft.role_title,
+      spark_line: draft.spark_line
+    }
+    setSaving(true);
+    try {
+       await updateRole(payload)  // your API/Supabase call
+      setMode('view');
+    } catch (e: any) {
+      setError(e.message);
+      // surface a toast/error here
+    } finally {
+      setSaving(false);
+    }
+  };
+
 
   useEffect(() => {
     setVisible(true);
@@ -37,12 +86,21 @@ export default function PersonFile({ person, isHR, onClose, onChanged }: {
   };
   const doRegenerate = async () => {
     setBusy(true);
-    try { await regenerateProfile(person.user_id); onChanged(); }
-    catch (e: any) { setError(e.message); }
-    finally { setBusy(false); }
+    try {
+      await regenerateProfile(person.user_id);
+      onChanged();
+    } catch (e: any) {
+      setError(e.message);
+    } finally {
+      setBusy(false);
+    }
   };
 
-  const r = file?.record;
+
+
+  // if (!Staff) return null
+
+  // console.log('r', r)
 
   return (
     <>
@@ -55,9 +113,16 @@ export default function PersonFile({ person, isHR, onClose, onChanged }: {
               <div className="pp-dr-name">{person.display_name}</div>
               <div className="pp-dr-role">{person.role_title}{person.department ? ` · ${person.department}` : ''}</div>
               <div style={{ display: 'flex', gap: 6, marginTop: 6, flexWrap: 'wrap' }}>
-                <span className={`pp-ribbon ${person.profile_state === 'published' ? 'pp-rib-live' : 'pp-rib-draft'}`}>
-                  {person.profile_state === 'published' ? 'Profile live' : person.profile_state === 'draft' ? `Draft · ${person.profile_draft_days ?? 0}d` : 'No profile'}
-                </span>
+                {Staff && (<span
+                  className={`pp-ribbon ${Staff?.profile_state === "submitted" ? "pp-rib-live" : "pp-rib-draft"
+                    }`}
+                >
+                  {Staff?.profile_state === "submitted"
+                    ? "Profile live"
+                    : Staff?.profile_state === "draft"
+                      ? `Draft · ${person.profile_draft_days ?? 0}d`
+                      : "No profile"}
+                </span>)}
                 {person.probation_active && <span className="pp-ribbon pp-rib-probation">Probation → {person.probation_end}</span>}
                 {person.on_leave_now && <span className="pp-ribbon pp-rib-leave">On leave</span>}
               </div>
@@ -80,21 +145,103 @@ export default function PersonFile({ person, isHR, onClose, onChanged }: {
           ) : (
             <>
               <div className="pp-dr-section">
-                <h5>📇 Employment</h5>
-                <div className="pp-dr-fact-grid">
-                  <Fact label="Started" value={r?.start_date} />
-                  <Fact label="Type" value={r?.employment_type?.replace('_', '-')} />
-                  {r?.tp_cohort && <Fact label="Cohort" value={r.tp_cohort} />}
-                  <Fact label="Status" value={r?.status} />
-                  {r?.spark_line && (
-                    <div style={{ gridColumn: '1/-1' }}>
-                      <Fact label="Spark line" value={<i>&ldquo;{r.spark_line}&rdquo;</i>} />
-                    </div>
+                <div className="flex items-center justify-between">
+                  <h5>📇 Employment</h5>
+                  {isHR && (
+                    mode === 'view' ? (
+                      <div onClick={startEdit} role="button" aria-label="Edit employment">
+                        <SquarePen size={16} />
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-2">
+                        <div onClick={cancelEdit} role="button" aria-label="Cancel">
+                          <X size={16} />
+                        </div>
+                        <div onClick={handleSave} role="button" aria-label="Save" aria-disabled={saving}>
+                          {saving ? <Loader2 size={16} className="animate-spin" /> : <Check size={16} />}
+                        </div>
+                      </div>
+                    )
                   )}
                 </div>
-                {isHR && person.profile_state !== 'none' && (
-                  <button className="pp-btn pp-btn-ghost" style={{ marginTop: 12, fontSize: 11.5 }} onClick={doRegenerate} disabled={busy}>
-                    ↻ Regenerate profile draft
+
+                <div className="pp-dr-fact-grid">
+                  {mode === 'view' ? (
+                    <>
+                      <Fact label="Started" value={r?.start_date} />
+                      <Fact label="Type" value={r?.employment_type?.replace('_', '-')} />
+                      {r?.tp_cohort && <Fact label="Cohort" value={r.tp_cohort} />}
+                      {Staff && (
+                        <Fact
+                          label="Status"
+                          value={Staff?.profile_state === 'submitted' ? 'SUBMITTED' : r?.status}
+                        />
+                      )}
+                      <Fact label="Digital signature" value={r?.role_title} />
+                      {r?.spark_line && (
+                        <div style={{ gridColumn: '1/-1' }}>
+                          <Fact label="Spark line" value={<i>&ldquo;{r.spark_line}&rdquo;</i>} />
+                        </div>
+                      )}
+                    </>
+                  ) : (
+                    <>
+                      <div className="pp-dr-fact">
+                        <span>Started</span>
+                        <input
+                          type="date"
+                          value={draft.start_date}
+                          onChange={(e) => setDraft((d) => ({ ...d, start_date: e.target.value }))}
+                        />
+                      </div>
+                      <div className="pp-dr-fact">
+                        <span>Type</span>
+                        <select
+                          value={draft.employment_type}
+                          onChange={(e) => setDraft((d) => ({ ...d, employment_type: e.target.value }))}
+                        >
+                          <option value="full_time">full-time</option>
+                          <option value="part_time">part-time</option>
+                          <option value="contract">contract</option>
+                        </select>
+                      </div>
+
+                      <div className="pp-dr-fact">
+                        <span>Digital signature</span>
+                        <input
+                          type="text"
+                          value={draft.role_title}
+                          onChange={(e) => setDraft((d) => ({ ...d, digital_signature: e.target.value }))}
+                        />
+                      </div>
+
+                      <div style={{ gridColumn: '1/-1' }} className="pp-dr-fact">
+                        <span>Spark line</span>
+                        <input
+                          type="text"
+                          value={draft.spark_line}
+                          onChange={(e) => setDraft((d) => ({ ...d, spark_line: e.target.value }))}
+                        />
+                      </div>
+                    </>
+                  )}
+                </div>
+
+                {isHR && Staff?.profile_state !== 'none' && (
+                  <button
+                    className="pp-btn pp-btn-ghost"
+                    style={{ marginTop: 12, fontSize: 11.5 }}
+                    onClick={doRegenerate}
+                    disabled={busy}
+                  >
+                    {busy ? (
+                      <>
+                        <Loader2 size={12} className="animate-spin" style={{ marginRight: 4 }} />
+                        Regenerating…
+                      </>
+                    ) : (
+                      <>↻ Regenerate profile draft</>
+                    )}
                   </button>
                 )}
               </div>
@@ -103,12 +250,12 @@ export default function PersonFile({ person, isHR, onClose, onChanged }: {
                 <div className="pp-dr-section confidential">
                   <h5>🔒 Confidential</h5>
                   <div className="pp-dr-fact-grid">
-                    <Fact label="Personal email" value={r.personal_email} />
-                    <Fact label="Personal phone" value={r.personal_phone} />
+                    <Fact label="Personal email" value={Staff?.personal_email} />
+                    <Fact label="Personal phone" value={Staff?.phone} />
                     <Fact label="Comp band" value={r.comp_band} />
                     <div style={{ gridColumn: '1/-1' }}>
-                      <Fact label="Emergency contact" value={r.emergency_contact
-                        ? `${r.emergency_contact.name} (${r.emergency_contact.relationship}) · ${r.emergency_contact.phone}` : '—'} />
+                      <Fact label="Emergency contact" value={Staff?.emergency_contact_phone
+                        ? `${Staff?.emergency_contact_name} · ${Staff?.emergency_contact_phone}` : '—'} />
                     </div>
                   </div>
                   {r.hr_notes && <p style={{ fontSize: 12, color: 'var(--soft)', marginTop: 10, whiteSpace: 'pre-wrap' }}>{r.hr_notes}</p>}
@@ -127,16 +274,16 @@ export default function PersonFile({ person, isHR, onClose, onChanged }: {
                   {file.documents.length === 0
                     ? <p style={{ fontSize: 12, color: 'var(--soft)' }}>No documents on file.</p>
                     : <div style={{ display: 'grid', gap: 8 }}>{file.documents.map(doc => (
-                        <div key={doc.id} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12 }}>
-                          <span><b>{doc.label}</b> <span style={{ color: 'var(--soft)' }}>· {doc.doc_type}</span></span>
-                          {doc.expiry_date && (
-                            <span className="pp-ribbon" style={{
-                              background: new Date(doc.expiry_date) < new Date(Date.now() + 30 * 86400000) ? 'var(--ember-soft)' : 'var(--paper)',
-                              color: new Date(doc.expiry_date) < new Date(Date.now() + 30 * 86400000) ? 'var(--ember)' : 'var(--soft)',
-                            }}>exp {doc.expiry_date}</span>
-                          )}
-                        </div>
-                      ))}</div>}
+                      <div key={doc.id} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12 }}>
+                        <span><b>{doc.label}</b> <span style={{ color: 'var(--soft)' }}>· {doc.doc_type}</span></span>
+                        {doc.expiry_date && (
+                          <span className="pp-ribbon" style={{
+                            background: new Date(doc.expiry_date) < new Date(Date.now() + 30 * 86400000) ? 'var(--ember-soft)' : 'var(--paper)',
+                            color: new Date(doc.expiry_date) < new Date(Date.now() + 30 * 86400000) ? 'var(--ember)' : 'var(--soft)',
+                          }}>exp {doc.expiry_date}</span>
+                        )}
+                      </div>
+                    ))}</div>}
                 </div>
               )}
 
@@ -172,14 +319,14 @@ export default function PersonFile({ person, isHR, onClose, onChanged }: {
                 {file.leave_history.length === 0
                   ? <p style={{ fontSize: 12, color: 'var(--soft)' }}>No leave recorded.</p>
                   : <div style={{ display: 'grid', gap: 7 }}>{file.leave_history.map(l => (
-                      <div key={l.id} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12 }}>
-                        <span>{l.leave_type} · {l.start_date} → {l.end_date}</span>
-                        <span className="pp-ribbon" style={{
-                          background: l.status === 'approved' ? 'var(--moss-soft)' : l.status === 'declined' ? 'var(--ember-soft)' : 'var(--amber-soft)',
-                          color: l.status === 'approved' ? 'var(--moss)' : l.status === 'declined' ? 'var(--ember)' : 'var(--amber)',
-                        }}>{l.status}</span>
-                      </div>
-                    ))}</div>}
+                    <div key={l.id} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12 }}>
+                      <span>{l.leave_type} · {l.start_date} → {l.end_date}</span>
+                      <span className="pp-ribbon" style={{
+                        background: l.status === 'approved' ? 'var(--moss-soft)' : l.status === 'declined' ? 'var(--ember-soft)' : 'var(--amber-soft)',
+                        color: l.status === 'approved' ? 'var(--moss)' : l.status === 'declined' ? 'var(--ember)' : 'var(--amber)',
+                      }}>{l.status}</span>
+                    </div>
+                  ))}</div>}
               </div>
 
               {isHR && r?.status !== 'offboarding' && (

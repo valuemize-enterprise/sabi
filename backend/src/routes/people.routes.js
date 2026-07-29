@@ -44,6 +44,17 @@ peopleRouter.get('/registry', async (req, res) => {
   } catch (e) { fail(res, e); }
 });
 
+peopleRouter.put('/update', async (req, res) => {
+  try {
+    if (!REGISTRY_ROLES.has(req.user.role)) {
+      return fail(res, { status: 403, message: 'People OS is HR + leadership only.' });
+    }
+    res.json({ success: true, ...(await people.updateRoleByHr(req.body, req.user)) });
+  } catch (e) {
+    fail(res, e);
+  }
+});
+
 peopleRouter.get('/insights', async (req, res) => {
   try { res.json({ success: true, insights: await people.insights(req.user) }); }
   catch (e) { fail(res, e); }

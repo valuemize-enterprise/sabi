@@ -103,14 +103,19 @@ router.post('/', authenticate, async (req, res, next) => {
     }
 
     // Upsert — if already assigned, update the role
-    const { data, error } = await supabase
-      .from('staff_brand_assignments')
-      .upsert(
-        { staff_id, brand_id: req.params.brandId, role_on_brand, roles_on_brand: role_on_brand },
-        { onConflict: 'staff_id,brand_id' }
-      )
-      .select()
-      .single();
+  const { data, error } = await supabase
+  .from('staff_brand_assignments')
+  .upsert(
+    {
+      staff_id,
+      brand_id: req.params.brandId,
+      role_on_brand,
+      roles_on_brand: [role_on_brand],
+    },
+    { onConflict: 'staff_id,brand_id' }
+  )
+  .select()
+  .single();
 
     if (error) throw error;
 

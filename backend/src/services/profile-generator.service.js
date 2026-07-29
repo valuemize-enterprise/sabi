@@ -19,7 +19,7 @@
 
 'use strict';
 
-const { supabase }      = require('../config/supabase');
+const  supabase       = require('../config/supabase');
 const { TIER1_FIELDS }  = require('./people.service');
 const { getGeneratorContext } = require('./profile-form.service');
 const dispatch          = require('./email-dispatch.service');
