@@ -137,7 +137,8 @@ router.post("/set-password", authenticate, async (req, res, next) => {
       .eq("id", req.user.id);
     require("../services/rpc.service")
       .setOnboardingStep(req.user.id, "portal_activated")
-      .catch(() => {});
+      .catch((e) =>
+  console.error("Failed to set onboarding step:", e.message));
     await auditLog({
       actorId: req.user.id,
       actorEmail: req.user.email,
@@ -149,7 +150,8 @@ router.post("/set-password", authenticate, async (req, res, next) => {
     // People OS onboarding — portal_activated
     require("../services/people.service")
       .setOnboardingStep(req.user.id, "portal_activated")
-      .catch(() => {});
+      .catch((e) =>
+  console.error("Failed to set onboarding step:", e.message));
 
     sendSuccess(res, null, "Password updated successfully");
   } catch (err) {

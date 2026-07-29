@@ -77,7 +77,8 @@ router.put('/:id/verify', authenticate, async (req, res, next) => {
 
     // People OS onboarding — first_task_done
     if (task.assignee_id) {
-      require('../../services/people.service').setOnboardingStep(task.assignee_id, 'first_task_done').catch(() => {});
+      require('../../services/people.service').setOnboardingStep(task.assignee_id, 'first_task_done').catch((e) =>
+  console.error("Failed to set onboarding step:", e.message));
     }
 
     sendSuccess(res, { task: data }, 'Task verified');

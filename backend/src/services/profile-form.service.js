@@ -353,6 +353,12 @@ async function saveDraft(userId, input) {
 
   if (error) throw new Error(error.message);
 
+  if (data && clean.profile_state === "draft") {
+    require("../services/rpc.service")
+      .setOnboardingStep(userId, "profile_draft")
+      .catch((e) => console.error("Failed to set onboarding step:", e.message));
+  }
+
   // Update quick-lookup on people_records
   await supabase
     .from("people_records")
@@ -421,6 +427,11 @@ async function submitForm(userId, input) {
   }
 
   // console.log('peoples data from supabase:', peopledata)
+  if (data) {
+    require("../services/rpc.service")
+      .setOnboardingStep(userId, "profile_published")
+      .catch((e) => console.error("Failed to set onboarding step:", e.message));
+  }
 
   await appendHistory(userId, userId, "submitted", null, {
     digital_signature: clean.digital_signature,

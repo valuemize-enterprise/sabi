@@ -390,6 +390,15 @@ async function userFor(userId) {
   return data;
 }
 
+async function hrEmails() {
+  const { data } = await supabase
+    .from("users")
+    .select("email, full_name")
+    .in("role", ["hr", "super_admin"])
+    .eq("is_active", true);
+  return (data || []).map((u) => u.email).filter(Boolean);
+}
+
 async function updateRoleByHr(body, caller) {
   const { userId, start_date, employment_type, role_title, spark_line } = body;
 
