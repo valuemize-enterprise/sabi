@@ -109,7 +109,7 @@ export default function ClientsPage() {
 
                 <div className="mt-4 pt-4 border-t border-white/5 flex items-center justify-between">
                   <p className="text-xs text-white/30">
-                    AM: {brand.users?.full_name ?? 'Unassigned'}
+                    BRAND ADMIN: {brand.users?.full_name ?? 'Unassigned'}
                   </p>
                   <ChevronRight className="w-4 h-4 text-white/20 group-hover:text-purple-400 transition-colors" />
                 </div>

@@ -358,21 +358,21 @@ export default function GoalGeneratorPanel({ brandId, brandName = 'Brand', onGoa
   // ── TRIGGER BUTTON (renders in-page, not in the overlay) ──────────────────
   const TriggerButton = (
     <button onClick={() => setOpen(true)} style={{ ...S.btnPrim, fontSize: 13 }}>
-      <Sparkles size={14} /> Generate goals with AI
+      <Sparkles size={14} /> Upload goals
     </button>
   );
 
   // ── OVERLAY + DRAWER ──────────────────────────────────────────────────────
   const Drawer = open ? (
     <div style={S.overlay} onClick={e => { if (e.target === e.currentTarget) close(); }}>
-      <div style={S.drawer} role="dialog" aria-modal="true" aria-label="Generate goals with AI">
+      <div style={S.drawer} role="dialog" aria-modal="true" aria-label="Upload goals">
 
         {/* Header */}
         <div style={S.header}>
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 2 }}>
               <Sparkles size={16} color="#5B21B6" />
-              <span style={{ fontSize: 15, fontWeight: 600, color: 'var(--text-primary, #111827)' }}>Generate goals with AI</span>
+              <span style={{ fontSize: 15, fontWeight: 600, color: 'var(--text-primary, #111827)' }}>Upload goals</span>
             </div>
             <div style={{ fontSize: 12, color: 'var(--text-muted, #9CA3AF)' }}>
               {brandName} · Upload a brief, deck, or contact report

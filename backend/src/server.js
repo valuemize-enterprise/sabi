@@ -90,6 +90,10 @@ const agencyTargetsRoutes       = require('./routes/agency/agency-targets.routes
 const pulseRoutes               = require('./routes/agency/pulse.routes');
 const leaderboardRoutes         = require('./routes/agency/leaderboard.routes');
 
+
+const financeP2 = require('./routes/finance-phase2.routes');
+const { financeRouter, clientPortalRouter } = require('./routes/finance-phase3.routes');
+
   const { profileFormRouter } = require('./routes/profile-form.routes');
    
 
@@ -247,6 +251,14 @@ app.use('/api/task-import', taskImportRouter);
 
 app.use('/api/goals', goalRouter);
 
+app.use('/api/finance', financeP2);
+
+
+// Phase 3 finance endpoints (expenses, P&L, VAT, PDF, portal invite)
+app.use('/api/finance', financeRouter);
+
+// Client portal (separate auth — no staff JWT required)
+app.use('/api/client-portal', clientPortalRouter);
 // ── 404 Handler ───────────────────────────────────────────────
 app.use('*', (req, res) => {
   res.status(404).json({

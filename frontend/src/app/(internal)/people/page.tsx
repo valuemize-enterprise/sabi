@@ -38,6 +38,7 @@ export default function PeoplePage() {
 
   const [tab, setTab] = useState<Tab>(TABS.some(t => t.key === initialTab) ? initialTab : 'registry');
   const [data, setData] = useState<RegistryPayload | null>(null);
+  console.log('data', data)
   const [insights, setInsights] = useState<InsightsPayload | null>(null);
   const [pending, setPending] = useState<LeaveRequestRow[]>([]);
   const [error, setError] = useState<string | null>(null);

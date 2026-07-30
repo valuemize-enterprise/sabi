@@ -50,7 +50,7 @@ export default function PersonFile({ person, isHR, onClose, onChanged, Staff }: 
   const cancelEdit = () => setMode('view');
 
   const handleSave = async () => {
-     setError("")
+    setError("")
     const payload = {
       userId: person.user_id,
       start_date: draft.start_date,
@@ -60,8 +60,9 @@ export default function PersonFile({ person, isHR, onClose, onChanged, Staff }: 
     }
     setSaving(true);
     try {
-       await updateRole(payload)  // your API/Supabase call
+      await updateRole(payload)
       setMode('view');
+      onChanged?.();
     } catch (e: any) {
       setError(e.message);
       // surface a toast/error here
@@ -211,7 +212,7 @@ export default function PersonFile({ person, isHR, onClose, onChanged, Staff }: 
                         <input
                           type="text"
                           value={draft.role_title}
-                          onChange={(e) => setDraft((d) => ({ ...d, digital_signature: e.target.value }))}
+                          onChange={(e) => setDraft((d) => ({ ...d, role_title: e.target.value }))}
                         />
                       </div>
 

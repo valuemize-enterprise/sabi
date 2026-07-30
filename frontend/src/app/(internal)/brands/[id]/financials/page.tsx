@@ -1,311 +1,334 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { useParams } from 'next/navigation';
-import Link from 'next/link';
+/**
+ * /brands/[Id]/financials/page.tsx — Brand Financials
+ * Sabi Intelligence Suite
+ *
+ * Accessible from the brand overview sub-pages nav (already linked via "financials" href).
+ * Shows per-brand financial summary + invoice list + create + record payment.
+ * Visible to: accountant, admin, md, super_admin, brand_admin (scoped to this brand).
+ */
+
+import { useCallback, useEffect, useState } from 'react';
+import { useParams, useRouter } from 'next/navigation';
 import {
-  ArrowLeft, Loader2, Check, Edit3, Plus, X,
-  TrendingUp, AlertCircle, FileText, Calendar, Lock
+  ArrowLeft, Plus, FileText, CheckCircle2, AlertTriangle,
+  Send, Loader2, X, Trash2, TrendingDown, DollarSign,
 } from 'lucide-react';
-import { AgencyTopNav } from '@/components/internal/AgencyTopNav';
-import { LoadingPage, EmptyState, Badge } from '@/components/ui';
+import { useAgencyStore } from '@/lib/store';
+import { LoadingPage, Badge } from '@/components/ui';
 
+// ── Types ─────────────────────────────────────────────────────────────────────
+
+interface Invoice {
+  id: string; invoice_number: string; type: string; status: string;
+  total_amount: number; amount_paid: number; due_date: string; issued_date: string;
+}
+interface BrandSummary {
+  state: string; overdue_amount: number; overdue_days: number;
+  invoiced_mtd: number; overdue_invoices: any[];
+}
+interface LineItem { description: string; quantity: string; unit_price: string; }
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+
+const API = process.env.NEXT_PUBLIC_API_URL || '';
 const tok = () => typeof window !== 'undefined' ? localStorage.getItem('sabi_token') : null;
-const api = (p: string, opts?: RequestInit) =>
-  fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000'}${p}`, {
-    ...opts, headers:{'Content-Type':'application/json', Authorization:`Bearer ${tok()}`, ...(opts?.headers??{})}
-  }).then(async r => { const b = await r.json(); if (!r.ok) throw new Error(b.error||b.message); return b; });
 
-const STATUS_META: Record<string,{label:string;color:string}> = {
-  expected: { label:'Expected', color:'gray'  },
-  invoiced: { label:'Invoiced', color:'blue'  },
-  paid:     { label:'Paid',     color:'green' },
-  overdue:  { label:'Overdue',  color:'red'   },
-  cancelled:{ label:'Cancelled',color:'gray'  },
-};
+async function apiFetch(path: string, init?: RequestInit) {
+  const res  = await fetch(`${API}${path}`, { ...init, headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${tok()}`, ...(init?.headers || {}) }, cache: 'no-store' });
+  const body = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(body?.error || `Error ${res.status}`);
+  return body;
+}
 
-const fmt = (n: number) => `₦${Number(n||0).toLocaleString('en-NG')}`;
+const fmtNGN = (n: number) => n >= 1_000_000 ? `₦${(n / 1_000_000).toFixed(2)}M` : n >= 1_000 ? `₦${Math.round(n / 1_000)}K` : `₦${Number(n).toLocaleString()}`;
+
+const STATUS_COLOR: Record<string, string> = { draft: 'gray', sent: 'blue', partial: 'amber', paid: 'green', overdue: 'red', cancelled: 'gray' };
+
+// ── Record Payment Modal ──────────────────────────────────────────────────────
+
+function RecordPaymentModal({ invoice, onClose, onRecorded }: { invoice: Invoice; onClose: () => void; onRecorded: () => void; }) {
+  const balance = invoice.total_amount - invoice.amount_paid;
+  const [form, setForm] = useState({ amount: String(balance.toFixed(2)), payment_date: new Date().toISOString().slice(0, 10), payment_method: 'bank_transfer', reference: '', notes: '' });
+  const [saving, setSaving] = useState(false);
+  const [error, setError]   = useState<string | null>(null);
+
+  const submit = async () => {
+    setSaving(true); setError(null);
+    try {
+      await apiFetch(`/api/finance/invoices/${invoice.id}/payments`, { method: 'POST', body: JSON.stringify(form) });
+      onRecorded(); onClose();
+    } catch (e: any) { setError(e.message); }
+    finally { setSaving(false); }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+      <div className="sabi-card w-full max-w-md p-6 space-y-4">
+        <div className="flex items-center justify-between">
+          <div><p className="font-bold text-white">Record payment</p><p className="text-xs text-white/40">{invoice.invoice_number} · Balance: {fmtNGN(balance)}</p></div>
+          <button onClick={onClose}><X className="w-5 h-5 text-white/30" /></button>
+        </div>
+        {error && <p className="text-xs text-red-400 bg-red-500/10 border border-red-500/20 rounded-lg px-3 py-2">{error}</p>}
+        <div className="grid grid-cols-2 gap-3">
+          <div className="col-span-2"><label className="text-[10px] font-bold uppercase tracking-wider text-white/30 block mb-1">Amount (₦)</label><input type="number" className="sabi-input text-sm w-full" value={form.amount} onChange={e => setForm(p => ({ ...p, amount: e.target.value }))} /></div>
+          <div><label className="text-[10px] font-bold uppercase tracking-wider text-white/30 block mb-1">Date</label><input type="date" className="sabi-input text-sm w-full" value={form.payment_date} onChange={e => setForm(p => ({ ...p, payment_date: e.target.value }))} /></div>
+          <div><label className="text-[10px] font-bold uppercase tracking-wider text-white/30 block mb-1">Method</label>
+            <select className="sabi-input text-sm w-full" value={form.payment_method} onChange={e => setForm(p => ({ ...p, payment_method: e.target.value }))}>
+              {['bank_transfer','cheque','cash','card','other'].map(m => <option key={m} className="bg-black" value={m}>{m.replace('_',' ')}</option>)}
+            </select>
+          </div>
+          <div className="col-span-2"><label className="text-[10px] font-bold uppercase tracking-wider text-white/30 block mb-1">Reference (optional)</label><input className="sabi-input text-sm w-full" value={form.reference} onChange={e => setForm(p => ({ ...p, reference: e.target.value }))} /></div>
+        </div>
+        <div className="flex gap-3 justify-end">
+          <button onClick={onClose} className="text-xs text-white/30 px-4 py-2">Cancel</button>
+          <button onClick={submit} disabled={saving} className="sabi-btn-primary text-sm flex items-center gap-2">
+            {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <CheckCircle2 className="w-3.5 h-3.5" />}
+            {saving ? 'Recording…' : 'Record payment'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Create Invoice Drawer (scoped to brand) ───────────────────────────────────
+
+function CreateInvoiceDrawer({ brandId, brandName, onClose, onCreated }: { brandId: string; brandName: string; onClose: () => void; onCreated: () => void; }) {
+  const [form, setForm]   = useState({ type: 'retainer', payment_terms: 'net_30', vat_rate: '0', notes: '' });
+  const [items, setItems] = useState<LineItem[]>([{ description: '', quantity: '1', unit_price: '' }]);
+  const [saving, setSaving] = useState(false);
+  const [error, setError]   = useState<string | null>(null);
+
+  const addItem    = () => setItems(p => [...p, { description: '', quantity: '1', unit_price: '' }]);
+  const removeItem = (i: number) => setItems(p => p.filter((_, idx) => idx !== i));
+  const setItem    = (i: number, k: keyof LineItem, v: string) => setItems(p => p.map((r, idx) => idx === i ? { ...r, [k]: v } : r));
+
+  const subtotal = items.reduce((s, i) => s + (parseFloat(i.quantity) || 0) * (parseFloat(i.unit_price) || 0), 0);
+  const vatAmt   = subtotal * (parseFloat(form.vat_rate) || 0);
+  const total    = subtotal + vatAmt;
+
+  const submit = async () => {
+    if (items.some(i => !i.description || !i.unit_price)) { setError('All line items need a description and price'); return; }
+    setSaving(true); setError(null);
+    try {
+      await apiFetch('/api/finance/invoices', { method: 'POST', body: JSON.stringify({ ...form, brand_id: brandId, vat_rate: parseFloat(form.vat_rate) || 0, line_items: items }) });
+      onCreated(); onClose();
+    } catch (e: any) { setError(e.message); }
+    finally { setSaving(false); }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-start justify-end bg-black/50 backdrop-blur-sm" onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
+      <div className="w-full max-w-lg h-full bg-[#0d0d1a] border-l border-white/10 flex flex-col overflow-hidden">
+        <div className="flex items-center justify-between px-5 py-4 border-b border-white/10">
+          <div><p className="font-bold text-white">Create invoice</p><p className="text-xs text-white/40">{brandName}</p></div>
+          <button onClick={onClose}><X className="w-5 h-5 text-white/30" /></button>
+        </div>
+        <div className="flex-1 overflow-y-auto p-5 space-y-4">
+          {error && <p className="text-xs text-red-400 bg-red-500/10 border border-red-500/20 rounded-lg px-3 py-2">{error}</p>}
+          <div className="grid grid-cols-2 gap-3">
+            <div><label className="text-[10px] font-bold uppercase tracking-wider text-white/30 block mb-1">Type</label>
+              <select className="sabi-input text-sm w-full" value={form.type} onChange={e => setForm(p => ({ ...p, type: e.target.value }))}>
+                <option className="bg-black" value="retainer">Retainer</option>
+                <option className="bg-black" value="project">Project</option>
+                <option className="bg-black" value="adhoc">Ad hoc</option>
+              </select>
+            </div>
+            <div><label className="text-[10px] font-bold uppercase tracking-wider text-white/30 block mb-1">Payment terms</label>
+              <select className="sabi-input text-sm w-full" value={form.payment_terms} onChange={e => setForm(p => ({ ...p, payment_terms: e.target.value }))}>
+                {['net_7','net_14','net_30','net_60'].map(t => <option key={t} className="bg-black" value={t}>{t.replace('_',' ')}</option>)}
+              </select>
+            </div>
+          </div>
+          <div>
+            <div className="flex items-center justify-between mb-2">
+              <label className="text-[10px] font-bold uppercase tracking-wider text-white/30">Line items *</label>
+              <button onClick={addItem} className="text-xs text-purple-400 flex items-center gap-1"><Plus className="w-3 h-3" /> Add</button>
+            </div>
+            <div className="space-y-2">
+              {items.map((item, i) => (
+                <div key={i} className="grid grid-cols-[1fr_56px_80px_20px] gap-2">
+                  <input className="sabi-input text-xs" placeholder="Description" value={item.description} onChange={e => setItem(i, 'description', e.target.value)} />
+                  <input type="number" className="sabi-input text-xs text-center" placeholder="Qty" value={item.quantity} onChange={e => setItem(i, 'quantity', e.target.value)} />
+                  <input type="number" className="sabi-input text-xs" placeholder="Price" value={item.unit_price} onChange={e => setItem(i, 'unit_price', e.target.value)} />
+                  <button onClick={() => removeItem(i)} disabled={items.length === 1} className="text-white/20 hover:text-red-400 disabled:opacity-30 mt-2"><Trash2 className="w-3 h-3" /></button>
+                </div>
+              ))}
+            </div>
+          </div>
+          <div className="sabi-card p-3 space-y-1.5">
+            <div className="flex justify-between text-xs text-white/40"><span>Subtotal</span><span>{fmtNGN(subtotal)}</span></div>
+            <div className="flex items-center justify-between text-xs text-white/40">
+              <span>VAT <select className="bg-transparent text-white/40 text-xs" value={form.vat_rate} onChange={e => setForm(p => ({ ...p, vat_rate: e.target.value }))}><option className="bg-black" value="0">0%</option><option className="bg-black" value="0.075">7.5%</option></select></span>
+              <span>{fmtNGN(vatAmt)}</span>
+            </div>
+            <div className="flex justify-between text-sm font-bold text-white border-t border-white/10 pt-1.5"><span>Total</span><span>{fmtNGN(total)}</span></div>
+          </div>
+          <textarea className="sabi-input text-xs w-full" rows={2} value={form.notes} onChange={e => setForm(p => ({ ...p, notes: e.target.value }))} placeholder="Notes, bank details, etc." />
+        </div>
+        <div className="px-5 py-4 border-t border-white/10 flex gap-3">
+          <button onClick={onClose} className="text-xs text-white/30 px-4 py-2">Cancel</button>
+          <button onClick={submit} disabled={saving} className="sabi-btn-primary flex-1 flex items-center justify-center gap-2 text-sm">
+            {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <FileText className="w-3.5 h-3.5" />}
+            {saving ? 'Creating…' : 'Save as draft'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Main page ─────────────────────────────────────────────────────────────────
 
 export default function BrandFinancialsPage() {
-  const { id: brandId } = useParams<{ id: string }>();
+  const { Id: brandId }         = useParams<{ Id: string }>();
+  const router                   = useRouter();
+  const { user }                 = useAgencyStore();
+  const [brand,    setBrand]     = useState<any>(null);
+  const [summary,  setSummary]   = useState<BrandSummary | null>(null);
+  const [invoices, setInvoices]  = useState<Invoice[]>([]);
+  const [loading,  setLoading]   = useState(true);
+  const [showCreate, setShowCreate] = useState(false);
+  const [payTarget,  setPayTarget]  = useState<Invoice | null>(null);
+  const [error,    setError]     = useState<string | null>(null);
+  const [acting,   setActing]    = useState<string | null>(null);
 
-  const [financials, setFinancials] = useState<any>(null);
-  const [invoices, setInvoices]     = useState<any[]>([]);
-  const [paidHistory, setPaidHistory] = useState<any[]>([]);
-  const [canEdit, setCanEdit]       = useState(false);
-  const [loading, setLoading]       = useState(true);
-  const [editingScope, setEditingScope] = useState(false);
-  const [scopeForm, setScopeForm]   = useState({ retainer_amount:'', billing_cycle:'monthly', billing_day:'1', retainer_scope:'', scope_agreed_date:'' });
-  const [saving, setSaving]         = useState(false);
-  const [showInvoiceForm, setShowInvoiceForm] = useState(false);
-  const [invoiceForm, setInvoiceForm] = useState({ invoice_type:'retainer', amount:'', due_date:'', reference:'' });
-  const [error, setError]           = useState('');
+  const isFinance = ['accountant','super_admin','admin','md'].includes(user?.role || '');
 
-  const load = () => {
-    api(`/api/agency/brands/${brandId}/financials`).then((r: any) => {
-      setFinancials(r.data?.financials ?? null);
-      setInvoices(r.data?.invoices ?? []);
-      setPaidHistory(r.data?.paidHistory ?? []);
-      setCanEdit(!!r.data?.canEdit);
-      if (r.data?.financials) {
-        setScopeForm({
-          retainer_amount: String(r.data.financials.retainer_amount ?? ''),
-          billing_cycle: r.data.financials.billing_cycle ?? 'monthly',
-          billing_day: String(r.data.financials.billing_day ?? '1'),
-          retainer_scope: r.data.financials.retainer_scope ?? '',
-          scope_agreed_date: r.data.financials.scope_agreed_date ?? '',
-        });
-      }
-    }).catch(() => {}).finally(() => setLoading(false));
-  };
-
-  useEffect(load, [brandId]);
-
-  const saveScope = async () => {
-    const amt = Number(scopeForm.retainer_amount);
-    if (!scopeForm.retainer_amount || isNaN(amt) || amt <= 0) { setError('Retainer amount must be a positive number'); return; }
-    const day = Number(scopeForm.billing_day);
-    if (isNaN(day) || day < 1 || day > 28) { setError('Billing day must be between 1 and 28'); return; }
-    if (!scopeForm.retainer_scope.trim() || scopeForm.retainer_scope.trim().length < 10) { setError('Documented scope is required (at least 10 characters)'); return; }
-    setSaving(true); setError('');
+  const load = useCallback(async () => {
+    setLoading(true); setError(null);
     try {
-      await api(`/api/agency/brands/${brandId}/financials`, { method:'PATCH', body:JSON.stringify(scopeForm) });
-      setEditingScope(false);
-      load();
-    } catch (err: any) { setError(err.message); }
-    finally { setSaving(false); }
+      const [brandRes, sumRes, invRes] = await Promise.all([
+        apiFetch(`/api/agency/brands/${brandId}`),
+        apiFetch(`/api/finance/brands/${brandId}/summary`),
+        apiFetch(`/api/finance/invoices?brand_id=${brandId}&limit=50`),
+      ]);
+      setBrand(brandRes.data?.brand || brandRes.brand);
+      setSummary(sumRes.summary);
+      setInvoices(invRes.invoices || []);
+    } catch (e: any) { setError(e.message); }
+    finally { setLoading(false); }
+  }, [brandId]);
+
+  useEffect(() => { load(); }, [load]);
+
+  const handleSend = async (invoiceId: string) => {
+    if (!confirm('Mark this invoice as sent to the client?')) return;
+    setActing(invoiceId);
+    try { await apiFetch(`/api/finance/invoices/${invoiceId}/send`, { method: 'POST' }); load(); }
+    catch (e: any) { setError(e.message); }
+    finally { setActing(null); }
   };
 
-  const createInvoice = async () => {
-    const amt = Number(invoiceForm.amount);
-    if (!invoiceForm.amount || isNaN(amt) || amt <= 0) { setError('Amount must be a positive number'); return; }
-    if (!invoiceForm.due_date) { setError('Due date is required'); return; }
-    if (invoiceForm.due_date < new Date().toISOString().slice(0,10)) { setError('Due date cannot be in the past'); return; }
-    setSaving(true); setError('');
-    try {
-      await api(`/api/agency/brands/${brandId}/financials/invoices`, { method:'POST', body:JSON.stringify(invoiceForm) });
-      setShowInvoiceForm(false);
-      setInvoiceForm({ invoice_type:'retainer', amount:'', due_date:'', reference:'' });
-      load();
-    } catch (err: any) { setError(err.message); }
-    finally { setSaving(false); }
-  };
-
-  const updateInvoiceStatus = async (invoiceId: string, status: string) => {
-    try {
-      await api(`/api/agency/financials/invoices/${invoiceId}`, { method:'PATCH', body:JSON.stringify({ status }) });
-      load();
-    } catch (err: any) { alert(err.message); }
-  };
-
-  if (loading) return <LoadingPage label="Loading financials…"/>;
-
-  const totalPaid = paidHistory.reduce((s,p)=>s+Number(p.amount),0);
-  const overdueInvoices = invoices.filter(i => i.status === 'overdue');
-  const expectedInvoices = invoices.filter(i => i.status === 'expected' || i.status === 'invoiced');
+  if (loading) return <LoadingPage />;
 
   return (
     <div className="p-4 sm:p-6 max-w-4xl mx-auto">
-      <AgencyTopNav title="Financials" breadcrumb={[{label:'Brands',href:'/brands'},{label:'Brand',href:`/brands/${brandId}`}]}/>
-      <Link href={`/brands/${brandId}`} className="flex items-center gap-2 text-xs text-white/30 hover:text-white mb-5 transition-colors w-fit">
-        <ArrowLeft className="w-3.5 h-3.5"/> Back to Brand
-      </Link>
+      <button onClick={() => router.back()} className="flex items-center gap-2 text-xs text-white/30 hover:text-white mb-5 transition-colors w-fit">
+        <ArrowLeft className="w-3.5 h-3.5" /> Back
+      </button>
 
-      <div className="flex items-start justify-between mb-6">
+      <div className="flex items-start justify-between gap-4 mb-6 flex-wrap">
         <div>
-          <h1 className="text-xl font-bold text-white">Financials</h1>
-          <p className="text-sm text-white/40 mt-0.5">Retainer, scope, and invoice history</p>
+          <h1 className="text-xl font-bold text-white">{brand?.name || 'Brand'} · Financials</h1>
+          <p className="text-sm text-white/40 mt-0.5">Invoices, payments, and outstanding balance</p>
         </div>
-        {!canEdit && (
-          <span className="flex items-center gap-1.5 text-xs text-white/30 border border-white/10 rounded-lg px-3 py-1.5">
-            <Lock className="w-3 h-3"/> View only
-          </span>
-        )}
-      </div>
-
-      {error && <div className="bg-red-500/10 border border-red-500/20 rounded-lg p-3 text-red-400 text-sm mb-4">{error}</div>}
-
-      {/* Stats */}
-      <div className="grid grid-cols-3 gap-4 mb-6">
-        <div className="sabi-card p-4">
-          <p className="text-xs text-white/30 mb-1">Monthly Retainer</p>
-          <p className="text-xl font-black text-white">{fmt(financials?.retainer_amount ?? 0)}</p>
-        </div>
-        <div className="sabi-card p-4">
-          <p className="text-xs text-white/30 mb-1">Paid (Last 6mo)</p>
-          <p className="text-xl font-black text-green-400">{fmt(totalPaid)}</p>
-        </div>
-        <div className={`sabi-card p-4 ${overdueInvoices.length > 0 ? 'border-red-500/25' : ''}`}>
-          <p className="text-xs text-white/30 mb-1">Overdue</p>
-          <p className={`text-xl font-black ${overdueInvoices.length > 0 ? 'text-red-400' : 'text-white/30'}`}>{overdueInvoices.length}</p>
-        </div>
-      </div>
-
-      {/* Retainer & Scope */}
-      <div className="sabi-card p-6 mb-5">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-xs font-semibold text-white/40 uppercase tracking-wider">Retainer & Documented Scope</h2>
-          {canEdit && !editingScope && (
-            <button onClick={() => setEditingScope(true)} className="flex items-center gap-1.5 text-xs text-purple-400 hover:text-purple-300 transition-colors">
-              <Edit3 className="w-3.5 h-3.5"/> Edit
-            </button>
-          )}
-        </div>
-
-        {editingScope ? (
-          <div className="space-y-4">
-            <div className="grid grid-cols-3 gap-3">
-              <div>
-                <label className="text-xs text-white/50 mb-1.5 block">Retainer Amount (₦)</label>
-                <input type="number" className="sabi-input text-sm" value={scopeForm.retainer_amount}
-                  onChange={e => setScopeForm(p=>({...p,retainer_amount:e.target.value}))}/>
-              </div>
-              <div>
-                <label className="text-xs text-white/50 mb-1.5 block">Billing Cycle</label>
-                <select className="sabi-input text-sm" value={scopeForm.billing_cycle}
-                  onChange={e => setScopeForm(p=>({...p,billing_cycle:e.target.value}))}>
-                  <option className='bg-black' value="monthly">Monthly</option>
-                  <option className='bg-black' value="quarterly">Quarterly</option>
-                </select>
-              </div>
-              <div>
-                <label className="text-xs text-white/50 mb-1.5 block">Billing Day</label>
-                <input type="number" min="1" max="28" className="sabi-input text-sm" value={scopeForm.billing_day}
-                  onChange={e => setScopeForm(p=>({...p,billing_day:e.target.value}))}/>
-              </div>
-            </div>
-            <div>
-              <label className="text-xs text-white/50 mb-1.5 block">
-                Documented Retainer Scope <span className="text-amber-400/70">— what's included in BAU</span>
-              </label>
-              <textarea className="sabi-input resize-none" rows={5}
-                placeholder="e.g. 20 social media posts/month across Instagram & Facebook, community management, monthly performance report, up to 2 rounds of design revisions per post..."
-                value={scopeForm.retainer_scope} onChange={e => setScopeForm(p=>({...p,retainer_scope:e.target.value}))}/>
-              <p className="text-xs text-amber-400/60 mt-1.5">
-                ⚠️ This scope is what admins reference when classifying briefs as Retainer vs New Project. Keep it accurate and current.
-              </p>
-            </div>
-            <div>
-              <label className="text-xs text-white/50 mb-1.5 block">Scope Agreed Date</label>
-              <input type="date" className="sabi-input text-sm w-48" value={scopeForm.scope_agreed_date}
-                onChange={e => setScopeForm(p=>({...p,scope_agreed_date:e.target.value}))}/>
-            </div>
-            <div className="flex gap-2">
-              <button onClick={saveScope} disabled={saving} className="sabi-btn-primary flex items-center gap-2 px-4 py-2 text-sm disabled:opacity-50">
-                {saving ? <Loader2 className="w-4 h-4 animate-spin"/> : <Check className="w-4 h-4"/>} Save
-              </button>
-              <button onClick={() => setEditingScope(false)} className="px-4 text-sm text-white/40 hover:text-white transition-colors">Cancel</button>
-            </div>
-          </div>
-        ) : (
-          <div>
-            {financials?.retainer_scope ? (
-              <>
-                <p className="text-sm text-white/65 leading-relaxed whitespace-pre-wrap">{financials.retainer_scope}</p>
-                <div className="flex items-center gap-4 mt-3 text-xs text-white/30">
-                  <span>{financials.billing_cycle === 'monthly' ? 'Billed monthly' : 'Billed quarterly'} on day {financials.billing_day}</span>
-                  {financials.scope_agreed_date && <span>Agreed {financials.scope_agreed_date}</span>}
-                </div>
-              </>
-            ) : (
-              <p className="text-sm text-white/25 italic">
-                No scope documented yet. {canEdit ? 'Add one so brief classification decisions are consistent.' : ''}
-              </p>
-            )}
-          </div>
-        )}
-      </div>
-
-      {/* Overdue alert */}
-      {overdueInvoices.length > 0 && (
-        <div className="flex items-start gap-3 p-4 mb-5 rounded-xl bg-red-500/8 border border-red-500/20">
-          <AlertCircle className="w-4 h-4 text-red-400 flex-shrink-0 mt-0.5"/>
-          <div>
-            <p className="text-sm font-medium text-white">{overdueInvoices.length} overdue invoice{overdueInvoices.length!==1?'s':''}</p>
-            <p className="text-xs text-white/40 mt-0.5">Total: {fmt(overdueInvoices.reduce((s,i)=>s+Number(i.amount),0))}</p>
-          </div>
-        </div>
-      )}
-
-      {/* Invoices */}
-      <div className="flex items-center justify-between mb-3">
-        <h2 className="text-sm font-semibold text-white">Invoices</h2>
-        {canEdit && (
-          <button onClick={() => setShowInvoiceForm(true)} className="flex items-center gap-1.5 text-xs text-purple-400 border border-purple-500/20 rounded-lg px-3 py-1.5 hover:bg-purple-500/8 transition-all">
-            <Plus className="w-3.5 h-3.5"/> Add Invoice
+        {isFinance && (
+          <button onClick={() => setShowCreate(true)} className="sabi-btn-primary flex items-center gap-2 text-sm">
+            <Plus className="w-4 h-4" /> Create invoice
           </button>
         )}
       </div>
 
-      {showInvoiceForm && (
-        <div className="sabi-card p-5 mb-4 border-purple-500/20">
-          <div className="grid grid-cols-2 gap-3 mb-3">
-            <div>
-              <label className="text-xs text-white/50 mb-1.5 block">Type</label>
-              <select className="sabi-input text-sm" value={invoiceForm.invoice_type} onChange={e=>setInvoiceForm(p=>({...p,invoice_type:e.target.value}))}>
-                <option className='bg-black' value="retainer">Retainer</option>
-                <option className='bg-black' value="project">Project</option>
-              </select>
-            </div>
-            <div>
-              <label className="text-xs text-white/50 mb-1.5 block">Amount (₦)</label>
-              <input type="number" className="sabi-input text-sm" value={invoiceForm.amount} onChange={e=>setInvoiceForm(p=>({...p,amount:e.target.value}))}/>
-            </div>
-            <div>
-              <label className="text-xs text-white/50 mb-1.5 block">Due Date</label>
-              <input type="date" className="sabi-input text-sm" value={invoiceForm.due_date} onChange={e=>setInvoiceForm(p=>({...p,due_date:e.target.value}))}/>
-            </div>
-            <div>
-              <label className="text-xs text-white/50 mb-1.5 block">Reference</label>
-              <input className="sabi-input text-sm" placeholder="Invoice #" value={invoiceForm.reference} onChange={e=>setInvoiceForm(p=>({...p,reference:e.target.value}))}/>
-            </div>
-          </div>
-          <div className="flex gap-2">
-            <button onClick={createInvoice} disabled={saving} className="sabi-btn-primary flex items-center gap-2 px-4 py-2 text-sm disabled:opacity-50">
-              {saving ? <Loader2 className="w-4 h-4 animate-spin"/> : <Check className="w-4 h-4"/>} Create
-            </button>
-            <button onClick={() => setShowInvoiceForm(false)} className="px-4 text-sm text-white/40 hover:text-white transition-colors">Cancel</button>
-          </div>
+      {error && (
+        <div className="flex items-center gap-2 bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-3 mb-5">
+          <AlertTriangle className="w-4 h-4 text-red-400 flex-shrink-0" />
+          <p className="text-sm text-red-300">{error}</p>
         </div>
       )}
 
-      {invoices.length === 0 ? (
-        <EmptyState icon={FileText} title="No invoices yet" description="Invoices appear here once created manually or generated from approved project briefs."/>
-      ) : (
-        <div className="sabi-card overflow-hidden">
-          <table className="w-full">
-            <thead>
-              <tr className="border-b border-white/5">
-                {['Type','Amount','Due Date','Reference','Status'].map(h => (
-                  <th key={h} className="px-4 py-3 text-left text-xs text-white/30 font-medium uppercase tracking-wider first:pl-5 last:pr-5">{h}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {invoices.map((inv,i) => {
-                const sm = STATUS_META[inv.status] ?? STATUS_META.expected;
-                return (
-                  <tr key={inv.id} className={`border-b border-white/3 ${i%2===0?'':'bg-white/1'}`}>
-                    <td className="px-4 py-3 pl-5 text-sm text-white/70 capitalize">{inv.invoice_type}</td>
-                    <td className="px-4 py-3 text-sm text-white font-medium">{fmt(inv.amount)}</td>
-                    <td className="px-4 py-3 text-xs text-white/40">{inv.due_date}</td>
-                    <td className="px-4 py-3 text-xs text-white/30">{inv.reference || '—'}</td>
-                    <td className="px-4 py-3 pr-5">
-                      {canEdit ? (
-                        <select value={inv.status} onChange={e => updateInvoiceStatus(inv.id, e.target.value)}
-                          className="text-xs bg-white/5 border border-white/10 rounded-lg px-2 py-1 text-white/60 cursor-pointer">
-                          {Object.entries(STATUS_META).map(([v,m]) => <option className='bg-black' key={v} value={v}>{m.label}</option>)}
-                        </select>
-                      ) : (
-                        <Badge label={sm.label} color={sm.color}/>
-                      )}
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
+      {/* Summary cards */}
+      {summary && (
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
+          {[
+            { label: 'Status',        value: summary.state.toUpperCase(),         color: summary.state === 'red' ? 'text-red-400' : summary.state === 'green' ? 'text-green-400' : summary.state === 'amber' ? 'text-amber-400' : 'text-white/40' },
+            { label: 'Overdue',       value: fmtNGN(summary.overdue_amount),      color: summary.overdue_amount > 0 ? 'text-red-400' : 'text-white/40' },
+            { label: 'Invoiced MTD',  value: fmtNGN(summary.invoiced_mtd),        color: 'text-white' },
+            { label: 'Total invoices',value: invoices.length,                     color: 'text-white' },
+          ].map(s => (
+            <div key={s.label} className="sabi-card p-4">
+              <div className="text-[10px] font-bold uppercase tracking-wider text-white/30 mb-1">{s.label}</div>
+              <div className={`text-lg font-bold ${s.color}`}>{s.value}</div>
+            </div>
+          ))}
         </div>
+      )}
+
+      {/* Overdue alert */}
+      {summary && summary.overdue_amount > 0 && (
+        <div className="flex items-start gap-3 bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-3 mb-5">
+          <AlertTriangle className="w-4 h-4 text-red-400 flex-shrink-0 mt-0.5" />
+          <p className="text-sm text-red-300">
+            <strong>{fmtNGN(summary.overdue_amount)}</strong> overdue — {summary.overdue_days} day{summary.overdue_days !== 1 ? 's' : ''} since oldest unpaid invoice
+          </p>
+        </div>
+      )}
+
+      {/* Invoice list */}
+      {invoices.length === 0 ? (
+        <div className="sabi-card p-10 text-center">
+          <FileText className="w-8 h-8 text-white/20 mx-auto mb-3" />
+          <p className="text-sm text-white/40 mb-4">No invoices yet for this brand</p>
+          {isFinance && <button onClick={() => setShowCreate(true)} className="sabi-btn-primary text-sm">Create first invoice</button>}
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {invoices.map(inv => {
+            const balance = inv.total_amount - inv.amount_paid;
+            return (
+              <div key={inv.id} className="sabi-card p-4 flex flex-col sm:flex-row sm:items-center gap-3">
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap mb-1">
+                    <p className="font-semibold text-white text-sm">{inv.invoice_number}</p>
+                    <Badge label={inv.status} color={STATUS_COLOR[inv.status] ?? 'gray'} />
+                    <span className="text-[10px] text-white/30 border border-white/10 rounded px-1.5 py-0.5 capitalize">{inv.type}</span>
+                  </div>
+                  <p className="text-xs text-white/40">Issued {inv.issued_date} · Due {inv.due_date}</p>
+                </div>
+                <div className="flex items-center gap-4 sm:gap-6">
+                  <div className="text-right">
+                    <p className="font-bold text-white text-sm">{fmtNGN(inv.total_amount)}</p>
+                    {balance > 0 && balance < inv.total_amount && <p className="text-xs text-amber-400">{fmtNGN(balance)} left</p>}
+                    {inv.status === 'paid' && <p className="text-xs text-green-400">Fully paid</p>}
+                  </div>
+                  {isFinance && (
+                    <div className="flex gap-2">
+                      {inv.status === 'draft' && (
+                        <button onClick={() => handleSend(inv.id)} disabled={acting === inv.id} className="flex items-center gap-1 text-xs text-blue-400 hover:text-blue-300 border border-blue-500/20 rounded-lg px-2 py-1.5">
+                          {acting === inv.id ? <Loader2 className="w-3 h-3 animate-spin" /> : <Send className="w-3 h-3" />} Send
+                        </button>
+                      )}
+                      {['sent','overdue','partial'].includes(inv.status) && (
+                        <button onClick={() => setPayTarget(inv)} className="flex items-center gap-1 text-xs text-green-400 hover:text-green-300 border border-green-500/20 rounded-lg px-2 py-1.5">
+                          <CheckCircle2 className="w-3 h-3" /> Pay
+                        </button>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {showCreate && brand && (
+        <CreateInvoiceDrawer brandId={brandId} brandName={brand.name} onClose={() => setShowCreate(false)} onCreated={load} />
+      )}
+      {payTarget && (
+        <RecordPaymentModal invoice={payTarget} onClose={() => setPayTarget(null)} onRecorded={load} />
       )}
     </div>
   );
