@@ -106,6 +106,9 @@ const taskImportRouter = require('./routes/task-import.routes');
 // goal generator
 const goalRouter = require('./routes/goal-generator.routes');
 
+const pipelineRouter = require('./routes/pipeline.routes');
+
+
 
 
 // ── Middleware ────────────────────────────────────────────────
@@ -252,6 +255,7 @@ app.use('/api/task-import', taskImportRouter);
 app.use('/api/goals', goalRouter);
 
 app.use('/api/finance', financeP2);
+app.use('/api/pipeline', authenticate, pipelineRouter);
 
 
 // Phase 3 finance endpoints (expenses, P&L, VAT, PDF, portal invite)
@@ -287,6 +291,7 @@ server.headersTimeout   = 66_000;
 // ── Fallback sweeper while server is awake (hourly) ──────────
 // Primary trigger should still be the cron ping — this only covers gaps.
 const { runSweep } = require('./services/notification-sweeper.service');
+const { authenticate } = require('./middleware/auth.middleware');
 let lastSweep = 0;
 setInterval(() => {
   if (Date.now() - lastSweep > 50 * 60 * 1000) {

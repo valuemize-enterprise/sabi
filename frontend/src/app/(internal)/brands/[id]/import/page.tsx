@@ -566,7 +566,7 @@ export default function ImportTasksPage() {
             <button
               disabled={!fileName}
               onClick={() => setStep(2)}
-              className="btn-primary disabled:opacity-40 disabled:cursor-not-allowed"
+              className="btn-primary disabled:opacity-40 text-white disabled:cursor-not-allowed"
             >
               Continue <ChevronRight className="w-4 h-4" />
             </button>
@@ -672,13 +672,13 @@ export default function ImportTasksPage() {
           )}
 
           <div className="flex items-center justify-between">
-            <button onClick={() => setStep(1)} className="btn-secondary">
+            <button onClick={() => setStep(1)} className="btn-secondary text-white">
               <ArrowLeft className="w-4 h-4" /> Back
             </button>
             <button
               disabled={!selectedBrand || !columnMap.title || totalImportable === 0}
               onClick={() => setStep(3)}
-              className="btn-primary disabled:opacity-40 disabled:cursor-not-allowed"
+              className="btn-primary disabled:opacity-40 disabled:cursor-not-allowed text-white"
             >
               Review {totalImportable} task{totalImportable !== 1 ? 's' : ''} <ChevronRight className="w-4 h-4" />
             </button>
@@ -781,7 +781,7 @@ export default function ImportTasksPage() {
             </div>
           </div>
 
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between ">
             <button onClick={() => setStep(2)} disabled={importing} className="btn-secondary">
               <ArrowLeft className="w-4 h-4" /> Back
             </button>

@@ -9,7 +9,7 @@ import {
   ChevronDown, ChevronRight,
   DollarSign,
   Activity,
-  ListChecks, Lock, Trophy, Target, Palette, X, Command
+  ListChecks, Lock, Trophy, Target, Palette, X, Command, Workflow
 } from 'lucide-react';
 import { useState } from 'react';
 import { useAgencyStore } from '@/lib/store';
@@ -29,6 +29,7 @@ const SHARED_NAV = [
 const ADMIN_NAV = [
   { href: '/command',  label: 'Command',  icon: Command,       roles: ['super_admin','admin','md','brand_admin'] },
   { href: '/brands',   label: 'Brands',   icon: Building2      },
+  { href: '/pipeline', label: 'Pipeline', icon: Workflow,      roles: ['super_admin','admin','md','brand_admin'] },
   { href: '/staff',    label: 'Staff',     icon: Users          },
   { href: '/finance',  label: 'Finance',   icon: DollarSign     },
   { href: '/reports',  label: 'Reports',   icon: FileText       },
