@@ -107,6 +107,11 @@ const taskImportRouter = require('./routes/task-import.routes');
 const goalRouter = require('./routes/goal-generator.routes');
 
 const pipelineRouter = require('./routes/pipeline.routes');
+const commandCentreRouter = require('./routes/command-centre.routes');
+const weeklyReportRouter = require('./routes/weekly-report.routes');
+const pipelinePhase3Router = require('./routes/pipeline-phase3.routes');
+
+
 
 
 
@@ -255,7 +260,7 @@ app.use('/api/task-import', taskImportRouter);
 app.use('/api/goals', goalRouter);
 
 app.use('/api/finance', financeP2);
-app.use('/api/pipeline', authenticate, pipelineRouter);
+
 
 
 // Phase 3 finance endpoints (expenses, P&L, VAT, PDF, portal invite)
@@ -299,6 +304,11 @@ setInterval(() => {
     runSweep().catch(e => console.error('[sweep]', e.message));
   }
 }, 10 * 60 * 1000);
+
+app.use('/api/pipeline', authenticate, pipelineRouter);
+app.use('/api/command-centre', authenticate, commandCentreRouter);
+app.use('/api/weekly-report', authenticate, weeklyReportRouter); 
+app.use('/api/pipeline', authenticate, pipelinePhase3Router);
 
 // Graceful shutdown
 process.on('SIGTERM', () => {

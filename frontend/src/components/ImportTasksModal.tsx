@@ -378,7 +378,7 @@ export default function ImportTasksModal({ open, onClose }: ImportTasksModalProp
                 </p>
               </div>
               <div className="flex gap-2.5 justify-center mt-6">
-                <a href="/tasks" className="btn-primary flex items-center gap-2">
+                <a href={`/brands/${brandId}/tasks`} className="btn-primary flex items-center gap-2">
                   Go to task board <ExternalLink className="w-3.5 h-3.5" />
                 </a>
                 <button onClick={reset} className="btn-secondary">Import another file</button>

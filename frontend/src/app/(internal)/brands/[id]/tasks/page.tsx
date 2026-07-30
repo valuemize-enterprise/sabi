@@ -9,7 +9,8 @@ import {
   Clock, User, Target, Lightbulb, MessageSquare,
   Filter, LayoutGrid, List, ChevronRight,
   FileSpreadsheet,
-  Sheet
+  Sheet,
+  Pencil
 } from 'lucide-react';
 
 import { useAgencyStore } from '@/lib/store';
@@ -43,6 +44,22 @@ const PRIORITY_META: Record<string, { label: string; color: string; dot: string 
   urgent: { label: 'Urgent', color: 'text-red-400', dot: 'bg-red-500' },
 };
 
+interface ITT {
+  id: string;
+  title: string,
+  description: string,
+  status: string,
+  priority: string,
+  due_date: string,
+  assignee_id: string,
+  strategy_id: string,
+  goal_id: string,
+  actual_hours: string,
+  estimated_hours: string,
+  tags: string[],
+  proof_links: string,
+}
+
 const EMPTY_FORM = { title: '', description: '', priority: 'medium', due_date: '', assignee_id: '', strategy_id: '', goal_id: '', estimated_hours: '' };
 
 export default function BrandTasksPage() {
@@ -66,6 +83,22 @@ export default function BrandTasksPage() {
   const [rejectingId, setRejectingId] = useState<string | null>(null);
   const [rejectReason, setRejectReason] = useState('');
   const [importOpen, setImportOpen] = useState(false);
+  const [editingTask, setEditingTask] = useState<ITT | null>(null); // holds the task being edited, null = modal closed
+  const [editForm, setEditForm] = useState({
+    title: '',
+    description: '',
+    status: 'todo',
+    priority: 'medium',
+    due_date: '',
+    assignee_id: '',
+    strategy_id: '',
+    goal_id: '',
+    actual_hours: '',
+    estimated_hours: '',
+    tags: '' as string, // comma-separated in the UI, split on save
+    proof_links: '' as string, // comma-separated in the UI, split on save
+  });
+  const [updateSaving, setUpdateSaving] = useState(false);
 
   const router = useRouter();
 
@@ -84,6 +117,75 @@ export default function BrandTasksPage() {
       setGoals(gr.data ?? []);
     }).catch(() => { }).finally(() => setLoading(false));
   }, [brandId]);
+
+  function openEditModal(t: ITT) {
+    setEditingTask(t);
+    setEditForm({
+      title: t.title ?? '',
+      description: t.description ?? '',
+      status: t.status ?? 'todo',
+      priority: t.priority ?? 'medium',
+      due_date: t.due_date ?? '',
+      assignee_id: t.assignee_id ?? '',
+      strategy_id: t.strategy_id ?? '',
+      goal_id: t.goal_id ?? '',
+      actual_hours: t.actual_hours?.toString() ?? '',
+      estimated_hours: t.estimated_hours?.toString() ?? '',
+      tags: (t.tags ?? []).join(', '),
+      proof_links: t.proof_links,
+    });
+  }
+
+  async function saveEditedTask() {
+  if (!editingTask) return;
+  const taskId = editingTask.id; // capture before clearing state
+  setUpdateSaving(true);
+
+  const payload = {
+    title: editForm.title.trim(),
+    description: editForm.description.trim() || null,
+    status: editForm.status,
+    priority: editForm.priority,
+    due_date: editForm.due_date || null,
+    assignee_id: editForm.assignee_id || null,
+    strategy_id: editForm.strategy_id || null,
+    goal_id: editForm.goal_id || null,
+    actual_hours: editForm.actual_hours ? Number(editForm.actual_hours) : null,
+    estimated_hours: editForm.estimated_hours ? Number(editForm.estimated_hours) : null,
+    tags: editForm.tags ? editForm.tags.split(',').map(s => s.trim()).filter(Boolean) : [],
+    proof_links: editForm.proof_links
+  };
+
+  try {
+    const res = await fetch(
+      `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000'}/api/agency/tasks/${taskId}`,
+      {
+        method: 'put',
+        credentials: 'include', // needed if using cookie-based auth
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('sabi_token')}`, // uncomment if using token auth
+        },
+        body: JSON.stringify(payload),
+      }
+    );
+
+    if (!res.ok) {
+      const errData = await res.json().catch(() => null);
+      throw new Error(errData?.message || 'Failed to update task');
+    }
+
+    const { data } = await res.json();
+
+    setTasks(prev => prev.map(task => (task.id === taskId ? { ...task, ...data } : task)));
+    setEditingTask(null);
+  } catch (err) {
+    console.error('Failed to update task:', err);
+    // optionally: show a toast/error state here instead of silently failing
+  } finally {
+    setUpdateSaving(false);
+  }
+}
 
   const createTask = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -152,6 +254,8 @@ export default function BrandTasksPage() {
   const visibleTasks = filterAssignee ? tasks.filter(t => t.assignee_id === filterAssignee) : tasks;
   const tasksByStatus = (status: string) => visibleTasks.filter(t => t.status === status);
 
+
+
   if (loading) return <LoadingPage label="Loading tasks…" />;
   if (importOpen) {
     return (
@@ -213,10 +317,10 @@ export default function BrandTasksPage() {
 
             <button onClick={() => setImportOpen(true)} className="text-xs border p-2 rounded-md flex items-center gap-2">
               <Image
-                src="/excel.svg"
+                src="/excel.png"
                 width={16}
                 height={16}
-                alt="excel_icon"
+                alt="excel icon"
               /> Upload tasks sheets
             </button>
 
@@ -421,7 +525,7 @@ export default function BrandTasksPage() {
               <table className="w-full">
                 <thead>
                   <tr className="border-b border-white/5">
-                    {['Task', 'Assignee', 'Priority', 'Strategy', 'Due', 'Status'].map(h => (
+                    {['Task', 'Assignee', 'Priority', 'Strategy', 'Due', 'Status',].map(h => (
                       <th key={h} className="px-4 py-3 text-left text-xs text-white/30 font-medium uppercase tracking-wider first:pl-5 last:pr-5">{h}</th>
                     ))}
                   </tr>
@@ -430,7 +534,8 @@ export default function BrandTasksPage() {
                   {visibleTasks.map((t, i) => {
                     const pri = PRIORITY_META[t.priority ?? 'medium'];
                     const assignee = teamMembers.find(m => m.id === t.assignee_id);
-                    const statusCol = { todo: 'gray', in_progress: 'blue', in_review: 'amber', done: 'green', blocked: 'red' } as const;
+                    const statusCol = { todo: 'gray', in_progress: 'blue', in_review: 'amber', done: 'green', blocked: 'red' } as const;// your existing/new state
+                    // statusCol[t.status]
                     return (
                       <tr key={t.id} className={`border-b border-white/3 hover:bg-white/2 transition-all ${i % 2 === 0 ? '' : 'bg-white/1'}`}>
                         <td className="px-4 py-3 pl-5">
@@ -452,6 +557,7 @@ export default function BrandTasksPage() {
                         </td>
                         <td className="px-4 py-3 text-xs text-white/40 max-w-[120px] truncate">{t.strategies?.title ?? '—'}</td>
                         <td className="px-4 py-3 text-xs text-white/35">{t.due_date ?? '—'}</td>
+                        {t.status === 'verified' && (<td className="px-4 py-3 font capitalize text-xs text-green-400 hover:text-green-300 transition-colors">{t.status}</td>)}
                         <td className="px-4 py-3 pr-5">
                           {t.status === 'done' && perms.canManage ? (
                             <div className="flex items-center gap-2">
@@ -470,7 +576,20 @@ export default function BrandTasksPage() {
                               {COLUMNS.filter(c => c.key !== 'verified').map(c => <option key={c.key} className='bg-black ' value={c.key}>{c.label}</option>)}
                             </select>
                           ) : null}
+
                         </td>
+                        
+                        {perms.canManage && (
+  <td className="px-4 py-3">
+    <button
+      onClick={() => openEditModal(t)}
+      className="p-1 rounded-md text-white/30 hover:text-white hover:bg-white/10 transition-all"
+      aria-label="Edit task"
+    >
+      <Pencil className="w-3 h-3" />
+    </button>
+  </td>
+)}
                       </tr>
                     );
                   })}
@@ -503,6 +622,191 @@ export default function BrandTasksPage() {
           </div>
         )
       }
-    </div >
+      {editingTask && (
+        <div
+          className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4"
+          onClick={() => setEditingTask(null)}
+        >
+          <div
+            className="bg-[#0f0f13] border border-white/10 rounded-xl w-full max-w-lg max-h-[85vh] overflow-y-auto"
+            onClick={e => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between px-5 py-4 border-b border-white/10">
+              <h2 className="text-sm font-semibold text-white">Edit Task</h2>
+              <button onClick={() => setEditingTask(null)} className="text-white/40 hover:text-white">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="p-5 space-y-4">
+              <div>
+                <label className="text-xs text-white/50 mb-1 block">Title</label>
+                <input
+                  value={editForm.title}
+                  onChange={e => setEditForm(f => ({ ...f, title: e.target.value }))}
+                  className="w-full text-sm bg-white/5 border border-white/10 rounded-md px-3 py-2 text-white focus:outline-none focus:border-purple-400/40"
+                />
+              </div>
+
+              <div>
+                <label className="text-xs text-white/50 mb-1 block">Description</label>
+                <textarea
+                  value={editForm.description}
+                  onChange={e => setEditForm(f => ({ ...f, description: e.target.value }))}
+                  rows={3}
+                  className="w-full text-sm bg-white/5 border border-white/10 rounded-md px-3 py-2 text-white focus:outline-none focus:border-purple-400/40 resize-none"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs text-white/50 mb-1 block">Status</label>
+                  <select
+                    value={editForm.status}
+                    onChange={e => setEditForm(f => ({ ...f, status: e.target.value }))}
+                    className="w-full text-sm bg-white/5 border border-white/10 rounded-md px-3 py-2 text-white"
+                  >
+                    {COLUMNS.map(c => (
+                      <option key={c.key} value={c.key} className="bg-black">{c.label}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="text-xs text-white/50 mb-1 block">Priority</label>
+                  <select
+                    value={editForm.priority}
+                    onChange={e => setEditForm(f => ({ ...f, priority: e.target.value }))}
+                    className="w-full text-sm bg-white/5 border border-white/10 rounded-md px-3 py-2 text-white"
+                  >
+                    {Object.entries(PRIORITY_META).map(([key, meta]) => (
+                      <option key={key} value={key} className="bg-black">{meta.label}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs text-white/50 mb-1 block">Due Date</label>
+                  <input
+                    type="date"
+                    value={editForm.due_date}
+                    onChange={e => setEditForm(f => ({ ...f, due_date: e.target.value }))}
+                    className="w-full text-sm bg-white/5 border border-white/10 rounded-md px-3 py-2 text-white"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-xs text-white/50 mb-1 block">Assignee</label>
+                  <select
+                    value={editForm.assignee_id}
+                    onChange={e => setEditForm(f => ({ ...f, assignee_id: e.target.value }))}
+                    className="w-full text-sm bg-white/5 border border-white/10 rounded-md px-3 py-2 text-white"
+                  >
+                    <option value="" className="bg-black">Unassigned</option>
+                    {teamMembers.map(m => (
+                      <option key={m.id} value={m.id} className="bg-black">{m.full_name}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs text-white/50 mb-1 block">Strategy</label>
+                  <select
+                    value={editForm.strategy_id}
+                    onChange={e => setEditForm(f => ({ ...f, strategy_id: e.target.value }))}
+                    className="w-full text-sm bg-white/5 border border-white/10 rounded-md px-3 py-2 text-white"
+                  >
+                    <option value="" className="bg-black">None</option>
+                    {strategies.map(s => (
+                      <option key={s.id} value={s.id} className="bg-black">{s.title}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="text-xs text-white/50 mb-1 block">Goal</label>
+                  <select
+                    value={editForm.goal_id}
+                    onChange={e => setEditForm(f => ({ ...f, goal_id: e.target.value }))}
+                    className="w-full text-sm bg-white/5 border border-white/10 rounded-md px-3 py-2 text-white"
+                  >
+                    <option value="" className="bg-black">None</option>
+                    {goals.map(g => (
+                      <option key={g.id} value={g.id} className="bg-black">{g.title}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs text-white/50 mb-1 block">Estimated Hours</label>
+                  <input
+                    type="number"
+                    min="0"
+                    step="0.5"
+                    value={editForm.estimated_hours}
+                    onChange={e => setEditForm(f => ({ ...f, estimated_hours: e.target.value }))}
+                    className="w-full text-sm bg-white/5 border border-white/10 rounded-md px-3 py-2 text-white"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-xs text-white/50 mb-1 block">Actual Hours</label>
+                  <input
+                    type="number"
+                    min="0"
+                    step="0.5"
+                    value={editForm.actual_hours}
+                    onChange={e => setEditForm(f => ({ ...f, actual_hours: e.target.value }))}
+                    className="w-full text-sm bg-white/5 border border-white/10 rounded-md px-3 py-2 text-white"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="text-xs text-white/50 mb-1 block">Tags (comma separated)</label>
+                <input
+                  value={editForm.tags}
+                  onChange={e => setEditForm(f => ({ ...f, tags: e.target.value }))}
+                  placeholder="urgent, client-facing"
+                  className="w-full text-sm bg-white/5 border border-white/10 rounded-md px-3 py-2 text-white"
+                />
+              </div>
+
+              <div>
+                <label className="text-xs text-white/50 mb-1 block">Proof Links (comma separated)</label>
+                <input
+                  value={editForm.proof_links}
+                  onChange={e => setEditForm(f => ({ ...f, proof_links: e.target.value }))}
+                  placeholder="https://..."
+                  className="w-full text-sm bg-white/5 border border-white/10 rounded-md px-3 py-2 text-white"
+                />
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end gap-2 px-5 py-4 border-t border-white/10">
+              <button
+                onClick={() => setEditingTask(null)}
+                className="text-xs text-white/50 hover:text-white px-3 py-2 rounded-md transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={saveEditedTask}
+                disabled={updateSaving || !editForm.title.trim()}
+                className="text-xs bg-purple-500/80 hover:bg-purple-500 disabled:opacity-40 disabled:cursor-not-allowed text-white px-4 py-2 rounded-md transition-colors flex items-center gap-1.5"
+              >
+                {updateSaving ? 'Saving...' : 'Save Changes'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
   );
 }

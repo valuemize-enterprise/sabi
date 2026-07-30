@@ -443,7 +443,7 @@ export default function ImportTasksPage() {
           </div>
 
           <div className="flex gap-3 justify-center pt-2">
-            <a href="/tasks" className="btn-primary">
+            <a href={`/brands/${selectedBrand}/tasks`} className="btn-primary">
               Go to task board <ExternalLink className="w-4 h-4" />
             </a>
             <button

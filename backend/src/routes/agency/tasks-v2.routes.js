@@ -155,6 +155,8 @@ router.get('/:id', authenticate, async (req, res, next) => {
 
 // ── PUT /api/agency/tasks/:id ─────────────────────────────────
 router.put('/:id', authenticate, async (req, res, next) => {
+      console.log('req.body', req.body)
+      console.log('hello from here ', req.body)
   try {
     const allowed = [
       'title','description','status','priority','due_date',
