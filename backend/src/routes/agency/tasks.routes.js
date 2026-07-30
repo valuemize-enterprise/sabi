@@ -20,14 +20,17 @@ const notify          = require('../../services/notification-triggers.service');
 
 async function notifyAssignee(taskId, taskTitle, assigneeId, assignerName) {
   if (!assigneeId) return;
-  await supabase.from('notifications').insert({
+  
+  const { error } = await supabase.from('notifications').insert({
     user_id:  assigneeId,
     type:     'task_assigned',
     title:    `📋 New Task: ${taskTitle}`,
     body:     `${assignerName} assigned you a task. Tap to view.`,
     metadata: { task_id: taskId },
     is_read:  false,
-  }).catch(() => {});
+  });
+
+  if (error) console.error('notifyAssignee error:', error.message);
 }
 
 router.get('/', authenticate, async (req, res, next) => {
