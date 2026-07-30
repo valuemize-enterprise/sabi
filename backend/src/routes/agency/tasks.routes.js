@@ -17,6 +17,19 @@ const { auditLog }    = require('../../middleware/logger.middleware');
 const povService      = require('../../services/aria/proof-of-value.service');
 const notify          = require('../../services/notification-triggers.service');
 
+
+async function notifyAssignee(taskId, taskTitle, assigneeId, assignerName) {
+  if (!assigneeId) return;
+  await supabase.from('notifications').insert({
+    user_id:  assigneeId,
+    type:     'task_assigned',
+    title:    `📋 New Task: ${taskTitle}`,
+    body:     `${assignerName} assigned you a task. Tap to view.`,
+    metadata: { task_id: taskId },
+    is_read:  false,
+  }).catch(() => {});
+}
+
 router.get('/', authenticate, async (req, res, next) => {
   try {
     const { brand_id, goal_id, status, assigned_to, page = 1, limit = 20 } = req.query;
