@@ -154,42 +154,42 @@ router.get('/:id', authenticate, async (req, res, next) => {
 });
 
 // ── PUT /api/agency/tasks/:id ─────────────────────────────────
-router.put('/:id', authenticate, async (req, res, next) => {
-      console.log('req.body', req.body)
-      console.log('hello from here ', req.body)
-  try {
-    const allowed = [
-      'title','description','status','priority','due_date',
-      'assignee_id','strategy_id','goal_id','actual_hours',
-      'estimated_hours','tags','proof_links',
-    ];
-    const updates = { updated_at: new Date().toISOString() };
-    allowed.forEach(k => { if (req.body[k] !== undefined) updates[k] = req.body[k]; });
+// router.put('/:id', authenticate, async (req, res, next) => {
+//       console.log('req.body', req.body)
+//       console.log('hello from here ', req.body)
+//   try {
+//     const allowed = [
+//       'title','description','status','priority','due_date',
+//       'assignee_id','strategy_id','goal_id','actual_hours',
+//       'estimated_hours','tags','proof_links',
+//     ];
+//     const updates = { updated_at: new Date().toISOString() };
+//     allowed.forEach(k => { if (req.body[k] !== undefined) updates[k] = req.body[k]; });
 
-    // Guard: 'verified' status must go through the dedicated verify endpoint
-    if (updates.status === 'verified') {
-      return sendError(res, 400, 'Cannot set status to "verified" directly — use PUT /api/agency/tasks/:id/verify');
-    }
+//     // Guard: 'verified' status must go through the dedicated verify endpoint
+//     if (updates.status === 'verified') {
+//       return sendError(res, 400, 'Cannot set status to "verified" directly — use PUT /api/agency/tasks/:id/verify');
+//     }
 
-    const { data: old } = await supabase.from('tasks').select('assignee_id, title').eq('id', req.params.id).single();
+//     const { data: old } = await supabase.from('tasks').select('assignee_id, title').eq('id', req.params.id).single();
 
-    const { data, error } = await supabase
-      .from('tasks')
-      .update(updates)
-      .eq('id', req.params.id)
-      .select('id, title, status, priority, assignee_id, updated_at')
-      .single();
+//     const { data, error } = await supabase
+//       .from('tasks')
+//       .update(updates)
+//       .eq('id', req.params.id)
+//       .select('id, title, status, priority, assignee_id, updated_at')
+//       .single();
 
-    if (error) throw error;
+//     if (error) throw error;
 
-    // Notify new assignee if changed
-    if (updates.assignee_id && updates.assignee_id !== old?.assignee_id) {
-      await notifyAssignee(req.params.id, data.title, updates.assignee_id, req.user.full_name);
-    }
+//     // Notify new assignee if changed
+//     if (updates.assignee_id && updates.assignee_id !== old?.assignee_id) {
+//       await notifyAssignee(req.params.id, data.title, updates.assignee_id, req.user.full_name);
+//     }
 
-    sendSuccess(res, { task: data }, 'Task updated');
-  } catch (err) { next(err); }
-});
+//     sendSuccess(res, { task: data }, 'Task updated');
+//   } catch (err) { next(err); }
+// });
 
 // ── PUT /api/agency/tasks/:id/status ─────────────────────────
 router.put('/:id/status', authenticate, async (req, res, next) => {

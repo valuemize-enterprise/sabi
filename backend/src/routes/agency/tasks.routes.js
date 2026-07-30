@@ -52,16 +52,54 @@ router.post('/', authenticate, async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
+// router.put('/:id', authenticate, async (req, res, next) => {
+//   console.log('hey', req.body)
+//   try {
+//     const allowed = ['title', 'description', 'assigned_to', 'status', 'priority', 'due_date'];
+//     const updates = {};
+//     allowed.forEach(k => { if (req.body[k] !== undefined) updates[k] = req.body[k]; });
+
+//     const { data, error } = await supabase.from('tasks').update(updates).eq('id', req.params.id).select().single();
+//     if (error) throw error;
+//     if (data.assignee_id) notify.onTaskAssigned(data, req.user.full_name);
+//     sendSuccess(res, { task: data });
+//   } catch (err) { next(err); }
+// });
+
 router.put('/:id', authenticate, async (req, res, next) => {
+      console.log('req.body', req.body)
+      console.log('hello from here ', req.body)
   try {
-    const allowed = ['title', 'description', 'assigned_to', 'status', 'priority', 'due_date'];
-    const updates = {};
+    const allowed = [
+      'title','description','status','priority','due_date',
+      'assignee_id','strategy_id','goal_id','actual_hours',
+      'estimated_hours','tags','proof_links',
+    ];
+    const updates = { updated_at: new Date().toISOString() };
     allowed.forEach(k => { if (req.body[k] !== undefined) updates[k] = req.body[k]; });
 
-    const { data, error } = await supabase.from('tasks').update(updates).eq('id', req.params.id).select().single();
+    // Guard: 'verified' status must go through the dedicated verify endpoint
+    if (updates.status === 'verified') {
+      return sendError(res, 400, 'Cannot set status to "verified" directly — use PUT /api/agency/tasks/:id/verify');
+    }
+
+    const { data: old } = await supabase.from('tasks').select('assignee_id, title').eq('id', req.params.id).single();
+
+    const { data, error } = await supabase
+      .from('tasks')
+      .update(updates)
+      .eq('id', req.params.id)
+      .select('id, title, status, priority, assignee_id, updated_at')
+      .single();
+
     if (error) throw error;
-    if (data.assignee_id) notify.onTaskAssigned(data, req.user.full_name);
-    sendSuccess(res, { task: data });
+
+    // Notify new assignee if changed
+    if (updates.assignee_id && updates.assignee_id !== old?.assignee_id) {
+      await notifyAssignee(req.params.id, data.title, updates.assignee_id, req.user.full_name);
+    }
+
+    sendSuccess(res, { task: data }, 'Task updated');
   } catch (err) { next(err); }
 });
 
