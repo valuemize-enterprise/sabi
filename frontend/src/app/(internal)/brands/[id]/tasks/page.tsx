@@ -21,6 +21,7 @@ import { LoadingPage, EmptyState, Badge } from '@/components/ui';
 import Router from 'next/router';
 import Image from 'next/image';
 import ImportTasksModal from '@/components/ImportTasksModal';
+import ExcelIcon from '@/components/ExcelIcon';
 
 const tok = () => typeof window !== 'undefined' ? localStorage.getItem('sabi_token') : null;
 const api = (p: string, opts?: RequestInit) =>
@@ -298,11 +299,11 @@ export default function BrandTasksPage() {
 
           <div className="flex items-center gap-2">
 
-            <button onClick={() => setImportOpen(true)} className="text-xs border p-2 rounded-md flex items-center gap-2">
+            <button onClick={() => setImportOpen(true)} className="text-xs border p-2 rounded-lg flex items-center gap-2">
               <Image
                 src="/excel.png"
-                width={16}
-                height={16}
+                width={20}
+                height={20}
                 alt="excel icon"
               /> Upload tasks sheets
             </button>
@@ -441,7 +442,24 @@ export default function BrandTasksPage() {
                         <div key={t.id} className="bg-[#12122a] border border-white/6 rounded-xl p-3 cursor-pointer hover:border-white/15 transition-all group">
                           <div className="flex items-start justify-between gap-2 mb-2">
                             <p className="text-xs font-medium text-white leading-snug">{t.title}</p>
-                            <div className={`w-2 h-2 rounded-full flex-shrink-0 mt-1 ${pri.dot}`} title={pri.label} />
+
+                            <div className="relative w-4 h-4 flex-shrink-0 mt-1">
+                              <div
+                                className={`absolute inset-0 flex items-center justify-center transition-opacity opacity-100 group-hover:opacity-0 ${perms.canManage ? '' : 'opacity-100 group-hover:opacity-100'}`}
+                              >
+                                <div className={`w-2 h-2 rounded-full ${pri.dot}`} title={pri.label} />
+                              </div>
+
+                              {perms.canManage && (
+                                <button
+                                  onClick={() => openEditModal(t)}
+                                  className="absolute inset-0 flex items-center justify-center rounded-md text-white/30 hover:text-white hover:bg-white/10 transition-opacity opacity-0 group-hover:opacity-100"
+                                  aria-label="Edit task"
+                                >
+                                  <Pencil className="w-3 h-3" />
+                                </button>
+                              )}
+                            </div>
                           </div>
                           <div className="flex items-center gap-2 flex-wrap">
                             {t.due_date && (
