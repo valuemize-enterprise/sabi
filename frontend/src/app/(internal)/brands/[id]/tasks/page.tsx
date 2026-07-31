@@ -57,7 +57,7 @@ interface ITT {
   actual_hours: string,
   estimated_hours: string,
   tags: string[],
-  proof_links: string,
+  proof_links: string[],
 }
 
 const EMPTY_FORM = { title: '', description: '', priority: 'medium', due_date: '', assignee_id: '', strategy_id: '', goal_id: '', estimated_hours: '' };
@@ -95,8 +95,8 @@ export default function BrandTasksPage() {
     goal_id: '',
     actual_hours: '',
     estimated_hours: '',
-    tags: '' as string, // comma-separated in the UI, split on save
-    proof_links: '' as string, // comma-separated in the UI, split on save
+    tags: '' as string,
+    proof_links: '' as string,
   });
   const [updateSaving, setUpdateSaving] = useState(false);
 
@@ -132,60 +132,43 @@ export default function BrandTasksPage() {
       actual_hours: t.actual_hours?.toString() ?? '',
       estimated_hours: t.estimated_hours?.toString() ?? '',
       tags: (t.tags ?? []).join(', '),
-      proof_links: t.proof_links,
+      proof_links: (t.proof_links ?? []).join(', '),
     });
   }
 
   async function saveEditedTask() {
-  if (!editingTask) return;
-  const taskId = editingTask.id; // capture before clearing state
-  setUpdateSaving(true);
+    if (!editingTask) return;
+    const taskId = editingTask.id;
+    setUpdateSaving(true);
 
-  const payload = {
-    title: editForm.title.trim(),
-    description: editForm.description.trim() || null,
-    status: editForm.status,
-    priority: editForm.priority,
-    due_date: editForm.due_date || null,
-    assignee_id: editForm.assignee_id || null,
-    strategy_id: editForm.strategy_id || null,
-    goal_id: editForm.goal_id || null,
-    actual_hours: editForm.actual_hours ? Number(editForm.actual_hours) : null,
-    estimated_hours: editForm.estimated_hours ? Number(editForm.estimated_hours) : null,
-    tags: editForm.tags ? editForm.tags.split(',').map(s => s.trim()).filter(Boolean) : [],
-    proof_links: editForm.proof_links
-  };
+    const payload = {
+      title: editForm.title.trim(),
+      description: editForm.description.trim() || null,
+      status: editForm.status,
+      priority: editForm.priority,
+      due_date: editForm.due_date || null,
+      assignee_id: editForm.assignee_id || null,
+      strategy_id: editForm.strategy_id || null,
+      goal_id: editForm.goal_id || null,
+      actual_hours: editForm.actual_hours ? Number(editForm.actual_hours) : null,
+      estimated_hours: editForm.estimated_hours ? Number(editForm.estimated_hours) : null,
+      tags: editForm.tags ? editForm.tags.split(',').map(s => s.trim()).filter(Boolean) : [],
+      proof_links: editForm.proof_links ? editForm.proof_links.split(',').map(s => s.trim()).filter(Boolean) : [],
+    };
 
-  try {
-    const res = await fetch(
-      `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000'}/api/agency/tasks/${taskId}`,
-      {
-        method: 'put',
-        credentials: 'include', // needed if using cookie-based auth
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('sabi_token')}`, // uncomment if using token auth
-        },
+    try {
+      const res: any = await api(`/api/agency/tasks/${taskId}`, {
+        method: 'PUT',
         body: JSON.stringify(payload),
-      }
-    );
-
-    if (!res.ok) {
-      const errData = await res.json().catch(() => null);
-      throw new Error(errData?.message || 'Failed to update task');
+      });
+      setTasks(prev => prev.map(t => (t.id === taskId ? { ...t, ...res.data.task } : t)));
+      setEditingTask(null);
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to update task');
+    } finally {
+      setUpdateSaving(false);
     }
-
-    const { data } = await res.json();
-
-    setTasks(prev => prev.map(task => (task.id === taskId ? { ...task, ...data } : task)));
-    setEditingTask(null);
-  } catch (err) {
-    console.error('Failed to update task:', err);
-    // optionally: show a toast/error state here instead of silently failing
-  } finally {
-    setUpdateSaving(false);
   }
-}
 
   const createTask = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -578,18 +561,18 @@ export default function BrandTasksPage() {
                           ) : null}
 
                         </td>
-                        
+
                         {perms.canManage && (
-  <td className="px-4 py-3">
-    <button
-      onClick={() => openEditModal(t)}
-      className="p-1 rounded-md text-white/30 hover:text-white hover:bg-white/10 transition-all"
-      aria-label="Edit task"
-    >
-      <Pencil className="w-3 h-3" />
-    </button>
-  </td>
-)}
+                          <td className="px-4 py-3">
+                            <button
+                              onClick={() => openEditModal(t)}
+                              className="p-1 rounded-md text-white/30 hover:text-white hover:bg-white/10 transition-all"
+                              aria-label="Edit task"
+                            >
+                              <Pencil className="w-3 h-3" />
+                            </button>
+                          </td>
+                        )}
                       </tr>
                     );
                   })}

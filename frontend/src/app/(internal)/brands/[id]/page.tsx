@@ -13,7 +13,8 @@ import {
   PieChart,
   Package,
   Palette,
-  Wallet
+  Wallet,
+  PackageCheck
 } from 'lucide-react';
 import { AgencyTopNav } from '@/components/internal/AgencyTopNav';
 import { Badge, LoadingPage, StatCard } from '@/components/ui';
@@ -137,9 +138,10 @@ export default function BrandOverviewPage() {
       </div>
 
       {/* Quick stats */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+      <div className="grid grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
         <StatCard label="Active Goals" value={stats?.goals?.active ?? 0} icon={Target} color="purple" />
-        <StatCard label="Tasks Done" value={stats?.tasks?.done ?? 0} icon={CheckSquare} color="green" />
+        <StatCard label="Tasks Done" value={stats?.tasks?.done ?? 0} icon={CheckSquare} color="purple" />
+        <StatCard label="Tasks verified" value={stats?.tasks?.verified ?? 0} icon={PackageCheck} color="green" />
         <StatCard label="Reports Published" value={stats?.reports?.length ?? 0} icon={FileText} color="blue" />
         <StatCard label="Client Contacts" value={stats?.clients ?? 0} icon={UserPlus} color="amber" />
       </div>

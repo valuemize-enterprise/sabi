@@ -211,8 +211,8 @@ router.get('/me/dashboard', authenticate, async (req, res, next) => {
     const { count: openTasks } = await supabase
       .from('tasks')
       .select('*', { count: 'exact', head: true })
-      .eq('assigned_to', staffId)
-      .in('status', ['todo', 'in_progress']);
+      .eq('assignee_id', staffId)
+      .in('status', ['todo', 'in_progress','todo','in_progress', 'in_review']);
 
     // Count completed tasks this month
     const monthStart = new Date();
@@ -222,7 +222,7 @@ router.get('/me/dashboard', authenticate, async (req, res, next) => {
     const { count: doneTasks } = await supabase
       .from('tasks')
       .select('*', { count: 'exact', head: true })
-      .eq('assigned_to', staffId)
+      .eq('assignee_id', staffId)
       .eq('status', 'done')
       .gte('completed_at', monthStart.toISOString());
 
