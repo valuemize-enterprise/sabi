@@ -10,7 +10,9 @@ import {
   Filter, LayoutGrid, List, ChevronRight,
   FileSpreadsheet,
   Sheet,
-  Pencil
+  Pencil,
+  Trash2,
+  LoaderCircle
 } from 'lucide-react';
 
 import { useAgencyStore } from '@/lib/store';
@@ -100,6 +102,8 @@ export default function BrandTasksPage() {
     proof_links: '' as string,
   });
   const [updateSaving, setUpdateSaving] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   const router = useRouter();
 
@@ -238,6 +242,26 @@ export default function BrandTasksPage() {
   const visibleTasks = filterAssignee ? tasks.filter(t => t.assignee_id === filterAssignee) : tasks;
   const tasksByStatus = (status: string) => visibleTasks.filter(t => t.status === status);
 
+
+  const handleDeleteTask = async ({ taskId, openModal }: { taskId: string; openModal?: boolean }) => {
+    if (!confirm('Delete this task? This cannot be undone.')) return;
+
+    setDeletingId(taskId);
+    setDeleting(true)
+    try {
+      await api(`/api/agency/tasks/${taskId}`, { method: 'DELETE' });
+      setTasks(prev => prev.filter(t => t.id !== taskId));
+      toast.success('Task deleted');
+      if (openModal) {
+        return setEditingTask(null)
+      }
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to delete task');
+    } finally {
+      setDeletingId(null);
+       setDeleting(false)
+    }
+  };
 
 
   if (loading) return <LoadingPage label="Loading tasks…" />;
@@ -500,6 +524,19 @@ export default function BrandTasksPage() {
                               {COLUMNS.filter(c => c.key !== 'verified').map(c => <option className='bg-black' key={c.key} value={c.key}>{c.label}</option>)}
                             </select>
                           )}
+                          {perms.canManage && (
+                            <button
+                              onClick={() => handleDeleteTask({ taskId: t.id })}
+                              disabled={deletingId === t.id}
+                              className="flex items-center ml-auto justify-end mt-2 disabled:opacity-50"
+                            >
+                              {deletingId === t.id ? (
+                                <LoaderCircle className="animate-spin" size={10} />
+                              ) : (
+                                <Trash2 className="text-red-800" size={10} />
+                              )}
+                            </button>
+                          )}
                         </div>
                       );
                     })}
@@ -577,9 +614,7 @@ export default function BrandTasksPage() {
                               {COLUMNS.filter(c => c.key !== 'verified').map(c => <option key={c.key} className='bg-black ' value={c.key}>{c.label}</option>)}
                             </select>
                           ) : null}
-
                         </td>
-
                         {perms.canManage && (
                           <td className="px-4 py-3">
                             <button
@@ -790,20 +825,34 @@ export default function BrandTasksPage() {
               </div>
             </div>
 
-            <div className="flex items-center justify-end gap-2 px-5 py-4 border-t border-white/10">
-              <button
-                onClick={() => setEditingTask(null)}
-                className="text-xs text-white/50 hover:text-white px-3 py-2 rounded-md transition-colors"
+            <div className="flex items-center justify-between gap-2 px-5 py-4 border-t border-white/10">
+
+              {perms.canManage && (<button
+                onClick={() => handleDeleteTask({ taskId: editingTask.id, openModal: true })}
+                disabled={deletingId === editingTask.id}
+                className="flex items-center justify-end mt-2 disabled:opacity-50"
               >
-                Cancel
-              </button>
-              <button
-                onClick={saveEditedTask}
-                disabled={updateSaving || !editForm.title.trim()}
-                className="text-xs bg-purple-500/80 hover:bg-purple-500 disabled:opacity-40 disabled:cursor-not-allowed text-white px-4 py-2 rounded-md transition-colors flex items-center gap-1.5"
-              >
-                {updateSaving ? 'Saving...' : 'Save Changes'}
-              </button>
+                {deletingId === editingTask.id ? (
+                  <LoaderCircle className="animate-spin"  />
+                ) : (
+                  <Trash2 className="text-red-800"  />
+                )}
+              </button>)}
+              <div className='flex items-center gap-2'>
+                <button
+                  onClick={() => setEditingTask(null)}
+                  className="text-xs text-white/50 hover:text-white px-3 py-2 rounded-md transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={saveEditedTask}
+                  disabled={deletingId === editingTask.id || updateSaving || !editForm.title.trim()}
+                  className="text-xs bg-purple-500/80 hover:bg-purple-500 disabled:opacity-40 disabled:cursor-not-allowed text-white px-4 py-2 rounded-md transition-colors flex items-center gap-1.5"
+                >
+                  {updateSaving ? 'Saving...' : 'Save Changes'}
+                </button>
+              </div>
             </div>
           </div>
         </div>
