@@ -25,6 +25,32 @@ const { auditLog } = require("../../middleware/logger.middleware");
 const clarityService = require("../../services/aria/clarity-score.service");
 const notify = require("../../services/notification-triggers.service");
 
+const BRAND_ROLES = [
+  "account_manager",
+  "brand_manager",
+  "creative_director",
+  "senior_strategist",
+  "strategist",
+  "copywriter",
+  "social_media_manager",
+  "analytics_specialist",
+  "content_creator",
+  "graphic_designer",
+  "community_manager",
+  "contributor",
+  "brand_admin",
+  "art_director",
+];
+
+const ADMIN_ROLES = [
+  "super_admin",
+  "ceo",
+  "managing_director",
+  "creative_director",
+  "strategy_director",
+  "account_director",
+];
+
 // GET /api/agency/brands
 router.get("/", authenticate, async (req, res, next) => {
   try {
@@ -139,25 +165,29 @@ router.get("/brandlist", authenticate, async (req, res, next) => {
     const from = (page - 1) * limit;
     const to = from + limit - 1;
 
-    const { data: brands, count, error } = await supabase
+    const {
+      data: brands,
+      count,
+      error,
+    } = await supabase
       .from("brands")
       .select("*", { count: "exact" })
       .range(from, to);
 
     if (error) throw error;
 
-    const brandIds = brands.map(b => b.id);
+    const brandIds = brands.map((b) => b.id);
 
-  const { data: assignments, error: assignError } = await supabase
-  .from("staff_brand_assignments")
-  .select("brand_id, staff_id, role_on_brand, users:staff_id(full_name)")
-  .in("brand_id", brandIds);
+    const { data: assignments, error: assignError } = await supabase
+      .from("staff_brand_assignments")
+      .select("brand_id, staff_id, role_on_brand, users:staff_id(full_name)")
+      .in("brand_id", brandIds);
 
     if (assignError) throw assignError;
 
-    const brandsWithTeam = brands.map(brand => ({
+    const brandsWithTeam = brands.map((brand) => ({
       ...brand,
-      team: assignments.filter(a => a.brand_id === brand.id),
+      team: assignments.filter((a) => a.brand_id === brand.id),
     }));
 
     sendPaginated(res, brandsWithTeam, count, page, limit);
@@ -186,6 +216,191 @@ router.get("/:id", authenticate, async (req, res, next) => {
 
     if (error || !brand) return sendError(res, 404, "Brand not found");
     sendSuccess(res, { brand });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// ── POST /api/agency/brands/:brandId/team ────────────────────
+router.post("/:brandId/team", authenticate, async (req, res, next) => {
+  try {
+    const { brandId } = req.params;
+    const { staff_id, role_on_brand } = req.body;
+
+    // ── Validate input first ──────────────────────────────────
+    if (!staff_id) {
+      return sendError(res, 400, "staff_id is required");
+    }
+    if (!BRAND_ROLES.includes(role_on_brand)) {
+      return sendError(
+        res,
+        400,
+        `role_on_brand must be one of: ${BRAND_ROLES.join(", ")}`,
+      );
+    }
+
+    // ── Permission check: company admin OR brand_admin on this brand ──
+    const isCompanyAdmin = ADMIN_ROLES.includes(req.user.role);
+    let isBrandAdmin = false;
+
+    if (!isCompanyAdmin) {
+      const { data: requesterAssignment, error: assignmentError } =
+        await supabase
+          .from("staff_brand_assignments")
+          .select("role_on_brand")
+          .eq("brand_id", brandId)
+          .eq("staff_id", req.user.id)
+          .maybeSingle();
+
+      if (assignmentError) throw assignmentError;
+
+      isBrandAdmin = requesterAssignment?.role_on_brand === "brand_admin";
+    }
+
+    if (!isCompanyAdmin && !isBrandAdmin) {
+      return sendError(res, 403, "Only admins can assign staff to brands");
+    }
+
+    // ── Only company admins can grant brand_admin itself ──────
+    // Prevents a brand_admin from promoting a peer (or reassigning
+    // account_manager_id) without company-level authorization.
+    if (role_on_brand === "brand_admin" && !isCompanyAdmin) {
+      return sendError(
+        res,
+        403,
+        "Only company admins can assign the brand_admin role",
+      );
+    }
+
+    // ── Upsert — if already assigned, update the role ─────────
+    const { data, error } = await supabase
+      .from("staff_brand_assignments")
+      .upsert(
+        {
+          staff_id,
+          brand_id: brandId,
+          role_on_brand,
+          roles_on_brand: [role_on_brand],
+        },
+        { onConflict: "staff_id, brand_id" },
+      )
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    // ── Keep brands.account_manager_id in sync with brand_admin ──
+    if (role_on_brand === "brand_admin") {
+      const { error: brandError } = await supabase
+        .from("brands")
+        .update({ account_manager_id: staff_id })
+        .eq("id", brandId);
+
+      if (brandError) throw brandError;
+    }
+
+    await auditLog({
+      actorId: req.user.id,
+      actorEmail: req.user.email,
+      actorRole: req.user.role,
+      action: "ASSIGN_STAFF_TO_BRAND",
+      resourceType: "brand",
+      resourceId: brandId,
+      details: { staff_id, role_on_brand },
+      req,
+    });
+
+    sendSuccess(res, { assignment: data }, "Staff assigned to brand", 201);
+  } catch (err) {
+    next(err);
+  }
+});
+
+// ── DELETE /api/agency/brands/:brandId/team/:staffId ─────────
+router.delete("/:brandId/:staffId", authenticate, async (req, res, next) => {
+  try {
+    const { brandId, staffId } = req.params;
+
+    // ── Permission check: company admin OR brand_admin on this brand ──
+    const isCompanyAdmin = ADMIN_ROLES.includes(req.user.role);
+    let isBrandAdmin = false;
+
+    if (!isCompanyAdmin) {
+      const { data: requesterAssignment, error: assignmentError } = await supabase
+        .from("staff_brand_assignments")
+        .select("role_on_brand")
+        .eq("brand_id", brandId)
+        .eq("staff_id", req.user.id)
+        .maybeSingle();
+
+      if (assignmentError) throw assignmentError;
+
+      isBrandAdmin = requesterAssignment?.role_on_brand === "brand_admin";
+    }
+
+    if (!isCompanyAdmin && !isBrandAdmin) {
+      return sendError(res, 403, "Only admins can remove staff from brands");
+    }
+
+    // ── Prevent removing yourself, and prevent a brand_admin from ──
+    // removing another brand_admin (only company admins can do that) ──
+    if (staffId === req.user.id) {
+      return sendError(res, 400, "You cannot remove yourself from a brand");
+    }
+
+    if (!isCompanyAdmin) {
+      const { data: targetAssignment, error: targetError } = await supabase
+        .from("staff_brand_assignments")
+        .select("role_on_brand")
+        .eq("brand_id", brandId)
+        .eq("staff_id", staffId)
+        .maybeSingle();
+
+      if (targetError) throw targetError;
+
+      if (targetAssignment?.role_on_brand === "brand_admin") {
+        return sendError(res, 403, "Only company admins can remove a brand_admin");
+      }
+    }
+
+    const { error } = await supabase
+      .from("staff_brand_assignments")
+      .delete()
+      .eq("brand_id", brandId)
+      .eq("staff_id", staffId);
+
+    if (error) throw error;
+
+    // ── Clear account_manager_id if the removed staff was the brand's manager ──
+    const { data: brand, error: brandFetchError } = await supabase
+      .from("brands")
+      .select("account_manager_id")
+      .eq("id", brandId)
+      .single();
+
+    if (brandFetchError) throw brandFetchError;
+
+    if (brand?.account_manager_id === staffId) {
+      const { error: brandUpdateError } = await supabase
+        .from("brands")
+        .update({ account_manager_id: null })
+        .eq("id", brandId);
+
+      if (brandUpdateError) throw brandUpdateError;
+    }
+
+    await auditLog({
+      actorId: req.user.id,
+      actorEmail: req.user.email,
+      actorRole: req.user.role,
+      action: "REMOVE_STAFF_FROM_BRAND",
+      resourceType: "brand",
+      resourceId: brandId,
+      details: { staffId },
+      req,
+    });
+
+    sendSuccess(res, null, "Staff removed from brand");
   } catch (err) {
     next(err);
   }
@@ -333,6 +548,5 @@ router.post("/:id/refresh-clarity", authenticate, async (req, res, next) => {
     next(err);
   }
 });
-
 
 module.exports = router;

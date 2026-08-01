@@ -46,6 +46,7 @@ const ADMIN_ROLES = [
   "account_director",
 ];
 
+
 // ── GET /api/agency/brands/:brandId/team ─────────────────────
 router.get("/", authenticate, async (req, res, next) => {
   try {
@@ -99,68 +100,8 @@ router.get("/available", authenticate, async (req, res, next) => {
   }
 });
 
-// ── POST /api/agency/brands/:brandId/team ────────────────────
-router.post("/", authenticate, async (req, res, next) => {
-  try {
-    if (!ADMIN_ROLES.includes(req.user.role)) {
-      return sendError(res, 403, "Only admins can assign staff to brands");
-    }
 
-    const { staff_id, role_on_brand } = req.body;
 
-    console.log('role_on_brand', role_on_brand);
-    console.log('staff_id', staff_id);
-    if (!staff_id) return sendError(res, 400, "staff_id is required");
-    if (!BRAND_ROLES.includes(role_on_brand)) {
-      return sendError(
-        res,
-        400,
-        `role_on_brand must be one of: ${BRAND_ROLES.join(", ")}`,
-      );
-    }
-
-    // Upsert — if already assigned, update the role
-    const { data, error } = await supabase
-      .from("staff_brand_assignments")
-      .upsert(
-        {
-          staff_id,
-          brand_id: req.params.brandId,
-          role_on_brand,
-          roles_on_brand: [role_on_brand],
-        },
-        { onConflict: "staff_id, brand_id" },
-      )
-      .select()
-      .single();
-
-    if (error) throw error;
-
-    if (role_on_brand === "brand_admin") {
-      const { error: brandError } = await supabase
-        .from("brands")
-        .update({ account_manager_id: staff_id })
-        .eq("id", req.params.brandId);
-
-      if (brandError) throw brandError;
-    }
-
-    await auditLog({
-      actorId: req.user.id,
-      actorEmail: req.user.email,
-      actorRole: req.user.role,
-      action: "ASSIGN_STAFF_TO_BRAND",
-      resourceType: "brand",
-      resourceId: req.params.brandId,
-      details: { staff_id, role_on_brand },
-      req,
-    });
-
-    sendSuccess(res, { assignment: data }, "Staff assigned to brand", 201);
-  } catch (err) {
-    next(err);
-  }
-});
 
 // ── PATCH /api/agency/brands/:brandId/team/:staffId ──────────
 router.patch("/:staffId", authenticate, async (req, res, next) => {
@@ -229,36 +170,6 @@ router.patch("/:staffId", authenticate, async (req, res, next) => {
   }
 });
 
-// ── DELETE /api/agency/brands/:brandId/team/:staffId ─────────
-router.delete("/:staffId", authenticate, async (req, res, next) => {
-  try {
-    if (!ADMIN_ROLES.includes(req.user.role)) {
-      return sendError(res, 403, "Only admins can remove staff from brands");
-    }
 
-    const { error } = await supabase
-      .from("staff_brand_assignments")
-      .delete()
-      .eq("brand_id", req.params.brandId)
-      .eq("staff_id", req.params.staffId);
-
-    if (error) throw error;
-
-    await auditLog({
-      actorId: req.user.id,
-      actorEmail: req.user.email,
-      actorRole: req.user.role,
-      action: "REMOVE_STAFF_FROM_BRAND",
-      resourceType: "brand",
-      resourceId: req.params.brandId,
-      details: { staffId: req.params.staffId },
-      req,
-    });
-
-    sendSuccess(res, null, "Staff removed from brand");
-  } catch (err) {
-    next(err);
-  }
-});
 
 module.exports = router;

@@ -8,7 +8,7 @@ import {
   ChevronDown, Users2, Shield, AlertTriangle
 } from 'lucide-react';
 import { useAgencyStore } from '@/lib/store';
-import { AgencyTopNav }   from '@/components/internal/AgencyTopNav';
+import { AgencyTopNav } from '@/components/internal/AgencyTopNav';
 import { BRAND_ROLE_OPTIONS } from '@/components/internal/RoleChip';
 import { useBrandPermissions, canCreateBrandAdmin } from '@/lib/permissions';
 import { LoadingPage, EmptyState, Badge, PageHeader } from '@/components/ui';
@@ -20,7 +20,7 @@ const api = (p: string, opts?: RequestInit) =>
   }).then(async r => { const b = await r.json(); if (!r.ok) throw new Error(b.message); return b; });
 
 function RoleDropdown({ current, staffId, brandId, canElevate, onChanged }: any) {
-  const [open, setOpen]   = useState(false);
+  const [open, setOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
 
@@ -46,11 +46,10 @@ function RoleDropdown({ current, staffId, brandId, canElevate, onChanged }: any)
   return (
     <div className="relative">
       <button onClick={() => setOpen(o => !o)} disabled={saving}
-        className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border text-xs font-medium transition-all hover:opacity-80 ${
-          current === 'brand_admin'
+        className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border text-xs font-medium transition-all hover:opacity-80 ${current === 'brand_admin'
             ? 'bg-violet-500/15 text-violet-300 border-violet-500/30'
             : 'bg-white/5 text-white/50 border-white/10'
-        }`}>
+          }`}>
         {saving ? <Loader2 className="w-3 h-3 animate-spin" /> : <span>{current_meta?.icon}</span>}
         <span>{current_meta?.label ?? current}</span>
         <ChevronDown className="w-3 h-3 opacity-60" />
@@ -70,11 +69,10 @@ function RoleDropdown({ current, staffId, brandId, canElevate, onChanged }: any)
                 const locked = r.elevated && !canElevate;
                 return (
                   <button key={r.value} onClick={() => change(r.value)} disabled={locked}
-                    className={`w-full flex items-center gap-3 px-3 py-2.5 text-left transition-all ${
-                      r.value === current ? 'bg-purple-500/10' :
-                      locked ? 'opacity-40 cursor-not-allowed' :
-                      'hover:bg-white/5'
-                    }`}>
+                    className={`w-full flex items-center gap-3 px-3 py-2.5 text-left transition-all ${r.value === current ? 'bg-purple-500/10' :
+                        locked ? 'opacity-40 cursor-not-allowed' :
+                          'hover:bg-white/5'
+                      }`}>
                     <span className="text-sm flex-shrink-0">{r.icon}</span>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-1.5">
@@ -98,20 +96,21 @@ function RoleDropdown({ current, staffId, brandId, canElevate, onChanged }: any)
 
 export default function BrandTeamPage() {
   const { id: brandId } = useParams<{ id: string }>();
-  const { user }        = useAgencyStore();
-  const perms           = useBrandPermissions(brandId);
-  const canElevate      = canCreateBrandAdmin(user?.role);
+  const { user } = useAgencyStore();
+  const perms = useBrandPermissions(brandId);
+  const canElevate = canCreateBrandAdmin(user?.role);
 
-  const [team, setTeam]       = useState<any[]>([]);
+  const [team, setTeam] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [showAdd, setShowAdd] = useState(false);
   const [available, setAvailable] = useState<any[]>([]);
-  const [search, setSearch]   = useState('');
+  const [search, setSearch] = useState('');
   const [selected, setSelected] = useState<any | null>(null);
   const [selRole, setSelRole] = useState('account_manager');
-  const [adding, setAdding]   = useState(false);
+  const [adding, setAdding] = useState(false);
   const [removing, setRemoving] = useState<string | null>(null);
   const [error, setError] = useState('');
+  const [addTeamError, setAddTeamError] = useState('');
 
   const loadTeam = useCallback(async () => {
     setLoading(true);
@@ -129,14 +128,17 @@ export default function BrandTeamPage() {
     try {
       const res: any = await api(`/api/agency/brands/${brandId}/team/available`);
       setAvailable(res.data?.staff ?? []);
-    } catch { setAvailable([]); }
+    } catch (err: any) {
+      setAvailable([]);
+      setError(err.message);
+    }
   };
 
   const addMember = async () => {
-    setError('');
+    setAddTeamError('');
     if (!selected) return;
     if (selRole === 'brand_admin' && !canElevate) {
-      setError('Only the Super Admin can assign the Brand Admin role.'); return;
+      setAddTeamError('Only the Super Admin can assign the Brand Admin role.'); return;
     }
     setAdding(true);
     try {
@@ -145,7 +147,10 @@ export default function BrandTeamPage() {
       });
       await loadTeam();
       setShowAdd(false); setSelected(null);
-    } catch (err: any) { setError(err.message); }
+    } catch (err: any) {
+
+      setAddTeamError('Only admins can assign staff to brands');
+    }
     finally { setAdding(false); }
   };
 
@@ -154,7 +159,7 @@ export default function BrandTeamPage() {
     if (!confirm('Remove this person from the brand team?')) return;
     setRemoving(staffId);
     try {
-      await api(`/api/agency/brands/${brandId}/team/${staffId}`, { method: 'DELETE' });
+      await api(`/api/agency/brands/${brandId}/${staffId}`, { method: 'DELETE' });
       setTeam(p => p.filter(m => m.users?.id !== staffId));
     } catch (err: any) { setError(err.message); }
     finally { setRemoving(null); }
@@ -168,8 +173,8 @@ export default function BrandTeamPage() {
   return (
     <div className="p-4 sm:p-6 max-w-4xl mx-auto">
       {perms.canAssignStaff && (
-      <AgencyTopNav title="Brand Team"
-        breadcrumb={[{ label: 'Brands', href: '/brands' }, { label: 'Brand', href: `/brands/${brandId}` }]} />)}
+        <AgencyTopNav title="Brand Team"
+          breadcrumb={[{ label: 'Brands', href: '/brands' }, { label: 'Brand', href: `/brands/${brandId}` }]} />)}
 
       <Link href={`/brands/${brandId}`} className="flex items-center gap-2 text-xs text-white/30 hover:text-white mb-5 transition-colors w-fit">
         <ArrowLeft className="w-3.5 h-3.5" /> Back to Brand
@@ -207,8 +212,17 @@ export default function BrandTeamPage() {
 
       {/* Add member modal */}
       {showAdd && (
+
+
         <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-[#12122a] border border-purple-500/20 rounded-2xl p-6 w-full max-w-lg max-h-[85vh] flex flex-col">
+
+            {addTeamError && (
+              <div className="flex items-center gap-2 p-3 mb-3 rounded-lg bg-red-500/8 border border-red-500/20">
+                <AlertTriangle className="w-3.5 h-3.5 text-red-400 flex-shrink-0" />
+                <p className="text-xs text-red-300">{addTeamError}</p>
+              </div>
+            )}
             <div className="flex items-center justify-between mb-4">
               <div>
                 <h3 className="text-base font-bold text-white">Add Team Member</h3>
@@ -260,11 +274,10 @@ export default function BrandTeamPage() {
                     const locked = r.elevated && !canElevate;
                     return (
                       <button key={r.value} onClick={() => !locked && setSelRole(r.value)} disabled={locked}
-                        className={`flex items-start gap-2.5 p-2.5 rounded-xl border text-left transition-all ${
-                          selRole === r.value ? 'border-purple-500/50 bg-purple-500/15' :
-                          locked ? 'opacity-40 cursor-not-allowed border-white/5' :
-                          'border-white/5 hover:border-white/10 hover:bg-white/3'
-                        }`}>
+                        className={`flex items-start gap-2.5 p-2.5 rounded-xl border text-left transition-all ${selRole === r.value ? 'border-purple-500/50 bg-purple-500/15' :
+                            locked ? 'opacity-40 cursor-not-allowed border-white/5' :
+                              'border-white/5 hover:border-white/10 hover:bg-white/3'
+                          }`}>
                         <span className="text-base mt-0.5 flex-shrink-0">{r.icon}</span>
                         <div className="min-w-0">
                           <div className="flex items-center gap-1">
