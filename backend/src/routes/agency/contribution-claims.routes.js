@@ -42,9 +42,10 @@ function mondayOf(dateStr) {
 // ── POST /api/agency/contribution-claims ──────────────────────
 router.post('/', authenticate, async (req, res, next) => {
   try {
-    const { brand_id, title, description, proof_links } = req.body;
+    const { brand_id, title, beneficiary, description, proof_links } = req.body;
     if (!brand_id)     return sendError(res, 400, 'brand_id is required');
     if (!title)        return sendError(res, 400, 'title is required');
+    if (!beneficiary)        return sendError(res, 400, 'provide who you helped');
     if (!description)  return sendError(res, 400, 'description is required — explain why this goes beyond your core function');
     if (!proof_links?.length) return sendError(res, 400, 'At least one proof link is required — claims without evidence cannot be reviewed');
 
@@ -68,7 +69,7 @@ router.post('/', authenticate, async (req, res, next) => {
       .from('contribution_claims')
       .insert({
         staff_id: staffId, brand_id, title: title.trim(), description: description.trim(),
-        proof_links, week_start: weekStart, status: 'pending',
+        proof_links, week_start: weekStart, status: 'pending', beneficiary,
       })
       .select()
       .single();
@@ -100,7 +101,12 @@ router.get('/mine', authenticate, async (req, res, next) => {
   try {
     const { data, error } = await supabase
       .from('contribution_claims')
-      .select('*, brands(name), reviewer:users!reviewed_by(full_name)')
+      .select(`
+        *,
+        brands(name),
+        reviewer:users!reviewed_by(full_name),
+        beneficiary_user:users!beneficiary(full_name)
+      `)
       .eq('staff_id', req.user.id)
       .order('created_at', { ascending: false })
       .limit(50);
@@ -137,7 +143,7 @@ router.get('/pending', authenticate, async (req, res, next) => {
 
     const { data, error } = await supabase
       .from('contribution_claims')
-      .select('*, brands(name), staff:users!staff_id(id, full_name, role)')
+      .select('*, brands(name), staff:users!staff_id(id, full_name, role), beneficiary_user:users!beneficiary(full_name)')
       .in('brand_id', brandIds)
       .eq('status', 'pending')
       .order('created_at', { ascending: true });

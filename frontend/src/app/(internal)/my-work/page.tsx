@@ -6,21 +6,21 @@ import { useAgencyStore } from '@/lib/store';
 import { goals as goalsApi, strategies as stratApi } from '@/lib/api';
 import { LINK_META, type ProofLink } from '@/lib/permissions';
 import { ProofLinksInput } from '@/components/internal/ProofLinksInput';
-import { StrategyCard }    from '@/components/internal/StrategyCard';
+import { StrategyCard } from '@/components/internal/StrategyCard';
 import { LoadingPage, EmptyState, Badge } from '@/components/ui';
 
 const CATEGORIES = [
-  { value:'strategy',     label:'Strategy & Planning',   icon:'📊' },
-  { value:'content_copy', label:'Copywriting & Content', icon:'✍️'  },
-  { value:'design',       label:'Design & Creative',     icon:'🎨' },
-  { value:'social_media', label:'Social Media',          icon:'📱' },
-  { value:'analytics',    label:'Analytics & Reporting', icon:'📈' },
-  { value:'video',        label:'Video & Photography',   icon:'🎬' },
-  { value:'community',    label:'Community Management',  icon:'💬' },
-  { value:'client_comms', label:'Client Communication',  icon:'📧' },
-  { value:'ads',          label:'Paid Advertising',      icon:'📣' },
-  { value:'seo',          label:'SEO & Digital',         icon:'🔍' },
-  { value:'other',        label:'Other',                 icon:'📌' },
+  { value: 'strategy', label: 'Strategy & Planning', icon: '📊' },
+  { value: 'content_copy', label: 'Copywriting & Content', icon: '✍️' },
+  { value: 'design', label: 'Design & Creative', icon: '🎨' },
+  { value: 'social_media', label: 'Social Media', icon: '📱' },
+  { value: 'analytics', label: 'Analytics & Reporting', icon: '📈' },
+  { value: 'video', label: 'Video & Photography', icon: '🎬' },
+  { value: 'community', label: 'Community Management', icon: '💬' },
+  { value: 'client_comms', label: 'Client Communication', icon: '📧' },
+  { value: 'ads', label: 'Paid Advertising', icon: '📣' },
+  { value: 'seo', label: 'SEO & Digital', icon: '🔍' },
+  { value: 'other', label: 'Other', icon: '📌' },
 ];
 
 const catInfo = (v: string) => CATEGORIES.find(c => c.value === v);
@@ -31,42 +31,47 @@ const apiFetch = (path: string, opts?: RequestInit) =>
     ...opts, headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${tok()}`, ...(opts?.headers ?? {}) },
   }).then(async r => { const b = await r.json(); if (!r.ok) throw new Error(b.message); return b; });
 
-const EMPTY_FORM = { brand_id:'', category:'', title:'', description:'', goal_id:'', strategy_id:'', hours:'' };
+const EMPTY_FORM = { brand_id: '', category: '', title: '', description: '', goal_id: '', strategy_id: '', hours: '' };
 
 export default function MyWorkPage() {
   const { user } = useAgencyStore();
-  const [logs, setLogs]           = useState<any[]>([]);
-  const [myBrands, setMyBrands]   = useState<any[]>([]);
-  const [brandGoals, setBrandGoals]   = useState<any[]>([]);
+  const [logs, setLogs] = useState<any[]>([]);
+  const [myBrands, setMyBrands] = useState<any[]>([]);
+  const [brandGoals, setBrandGoals] = useState<any[]>([]);
   const [brandStrategies, setBrandStrats] = useState<any[]>([]);
-  const [loading, setLoading]     = useState(true);
-  const [showForm, setShowForm]   = useState(false);
-  const [form, setForm]           = useState({ ...EMPTY_FORM });
+  const [loading, setLoading] = useState(true);
+  const [showForm, setShowForm] = useState(false);
+  const [form, setForm] = useState({ ...EMPTY_FORM });
   const [proofLinks, setProofLinks] = useState<ProofLink[]>([]);
-  const [saving, setSaving]       = useState(false);
-  const [error, setError]         = useState('');
-  const [period, setPeriod]       = useState<'week'|'month'|'all'>('week');
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
+  const [period, setPeriod] = useState<'week' | 'month' | 'all'>('week');
   const [brandFilter, setBrandFilter] = useState('');
   const [showClaimForm, setShowClaimForm] = useState(false);
-  const [claimForm, setClaimForm] = useState({ brand_id:'', title:'', description:'' });
+  const [claimForm, setClaimForm] = useState({ brand_id: '', title: '', beneficiary: "", description: '' });
   const [claimLinks, setClaimLinks] = useState<ProofLink[]>([]);
   const [savingClaim, setSavingClaim] = useState(false);
   const [myClaims, setMyClaims] = useState<any[]>([]);
   const [weekClaimCount, setWeekClaimCount] = useState(0);
+  const [teamList, setTeamList] = useState<any[]>([])
+  const [selectedBrandId, setSelectedBrandId] = useState('');
   const maxClaimsPerWeek = 2;
 
   const setF = (k: string, v: string) => setForm(p => ({ ...p, [k]: v }));
 
   useEffect(() => {
     Promise.all([
-      apiFetch('/api/agency/staff/me/brands').catch(() => ({ data: [] })),
+      apiFetch('/api/agency/brands/brandlist').catch(() => ({ data: [] })),
       apiFetch('/api/agency/work-logs?limit=100').catch(() => ({ data: [] })),
-    ]).then(([b, l]) => { setMyBrands(b.data ?? []); setLogs(l.data ?? []); })
+    ]).then(([b, l]) => {
+      setMyBrands(b.data ?? []);
+      setLogs(l.data ?? []);
+    })
       .finally(() => setLoading(false));
 
     apiFetch('/api/agency/contribution-claims/mine')
       .then((r: any) => { setMyClaims(r.data?.claims ?? []); setWeekClaimCount(r.data?.thisWeekCount ?? 0); })
-      .catch(() => {});
+      .catch(() => { });
   }, []);
 
   // Load goals + strategies when brand changes
@@ -78,8 +83,14 @@ export default function MyWorkPage() {
     ]).then(([gr, sr]: any) => {
       setBrandGoals(gr.data ?? []);
       setBrandStrats(sr.data ?? []);
-    }).catch(() => {});
+    }).catch(() => { });
   }, [form.brand_id]);
+
+
+  useEffect(() => {
+    const brand = myBrands.find((b: any) => b.id === selectedBrandId);
+    setTeamList(brand?.team ?? []);
+  }, [myBrands, selectedBrandId]);
 
   const openForm = () => {
     setForm({ ...EMPTY_FORM });
@@ -90,9 +101,10 @@ export default function MyWorkPage() {
 
   const save = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!form.brand_id)  { setError('Please select a brand');    return; }
-    if (!form.category)  { setError('Please select a work type'); return; }
-    if (!form.title)     { setError('Please describe what you did'); return; }
+    if (!form.brand_id) { setError('Please select a brand'); return; }
+    if (!form.category) { setError('Please select a work type'); return; }
+    if (!form.title) { setError('Please describe what you did'); return; }
+    if (!form.title) { setError('Please describe what you did'); return; }
 
     setSaving(true); setError('');
     try {
@@ -100,9 +112,9 @@ export default function MyWorkPage() {
         method: 'POST',
         body: JSON.stringify({
           ...form,
-          hours:       parseFloat(form.hours) || 0,
+          hours: parseFloat(form.hours) || 0,
           strategy_id: form.strategy_id || null,
-          goal_id:     form.goal_id     || null,
+          goal_id: form.goal_id || null,
           proof_links: proofLinks,
         }),
       });
@@ -111,9 +123,10 @@ export default function MyWorkPage() {
     } catch (err: any) { setError(err.message || 'Failed to save'); }
     finally { setSaving(false); }
   };
+  
 
   const submitClaim = async () => {
-    if (!claimForm.brand_id || !claimForm.title || !claimForm.description) { setError('All fields are required'); return; }
+    if (!claimForm.brand_id || !claimForm.title || !claimForm.description || !claimForm.beneficiary) { setError('All fields are required'); return; }
     if (claimLinks.length === 0) { setError('At least one proof link is required'); return; }
     setSavingClaim(true); setError('');
     try {
@@ -121,9 +134,10 @@ export default function MyWorkPage() {
         method: 'POST',
         body: JSON.stringify({ ...claimForm, proof_links: claimLinks }),
       });
+
       setMyClaims(p => [res.data.claim, ...p]);
       setWeekClaimCount(p => p + 1);
-      setClaimForm({ brand_id:'', title:'', description:'' });
+      setClaimForm({ brand_id: '', title: '', description: '', beneficiary: '' });
       setClaimLinks([]);
       setShowClaimForm(false);
     } catch (err: any) { setError(err.message); }
@@ -134,7 +148,7 @@ export default function MyWorkPage() {
   const now = new Date();
   const visible = logs.filter(l => {
     if (brandFilter && l.brand_id !== brandFilter) return false;
-    if (period === 'week')  return (now.getTime() - new Date(l.created_at).getTime()) < 7 * 86400000;
+    if (period === 'week') return (now.getTime() - new Date(l.created_at).getTime()) < 7 * 86400000;
     if (period === 'month') { const d = new Date(l.created_at); return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear(); }
     return true;
   });
@@ -154,10 +168,10 @@ export default function MyWorkPage() {
         <div className="flex items-center gap-2">
           <button onClick={() => setShowClaimForm(true)}
             className="flex items-center gap-2 px-4 py-2.5 text-sm text-amber-400 border border-amber-500/20 rounded-xl hover:bg-amber-500/8 transition-all">
-            <Star className="w-4 h-4"/> Claim a Contribution
+            <Star className="w-4 h-4" /> Claim a Contribution
           </button>
           <button onClick={openForm} className="sabi-btn-primary flex items-center gap-2 px-4 py-2.5 text-sm">
-            <Plus className="w-4 h-4"/> Log Work
+            <Plus className="w-4 h-4" /> Log Work
           </button>
         </div>
       </div>
@@ -183,7 +197,7 @@ export default function MyWorkPage() {
       {/* Filters */}
       <div className="flex items-center gap-3 mb-5 flex-wrap">
         <div className="flex items-center gap-1 p-1 bg-white/3 rounded-xl border border-white/5">
-          {(['week','month','all'] as const).map(p => (
+          {(['week', 'month', 'all'] as const).map(p => (
             <button key={p} onClick={() => setPeriod(p)}
               className={`px-3 py-1.5 text-xs rounded-lg transition-all ${period === p ? 'bg-purple-600 text-white' : 'text-white/40 hover:text-white'}`}>
               {p === 'all' ? 'All Time' : `This ${p.charAt(0).toUpperCase() + p.slice(1)}`}
@@ -218,7 +232,7 @@ export default function MyWorkPage() {
                 <label className="text-xs text-white/50 mb-1.5 block">Brand *</label>
                 <select className="sabi-input" required value={form.brand_id} onChange={e => setF('brand_id', e.target.value)}>
                   <option value="">Select brand…</option>
-                  {myBrands.map((b: any) => <option key={b.brand_id ?? b.id} value={b.brand_id ?? b.id}>{b.name}</option>)}
+                  {myBrands.map((b: any) => <option className='bg-black' key={b.brand_id ?? b.id} value={b.brand_id ?? b.id}>{b.name}</option>)}
                 </select>
               </div>
 
@@ -250,9 +264,8 @@ export default function MyWorkPage() {
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5">
                   {CATEGORIES.map(c => (
                     <button type="button" key={c.value} onClick={() => setF('category', c.value)}
-                      className={`flex items-center gap-2 p-2.5 rounded-xl border text-left transition-all ${
-                        form.category === c.value ? 'border-purple-500/50 bg-purple-500/15' : 'border-white/5 hover:border-white/10'
-                      }`}>
+                      className={`flex items-center gap-2 p-2.5 rounded-xl border text-left transition-all ${form.category === c.value ? 'border-purple-500/50 bg-purple-500/15' : 'border-white/5 hover:border-white/10'
+                        }`}>
                       <span className="text-sm flex-shrink-0">{c.icon}</span>
                       <span className={`text-xs font-medium ${form.category === c.value ? 'text-purple-300' : 'text-white/60'}`}>{c.label}</span>
                     </button>
@@ -267,6 +280,8 @@ export default function MyWorkPage() {
                   placeholder="e.g. Created July content calendar with 30 posts"
                   value={form.title} onChange={e => setF('title', e.target.value)} />
               </div>
+
+
 
               {/* Description */}
               <div>
@@ -318,20 +333,42 @@ export default function MyWorkPage() {
                 <h2 className="text-base font-bold text-white">Claim a Contribution</h2>
                 <p className="text-xs text-white/30 mt-0.5">Something beyond your core function — bring proof</p>
               </div>
-              <button onClick={() => setShowClaimForm(false)}><X className="w-5 h-5 text-white/30"/></button>
+              <button onClick={() => setShowClaimForm(false)}><X className="w-5 h-5 text-white/30" /></button>
             </div>
             <div className="flex-1 overflow-y-auto p-6 space-y-4">
               {error && <div className="bg-red-500/10 border border-red-500/20 rounded-lg p-3 text-red-400 text-sm">{error}</div>}
-              <select className="sabi-input" value={claimForm.brand_id} onChange={e => setClaimForm(p=>({...p,brand_id:e.target.value}))}>
+              <select className="sabi-input" value={claimForm.brand_id} onChange={e => { setSelectedBrandId(e.target.value); setClaimForm(p => ({ ...p, brand_id: e.target.value })) }}>
                 <option className='bg-black' value="">Select brand…</option>
-                {myBrands.map((b: any) => <option className='bg-black' key={b.brand_id??b.id} value={b.brand_id??b.id}>{b.name}</option>)}
+                {myBrands.map((b: any) => <option className='bg-black' key={b.brand_id ?? b.id} value={b.brand_id ?? b.id}>{b.name}</option>)}
               </select>
-              <input className="sabi-input" placeholder="What did you do? e.g. 'Introduced Reels trend-jacking format'"
-                value={claimForm.title} onChange={e => setClaimForm(p=>({...p,title:e.target.value}))}/>
+              <select
+                className="sabi-input"
+                value={claimForm.title}
+                onChange={e => setClaimForm(p => ({ ...p, beneficiary: e.target.value }))}
+                disabled={!selectedBrandId}
+              >
+                <option className="bg-black" disabled value="">
+                  {selectedBrandId ? 'Who did you help' : 'Select a brand first'}
+                </option>
+                {teamList.map((b: any) => (
+                  <option className="bg-black" key={b.staff_id} value={b.staff_id}>
+                    {b.users?.full_name ?? 'Unknown'}
+                  </option>))}
+              </select>
+
+              {/* What did you do */}
+              <div>
+                <label className="text-xs text-white/50 mb-1.5 block">What did you do? *</label>
+                <input className="sabi-input" required
+                  placeholder="e.g. Created July content calendar with 30 posts"
+                  value={claimForm.title} onChange={e => setClaimForm(p => ({ ...p, title: e.target.value }))}/>
+              </div>
+
+
               <textarea className="sabi-input resize-none" rows={4}
                 placeholder="Explain why this goes beyond your normal role — what impact did it have?"
-                value={claimForm.description} onChange={e => setClaimForm(p=>({...p,description:e.target.value}))}/>
-              <ProofLinksInput value={claimLinks} onChange={setClaimLinks}/>
+                value={claimForm.description} onChange={e => setClaimForm(p => ({ ...p, description: e.target.value }))} />
+              <ProofLinksInput value={claimLinks} onChange={setClaimLinks} />
               <div className="flex items-center justify-between">
                 <p className="text-xs text-amber-400/60">
                   {weekClaimCount >= maxClaimsPerWeek
@@ -344,7 +381,7 @@ export default function MyWorkPage() {
             <div className="flex gap-3 p-6 border-t border-white/5">
               <button onClick={submitClaim} disabled={savingClaim || claimLinks.length === 0}
                 className="sabi-btn-primary flex-1 flex items-center justify-center gap-2 py-2.5 text-sm disabled:opacity-50">
-                {savingClaim ? <><Loader2 className="w-4 h-4 animate-spin"/>Submitting…</> : <><Check className="w-4 h-4"/>Submit Claim</>}
+                {savingClaim ? <><Loader2 className="w-4 h-4 animate-spin" />Submitting…</> : <><Check className="w-4 h-4" />Submit Claim</>}
               </button>
               <button onClick={() => setShowClaimForm(false)} className="px-4 text-sm text-white/40">Cancel</button>
             </div>
@@ -360,7 +397,7 @@ export default function MyWorkPage() {
       ) : (
         <div className="space-y-3">
           {visible.map((l, i) => {
-            const cat   = catInfo(l.category);
+            const cat = catInfo(l.category);
             const links: ProofLink[] = l.proof_links ?? [];
             return (
               <div key={l.id ?? i} className="sabi-card p-5 hover:border-white/10 transition-all">
@@ -387,7 +424,7 @@ export default function MyWorkPage() {
                         </span>
                       )}
                       <span className="text-xs text-white/20">
-                        {new Date(l.created_at).toLocaleDateString('en-NG', { day:'numeric', month:'short' })}
+                        {new Date(l.created_at).toLocaleDateString('en-NG', { day: 'numeric', month: 'short' })}
                       </span>
                     </div>
 
@@ -428,11 +465,12 @@ export default function MyWorkPage() {
               <div key={c.id} className="flex items-center justify-between p-3 bg-white/3 border border-white/6 rounded-xl">
                 <div>
                   <p className="text-sm text-white">{c.title}</p>
+                  <p className="text-sm text-white">Who did you help : {c.beneficiary_user.full_name ?? ""}</p>
                   <p className="text-xs text-white/30">{c.brands?.name} · {c.week_start}</p>
                 </div>
-                {c.status === 'pending'  && <Badge label="Pending" color="amber"/>}
-                {c.status === 'verified' && <Badge label={`+${c.points_awarded} pts`} color="green"/>}
-                {c.status === 'rejected' && <Badge label="Not verified" color="red"/>}
+                {c.status === 'pending' && <Badge label="Pending" color="amber" />}
+                {c.status === 'verified' && <Badge label={`+${c.points_awarded} pts`} color="green" />}
+                {c.status === 'rejected' && <Badge label="Not verified" color="red" />}
               </div>
             ))}
           </div>
