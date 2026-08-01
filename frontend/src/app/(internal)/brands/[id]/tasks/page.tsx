@@ -38,6 +38,7 @@ const COLUMNS = [
   { key: 'done', label: 'Done', color: 'border-green-500/20 bg-green-500/3', dot: 'bg-green-500' },
   { key: 'blocked', label: 'Blocked', color: 'border-red-500/20 bg-red-500/3', dot: 'bg-red-500' },
   { key: 'verified', label: 'Verified', color: 'border-purple-500/20 bg-purple-500/3', dot: 'bg-purple-500' },
+  { key: 'pending_deletion', label: 'Pending Deletion', color: 'border-orange-500/20 bg-orange-500/3', dot: 'bg-orange-500' },
 ];
 
 const PRIORITY_META: Record<string, { label: string; color: string; dot: string }> = {
@@ -247,19 +248,24 @@ export default function BrandTasksPage() {
     if (!confirm('Delete this task? This cannot be undone.')) return;
 
     setDeletingId(taskId);
-    setDeleting(true)
     try {
-      await api(`/api/agency/tasks/${taskId}`, { method: 'DELETE' });
-      setTasks(prev => prev.filter(t => t.id !== taskId));
-      toast.success('Task deleted');
+      const res = await api(`/api/agency/tasks/${taskId}`, { method: 'DELETE' });
+
+      if (res.data?.deleted) {
+        setTasks(prev => prev.filter(t => t.id !== taskId));
+      } else {
+        setTasks(prev => prev.map(t => (t.id === taskId ? { ...t, status: 'pending_deletion' } : t)));
+      }
+
+      toast.success(res.message || 'Task updated');
+
       if (openModal) {
-        return setEditingTask(null)
+        setEditingTask(null);
       }
     } catch (err: any) {
       toast.error(err.message || 'Failed to delete task');
     } finally {
       setDeletingId(null);
-       setDeleting(false)
     }
   };
 
@@ -524,19 +530,18 @@ export default function BrandTasksPage() {
                               {COLUMNS.filter(c => c.key !== 'verified').map(c => <option className='bg-black' key={c.key} value={c.key}>{c.label}</option>)}
                             </select>
                           )}
-                          {perms.canManage && (
+                          {t.status !== 'pending_deletion' && (
                             <button
                               onClick={() => handleDeleteTask({ taskId: t.id })}
                               disabled={deletingId === t.id}
                               className="flex items-center ml-auto justify-end mt-2 disabled:opacity-50"
                             >
                               {deletingId === t.id ? (
-                                <LoaderCircle className="animate-spin" size={10} />
-                              ) : (
-                                <Trash2 className="text-red-800" size={10} />
-                              )}
-                            </button>
-                          )}
+                              <LoaderCircle className="animate-spin" size={10} />
+                            ) : (
+                              <Trash2 className="text-red-800" size={10} />
+                            )}
+                          </button>)}
                         </div>
                       );
                     })}
@@ -826,18 +831,17 @@ export default function BrandTasksPage() {
             </div>
 
             <div className="flex items-center justify-between gap-2 px-5 py-4 border-t border-white/10">
-
-              {perms.canManage && (<button
+              <button
                 onClick={() => handleDeleteTask({ taskId: editingTask.id, openModal: true })}
                 disabled={deletingId === editingTask.id}
                 className="flex items-center justify-end mt-2 disabled:opacity-50"
               >
                 {deletingId === editingTask.id ? (
-                  <LoaderCircle className="animate-spin"  />
+                  <LoaderCircle className="animate-spin" />
                 ) : (
-                  <Trash2 className="text-red-800"  />
+                  <Trash2 className="text-red-800" />
                 )}
-              </button>)}
+              </button>
               <div className='flex items-center gap-2'>
                 <button
                   onClick={() => setEditingTask(null)}

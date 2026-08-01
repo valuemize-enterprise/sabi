@@ -1674,22 +1674,24 @@ T.profile_form_nag = (d) => ({
 T.goal_change_request = (d) => {
   // ← compute badge locally, not from d
   const badge = {
-    create: { bg: '#052e16', border: '#14532d', text: '#bbf7d0' },
-    edit:   { bg: '#2d1f00', border: '#78350f', text: '#fde68a' },
-    delete: { bg: '#450a0a', border: '#7f1d1d', text: '#fca5a5' },
-  }[d.requestType] ?? { bg: '#1e1e35', border: '#2d2d4a', text: '#94a3b8' };
+    create: { bg: "#052e16", border: "#14532d", text: "#bbf7d0" },
+    edit: { bg: "#2d1f00", border: "#78350f", text: "#fde68a" },
+    delete: { bg: "#450a0a", border: "#7f1d1d", text: "#fca5a5" },
+  }[d.requestType] ?? { bg: "#1e1e35", border: "#2d2d4a", text: "#94a3b8" };
 
-  const actionLabel = {
-    create: 'Create Goal',
-    edit:   'Edit Goal',
-    delete: 'Delete Goal',
-  }[d.requestType] ?? d.requestType;
+  const actionLabel =
+    {
+      create: "Create Goal",
+      edit: "Edit Goal",
+      delete: "Delete Goal",
+    }[d.requestType] ?? d.requestType;
 
   return {
-    subject:  `Goal Change Request — ${d.brandName}`,
-    category: 'admin',
-    tone:     'informational',
-    html: base(`
+    subject: `Goal Change Request — ${d.brandName}`,
+    category: "admin",
+    tone: "informational",
+    html: base(
+      `
       <tr><td style="padding:32px 40px 0;">
         <p style="margin:0 0 8px;font-family:'JetBrains Mono',Menlo,monospace;
                   font-size:10px;font-weight:600;letter-spacing:.1em;
@@ -1775,7 +1777,9 @@ T.goal_change_request = (d) => {
           You are receiving this because you are listed as Admin or Leadership in Sabi.
         </p>
       </td></tr>
-    `, `Goal Change Request — ${d.brandName}`),
+    `,
+      `Goal Change Request — ${d.brandName}`,
+    ),
   };
 };
 
@@ -1807,6 +1811,141 @@ T.guarantor_form_reminder = (d) => ({
       ) +
       cta("Mark as received (once in hand) →", `${APP}/people`, C.amber),
     `Guarantor form outstanding for ${d.staffName} — probation in ${d.daysUntilProbation} days.`,
+  ),
+});
+
+T.task_deletion_request = (d) => ({
+  category: "tasks",
+  subject: `🗑 Deletion Request — "${esc(d.taskTitle)}"`,
+  preheader: `${esc(d.requesterName)} wants to delete a task on ${esc(d.brandName)}. Your approval is needed.`,
+  html: base(
+    C.volt, // violet accent — matches Sabi task colour
+    "🗑️",
+    "Task Deletion Requested",
+    esc(d.brandName),
+    greeting(d.recipientName) +
+      p(
+        `<strong>${esc(d.requesterName)}</strong> ` +
+          `<span style="color:${C.muted};">(${esc(d.requesterRole)})</span> ` +
+          `has requested to delete a task but does not have the required permissions to do this directly. ` +
+          `The deletion is on hold pending your review.`,
+      ) +
+      // ── Task detail card ───────────────────────────────────────────
+      `<table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:24px 0;">
+      <tr>
+        <td style="
+          background: rgba(109,40,217,0.08);
+          border: 1px solid rgba(109,40,217,0.22);
+          border-radius: 10px;
+          padding: 20px 22px;
+        ">
+          <table width="100%" cellpadding="0" cellspacing="0" border="0">
+
+            <tr>
+              <td style="padding-bottom:12px;border-bottom:1px solid rgba(255,255,255,0.06);">
+                <p style="margin:0 0 3px;font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:${C.muted};">Task</p>
+                <p style="margin:0;font-family:'Space Grotesk',sans-serif;font-size:15px;font-weight:700;color:#f1f5f9;">${esc(d.taskTitle)}</p>
+              </td>
+            </tr>
+
+            <tr>
+              <td style="padding-top:12px;">
+                <table width="100%" cellpadding="0" cellspacing="0" border="0">
+                  <tr>
+                    <td width="50%" style="padding-right:10px;vertical-align:top;">
+                      <p style="margin:0 0 3px;font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:${C.muted};">Brand</p>
+                      <p style="margin:0;font-family:'Inter',sans-serif;font-size:13px;color:#cbd5e1;">${esc(d.brandName)}</p>
+                    </td>
+                    <td width="50%" style="vertical-align:top;">
+                      <p style="margin:0 0 3px;font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:${C.muted};">Requested by</p>
+                      <p style="margin:0;font-family:'Inter',sans-serif;font-size:13px;color:#cbd5e1;">${esc(d.requesterName)}</p>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td colspan="2" style="padding-top:12px;">
+                      <p style="margin:0 0 3px;font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:${C.muted};">Requested at</p>
+                      <p style="margin:0;font-family:'Inter',sans-serif;font-size:13px;color:#cbd5e1;">${esc(d.requestedAt)}</p>
+                    </td>
+                  </tr>
+                </table>
+              </td>
+            </tr>
+
+          </table>
+        </td>
+      </tr>
+    </table>` +
+      // ── Approve CTA ────────────────────────────────────────────────
+      cta("Review Request in Sabi", d.reviewUrl) +
+      p(
+        `If you approve the deletion, open the task in Sabi and delete it directly. ` +
+          `If you want to reject the request, no action is needed — the task remains unchanged. ` +
+          `You may want to notify ${esc(d.requesterName)} of your decision.`,
+      ) +
+      p(
+        `This notification was triggered because ${esc(d.requesterName)} does not have ` +
+          `super_admin, admin, or md permissions. Only users with those roles can delete tasks directly.`,
+      ),
+  ),
+});
+
+T.task_deleted_confirmation = (d) => ({
+  category: "tasks",
+  subject: `Task Removed — "${esc(d.taskTitle)}"`,
+  preheader: `${esc(d.deleterName)} deleted a task on ${esc(d.brandName)}.`,
+  html: base(
+    C.ember, // amber/warning tone — task is gone
+    "🗑️",
+    "Task Deleted",
+    esc(d.brandName),
+    greeting(d.recipientName) +
+      p(
+        `The task <strong>"${esc(d.taskTitle)}"</strong> on the <strong>${esc(d.brandName)}</strong> board ` +
+          `has been permanently deleted by <strong>${esc(d.deleterName)}</strong> ` +
+          `<span style="color:${C.muted};">(${esc(d.deleterRole)})</span>.`,
+      ) +
+      // ── Summary card ───────────────────────────────────────────────
+      `<table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:20px 0;">
+      <tr>
+        <td style="
+          background: rgba(217,119,6,0.08);
+          border: 1px solid rgba(217,119,6,0.22);
+          border-radius: 10px;
+          padding: 18px 20px;
+        ">
+          <table width="100%" cellpadding="0" cellspacing="0" border="0">
+            <tr>
+              <td width="50%" style="padding-right:10px;vertical-align:top;">
+                <p style="margin:0 0 3px;font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:${C.muted};">Deleted task</p>
+                <p style="margin:0;font-family:'Space Grotesk',sans-serif;font-size:14px;font-weight:700;color:#fde68a;text-decoration:line-through;">${esc(d.taskTitle)}</p>
+              </td>
+              <td width="50%" style="vertical-align:top;">
+                <p style="margin:0 0 3px;font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:${C.muted};">Deleted at</p>
+                <p style="margin:0;font-family:'Inter',sans-serif;font-size:13px;color:#cbd5e1;">${esc(d.deletedAt)}</p>
+              </td>
+            </tr>
+            ${
+              d.reason
+                ? `
+            <tr>
+              <td colspan="2" style="padding-top:12px;border-top:1px solid rgba(255,255,255,0.05);margin-top:12px;">
+                <p style="margin:0 0 3px;font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:${C.muted};">Reason</p>
+                <p style="margin:0;font-family:'Inter',sans-serif;font-size:13px;color:#cbd5e1;">${esc(d.reason)}</p>
+              </td>
+            </tr>`
+                : ""
+            }
+          </table>
+        </td>
+      </tr>
+    </table>` +
+      p(
+        `This action is permanent. If the task was deleted in error, ` +
+          `please contact <strong>${esc(d.deleterName)}</strong> or your Super Admin.`,
+      ) +
+      p(
+        `You received this notification because you are assigned to this brand or were assigned to this task.`,
+      ),
   ),
 });
 

@@ -20,6 +20,7 @@ const {
 const { auditLog } = require("../../middleware/logger.middleware");
 const povService = require("../../services/aria/proof-of-value.service");
 const notify = require("../../services/notification-triggers.service");
+const { send } = require("../../services/email-dispatch.service");
 
 async function notifyAssignee(taskId, taskTitle, assigneeId, assignerName) {
   if (!assigneeId) return;
@@ -69,7 +70,15 @@ router.get("/", authenticate, async (req, res, next) => {
     if (priority) query = query.eq("priority", priority);
     if (strategy_id) query = query.eq("strategy_id", strategy_id);
 
-    const ADMIN_ROLES = ['super_admin','ceo', 'brand_admin','managing_director','creative_director','strategy_director','account_director'];
+    const ADMIN_ROLES = [
+      "super_admin",
+      "ceo",
+      "brand_admin",
+      "managing_director",
+      "creative_director",
+      "strategy_director",
+      "account_director",
+    ];
 
     // Staff only see tasks for their brands
     if (!ADMIN_ROLES.includes(req.user.role)) {
@@ -456,11 +465,123 @@ router.post("/:id/comments", authenticate, async (req, res, next) => {
   }
 });
 
-// ── DELETE /api/agency/tasks/:id ─────────────────────────────
+// ── DELETE /api/agency/tasks/:brandId/:id ─────────────────────────────
 router.delete("/:id", authenticate, async (req, res, next) => {
   try {
-    await supabase.from("tasks").delete().eq("id", req.params.id);
-    sendSuccess(res, null, "Task deleted");
+    // ── Fetch task details first — needed for perms, emails, everything ──
+    const { data: task, error: taskError } = await supabase
+      .from("tasks")
+      .select("id, title, brand_id, assigned_to, brands(name)")
+      .eq("id", req.params.id)
+      .single();
+
+    if (taskError || !task) return sendError(res, 404, "Task not found");
+
+    const taskTitle = task.title || "Unknown Task";
+    const brandName = task.brands?.name || "Unknown Brand";
+    const requestedAt = new Date().toLocaleString("en-GB", {
+      weekday: "short",
+      day: "numeric",
+      month: "short",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+      timeZone: "Africa/Lagos",
+    });
+
+    // ── Fetch this brand's account manager (needed for perms + email) ──
+    const { data: brand, error: brandError } = await supabase
+      .from("brands")
+      .select(
+        "account_manager_id, account_manager:users!account_manager_id(id, full_name, email, avatar_url)",
+      )
+      .eq("id", task.brand_id)
+      .single();
+
+    if (brandError) throw brandError;
+
+    const accountManager = brand?.account_manager;
+    const isAccountManager = accountManager?.id === req.user.id;
+
+    // ── Company/brand-level admin roles ──
+    const { data: perms, error: permError } = await supabase
+      .from("staff_brand_assignments")
+      .select("role_on_brand")
+      .eq("staff_id", req.user.id)
+      .eq("brand_id", task.brand_id)
+      .in("role_on_brand", ["super_admin", "admin", "md"]);
+
+    if (permError) throw permError;
+
+    const isAuthorized = (perms && perms.length > 0) || isAccountManager;
+
+    // ── Branch 1: not authorized — log request, notify account manager ──
+    if (!isAuthorized) {
+      const { error: statusError } = await supabase
+        .from("tasks")
+        .update({
+          status: "pending_deletion",
+          deletion_requested_at: new Date().toISOString(),
+          deletion_requested_by: req.user.id,
+        })
+        .eq("id", req.params.id);
+
+      if (statusError) throw statusError;
+
+      if (accountManager?.email) {
+        await send("task_deletion_request", {
+          to: { id: accountManager.id, email: accountManager.email },
+          data: {
+            recipientName: accountManager.full_name,
+            requesterName: req.user.full_name,
+            requesterRole: req.user.role,
+            taskTitle,
+            brandName,
+            requestedAt,
+            reviewUrl: `${process.env.APP_URL}/tasks?highlight=${req.params.id}`,
+          },
+          entityId: `${req.params.id}:${accountManager.id}`,
+          dedupe: "once",
+        });
+      }
+      return sendSuccess(res, { task: { id: req.params.id, status: "pending_deletion" }, deleted: false }, "Deletion request submitted for approval");
+    }
+
+    // ── Branch 2: authorized (admin OR account manager) — delete directly ──
+    const { error: deleteError } = await supabase
+      .from("tasks")
+      .delete()
+      .eq("id", req.params.id);
+
+    if (deleteError) throw deleteError;
+
+    // Notify assignee, unless they deleted their own task
+    if (task.assigned_to && task.assigned_to !== req.user.id) {
+      const { data: assignee } = await supabase
+        .from("users")
+        .select("id, email, full_name")
+        .eq("id", task.assigned_to)
+        .single();
+
+      if (assignee) {
+        await send("task_deleted_confirmation", {
+          to: { id: assignee.id, email: assignee.email },
+          data: {
+            recipientName: assignee.full_name,
+            deleterName: req.user.full_name,
+            deleterRole: req.user.role,
+            taskTitle,
+            brandName,
+            deletedAt: requestedAt,
+            reason: req.body?.reason || "",
+          },
+          entityId: `deleted:${req.params.id}:${assignee.id}`,
+          dedupe: "always",
+        });
+      }
+    }
+
+    sendSuccess(res, { deleted: true }, "Task deleted");
   } catch (err) {
     next(err);
   }

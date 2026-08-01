@@ -212,7 +212,7 @@ router.get('/me/dashboard', authenticate, async (req, res, next) => {
       .from('tasks')
       .select('*', { count: 'exact', head: true })
       .eq('assignee_id', staffId)
-      .in('status', ['todo', 'in_progress','todo','in_progress', 'in_review']);
+      .in('status', ['todo', 'in_progress','todo','in_progress', 'in_review', ]);
 
     // Count completed tasks this month
     const monthStart = new Date();
