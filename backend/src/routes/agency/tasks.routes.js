@@ -329,7 +329,7 @@ router.post("/:id/complete", authenticate, async (req, res, next) => {
 router.put("/:id/status", authenticate, async (req, res, next) => {
   try {
     const { status } = req.body;
-    const valid = ["todo", "in_progress", "in_review", "done", "blocked"];
+    const valid = ["todo", "in_progress", "in_review", "done", "blocked", "pending_deletion"];
     if (!valid.includes(status))
       return sendError(res, 400, `status must be one of: ${valid.join(", ")}`);
 

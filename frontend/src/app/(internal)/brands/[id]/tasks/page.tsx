@@ -105,6 +105,9 @@ export default function BrandTasksPage() {
   const [updateSaving, setUpdateSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [verifyTasking, setVerifyTasking] = useState<boolean>(true);
+  const [rejectTasking, setRejectTasking] = useState(false);
+  const [verifyingId, setVerifyingId] = useState<string | null>(null);
 
   const router = useRouter();
 
@@ -207,15 +210,17 @@ export default function BrandTasksPage() {
   };
 
   const verifyTask = async (taskId: string) => {
+    setVerifyTasking(true);
     try {
       await api(`/api/agency/tasks/${taskId}/verify`, { method: 'PUT' });
       setTasks(p => p.map(t => t.id === taskId ? { ...t, status: 'verified' } : t));
       toast.success('Task verified');
-    } catch (err: any) { toast.error(err.message); }
+    } catch (err: any) { toast.error(err.message); } finally { setVerifyTasking(false); }
   };
 
   const rejectTask = async () => {
     if (!rejectingId || !rejectReason.trim()) return;
+    setRejectTasking(true);
     try {
       await api(`/api/agency/tasks/${rejectingId}/reject-verification`, {
         method: 'PUT', body: JSON.stringify({ reason: rejectReason.trim() }),
@@ -223,7 +228,11 @@ export default function BrandTasksPage() {
       setTasks(p => p.map(t => t.id === rejectingId ? { ...t, status: 'in_progress' } : t));
       toast.success('Task sent back for revision');
       setRejectingId(null); setRejectReason('');
-    } catch (err: any) { toast.error(err.message); }
+    } catch (err: any) {
+      toast.error(err.message);
+    } finally {
+      setRejectTasking(false);
+    }
   };
 
   const generateFromStrategy = async (strategyId: string) => {
@@ -269,6 +278,12 @@ export default function BrandTasksPage() {
     }
   };
 
+
+  useEffect(() => {
+    if (!perms.canManage && user?.id) {
+      setFA(user.id);
+    }
+  }, [perms.canManage, user?.id]);
 
   if (loading) return <LoadingPage label="Loading tasks…" />;
   if (importOpen) {
@@ -353,12 +368,24 @@ export default function BrandTasksPage() {
       </div >
 
       {/* Filters */}
-      < div className="flex items-center gap-3 mb-5" >
-        <select className="sabi-input w-44 text-sm" value={filterAssignee} onChange={e => setFA(e.target.value)}>
-          <option className='bg-black' value="">All assignees</option>
-          {teamMembers.map(m => <option className='bg-black' key={m.id} value={m.id}>{m.full_name}</option>)}
-        </select>
-      </div >
+      <div className="flex items-center gap-3 mb-5" >
+        {perms.canManage ? (
+          <select
+            className="sabi-input w-44 text-sm"
+            value={filterAssignee}
+            onChange={e => setFA(e.target.value)}
+          >
+            <option className="bg-black" value="">All assignees</option>
+            {teamMembers.map(m => (
+              <option className="bg-black" key={m.id} value={m.id}>{m.full_name}</option>
+            ))}
+          </select>
+        ) : (
+          <div className="sabi-input w-44 text-sm flex items-center text-white/50">
+            {teamMembers.find(m => m.id === user?.id)?.full_name ?? user?.full_name ?? 'You'}
+          </div>
+        )}
+      </div>
 
       {/* Create task modal */}
       {
@@ -513,18 +540,37 @@ export default function BrandTasksPage() {
                           )}
                           {t.status === 'done' && perms.canManage && (
                             <div className="flex gap-1.5 mt-2">
-                              <button onClick={() => verifyTask(t.id)}
-                                className="flex-1 flex items-center justify-center gap-1.5 text-[10px] py-1.5 rounded-lg bg-green-500/10 border border-green-500/25 text-green-400 hover:bg-green-500/20 transition-all font-medium">
-                                <Check className="w-3 h-3" /> Verify
+                              <button
+                                onClick={async () => {
+                                  setVerifyingId(t.id);
+                                  try {
+                                    await verifyTask(t.id);
+                                  } finally {
+                                    setVerifyingId(null);
+                                  }
+                                }}
+                                disabled={verifyingId === t.id}
+                                className="flex-1 flex items-center justify-center gap-1.5 text-[10px] py-1.5 rounded-lg bg-green-500/10 border border-green-500/25 text-green-400 hover:bg-green-500/20 transition-all font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                              >
+                                {verifyingId === t.id ? (
+                                  <LoaderCircle className="w-3 h-3 animate-spin" />
+                                ) : (
+                                  <Check className="w-3 h-3" />
+                                )}
+                                Verify
                               </button>
-                              <button onClick={() => { setRejectingId(t.id); setRejectReason(''); }}
-                                className="flex-1 flex items-center justify-center gap-1.5 text-[10px] py-1.5 rounded-lg bg-red-500/10 border border-red-500/25 text-red-400 hover:bg-red-500/20 transition-all font-medium">
+
+                              <button
+                                onClick={() => { setRejectingId(t.id); setRejectReason(''); }}
+                                disabled={verifyingId === t.id}
+                                className="flex-1 flex items-center justify-center gap-1.5 text-[10px] py-1.5 rounded-lg bg-red-500/10 border border-red-500/25 text-red-400 hover:bg-red-500/20 transition-all font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                              >
                                 <X className="w-3 h-3" /> Reject
                               </button>
                             </div>
                           )}
                           {/* Status change — only admin/brand admin can move task out of Verified */}
-                          {(t.status !== 'verified' || perms.canManage) && (
+                          {((t.status !== 'pending_deletion' && t.status !== 'verified') || perms.canManage) && (
                             <select className="w-full mt-2 text-[10px] bg-black border border-white/8 rounded-lg px-2 py-1 text-white/50 hover:text-white cursor-pointer transition-all opacity-0 group-hover:opacity-100"
                               value={t.status} onChange={e => updateStatus(t.id, e.target.value)}>
                               {COLUMNS.filter(c => c.key !== 'verified').map(c => <option className='bg-black' key={c.key} value={c.key}>{c.label}</option>)}
@@ -537,11 +583,11 @@ export default function BrandTasksPage() {
                               className="flex items-center ml-auto justify-end mt-2 disabled:opacity-50"
                             >
                               {deletingId === t.id ? (
-                              <LoaderCircle className="animate-spin" size={10} />
-                            ) : (
-                              <Trash2 className="text-red-800" size={10} />
-                            )}
-                          </button>)}
+                                <LoaderCircle className="animate-spin" size={10} />
+                              ) : (
+                                <Trash2 className="text-red-800" size={10} />
+                              )}
+                            </button>)}
                         </div>
                       );
                     })}
@@ -650,9 +696,12 @@ export default function BrandTasksPage() {
               <textarea className="sabi-input resize-none text-sm" rows={3} placeholder="e.g. Missing deliverables, doesn't meet brief requirements..."
                 value={rejectReason} onChange={e => setRejectReason(e.target.value)} />
               <div className="flex gap-2 mt-4">
-                <button onClick={rejectTask} disabled={!rejectReason.trim()}
-                  className="flex-1 py-2 text-sm rounded-lg bg-red-500/15 border border-red-500/30 text-red-400 font-medium hover:bg-red-500/25 transition-all disabled:opacity-40">
-                  Send Back
+                <button
+                  onClick={rejectTask}
+                  disabled={!rejectReason.trim() || rejectTasking}
+                  className="flex-1 py-2 text-sm rounded-lg bg-red-500/15 border border-red-500/30 text-red-400 font-medium hover:bg-red-500/25 transition-all disabled:opacity-40"
+                >
+                  {rejectTasking ? 'Sending...' : 'Send Back'}
                 </button>
                 <button onClick={() => { setRejectingId(null); setRejectReason(''); }}
                   className="px-4 py-2 text-sm text-white/40 hover:text-white transition-colors">
