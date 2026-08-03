@@ -23,10 +23,9 @@
 
 'use strict';
 
-const express       = require('express');
 const router        = express.Router();
-const { authenticate }    = require('../middleware/auth');
-const { sendSuccess, sendError } = require('../utils/response');
+const { authenticate }    = require('../middleware/auth.middleware');
+const { sendSuccess, sendError } = require('');
 const inv           = require('../services/invoice.service');
 const finEmail      = require('../services/finance-email.service');
 const { supabase }  = require('../config/supabase');

@@ -188,6 +188,8 @@ export default function ImportTasksModal({ open, onClose }: ImportTasksModalProp
 
   const handleClose = () => { reset(); onClose(); };
 
+  console.log('from import task ', brands)
+
   useEffect(() => {
     if (!open) return;
 

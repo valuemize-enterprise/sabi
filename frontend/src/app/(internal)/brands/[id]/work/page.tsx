@@ -10,6 +10,9 @@ import {
 import { workLogs, goals as goalsApi } from '@/lib/api';
 import { useAgencyStore } from '@/lib/store';
 import { LoadingPage, EmptyState, Badge } from '@/components/ui';
+import { ProofLinksInput } from '@/components/internal/ProofLinksInput';
+import toast from 'react-hot-toast';
+import { ProofLink } from '@/lib/permissions';
 
 const CATEGORIES = [
   { value: 'strategy', label: 'Strategy & Planning', icon: '📊' },
@@ -27,7 +30,7 @@ const CATEGORIES = [
 
 const catInfo = (v: string) => CATEGORIES.find(c => c.value === v);
 
-const EMPTY_FORM = { category: '', title: '', description: '', goal_id: '', hours: '' };
+const EMPTY_FORM = { category: '', title: '', description: '', goal_id: '', hours: '', proof_links: [] as ProofLink[] };
 
 export default function BrandWorkPage() {
   const { id: brandId } = useParams<{ id: string }>();
@@ -41,6 +44,8 @@ export default function BrandWorkPage() {
   const [files, setFiles] = useState<File[]>([]);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
+  const [proofLinks, setProofLinks] = useState<ProofLink[]>([]);
+  const [showProofLinks, setShowProofLinks] = useState(false);
   const [period, setPeriod] = useState<'week' | 'month' | 'all'>('month');
   const router = useRouter();
 
@@ -61,6 +66,8 @@ export default function BrandWorkPage() {
     if (!form.category) { setError('Please select a work type'); return; }
     if (!form.title) { setError('Please describe what you did'); return; }
     setSaving(true); setError('');
+
+    console.log('Saving work log:', { ...form, proof_links: proofLinks, files });
     try {
       const res: any = await workLogs.create({
         brand_id: brandId,
@@ -69,6 +76,8 @@ export default function BrandWorkPage() {
         description: form.description || null,
         goal_id: form.goal_id || null,
         hours: parseFloat(form.hours) || 0,
+        proof_links: proofLinks,
+        evidence_files: files
       });
       setLogs(p => [res.data, ...p]);
       setForm({ ...EMPTY_FORM }); setFiles([]); setShowForm(false);
@@ -87,7 +96,26 @@ export default function BrandWorkPage() {
     return true;
   });
 
+
   const totalHours = visible.reduce((s, l) => s + (l.hours ?? 0), 0);
+
+  const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const selected = Array.from(e.target.files ?? []);
+    const tooLarge = selected.filter(f => f.size > MAX_FILE_SIZE);
+    const okFiles = selected.filter(f => f.size <= MAX_FILE_SIZE);
+
+    if (tooLarge.length > 0) {
+      toast.error(
+        `${tooLarge.length} file${tooLarge.length !== 1 ? 's are' : ' is'} over 5MB. Please add a link below instead of uploading large files.`
+      );
+      setShowProofLinks(true); // auto-reveal the link input so they see where to go
+    }
+
+    setFiles(prev => [...prev, ...okFiles]);
+    e.target.value = ''; // allow re-selecting the same file if needed
+  };
 
   return (
     <div className="p-4 sm:p-6 max-w-3xl mx-auto">
@@ -153,8 +181,8 @@ export default function BrandWorkPage() {
                   {CATEGORIES.map(c => (
                     <button type="button" key={c.value} onClick={() => setF('category', c.value)}
                       className={`flex items-center gap-2.5 p-2.5 rounded-xl border text-left transition-all ${form.category === c.value
-                          ? 'border-purple-500/50 bg-purple-500/15'
-                          : 'border-white/5 hover:border-white/10'
+                        ? 'border-purple-500/50 bg-purple-500/15'
+                        : 'border-white/5 hover:border-white/10'
                         }`}>
                       <span className="text-base flex-shrink-0">{c.icon}</span>
                       <span className={`text-xs font-medium ${form.category === c.value ? 'text-purple-300' : 'text-white/60'}`}>
@@ -205,7 +233,7 @@ export default function BrandWorkPage() {
               {/* File attachment */}
               <div>
                 <label className="text-xs text-white/50 mb-1.5 block">
-                  Attach Evidence <span className="text-white/20">(optional)</span>
+                  Attach Evidence <span className="text-white/20">(optional, max 5MB per file)</span>
                 </label>
                 <label className={`flex items-center gap-3 p-3 rounded-xl border border-dashed cursor-pointer transition-all ${files.length ? 'border-purple-500/30 bg-purple-500/5' : 'border-white/10 hover:border-white/20'
                   }`}>
@@ -213,19 +241,28 @@ export default function BrandWorkPage() {
                   <span className="text-sm text-white/40">
                     {files.length ? `${files.length} file${files.length !== 1 ? 's' : ''} selected` : 'Click to attach files'}
                   </span>
-                  <input type="file" multiple className="sr-only"
-                    onChange={e => setFiles(Array.from(e.target.files ?? []))} />
+                  <input type="file" multiple className="sr-only" onChange={handleFileSelect} />
                 </label>
+
                 {files.map((f, i) => (
                   <div key={i} className="flex items-center gap-2 mt-1.5 text-xs text-white/40">
                     <FileText className="w-3.5 h-3.5 text-purple-400 flex-shrink-0" />
                     {f.name}
-                    <button type="button" onClick={() => setFiles(p => p.filter((_, j) => j !== i))}
-                      className="text-white/20 hover:text-red-400 ml-auto transition-colors">
+                    <span className="text-white/20">({(f.size / 1024 / 1024).toFixed(1)}MB)</span>
+                    <button
+                      type="button"
+                      onClick={() => setFiles(prev => prev.filter((_, j) => j !== i))}
+                      className="text-white/20 hover:text-red-400 ml-auto transition-colors"
+                    >
                       <X className="w-3 h-3" />
                     </button>
                   </div>
                 ))}
+              </div>
+
+              {/* ── PROOF LINKS ─────────────────────────────────────────── */}
+              <div>
+                <ProofLinksInput value={proofLinks} onChange={setProofLinks} />
               </div>
 
               <div className="flex gap-3 pt-1">
@@ -276,6 +313,24 @@ export default function BrandWorkPage() {
                     </div>
                     {l.description && (
                       <p className="text-xs text-white/35 mt-1.5 leading-relaxed">{l.description}</p>
+                    )}
+
+                    {/* ── Proof links ─────────────────────────────── */}
+                    {Array.isArray(l.proof_links) && l.proof_links.length > 0 && (
+                      <div className="flex items-center gap-2 mt-2 flex-wrap">
+                        {l.proof_links.map((p: any, j: number) => (
+                          <a
+                            key={j}
+                            href={p?.url || '#'}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex items-center gap-1 text-xs text-purple-400/70 hover:text-purple-300 transition-colors bg-purple-500/5 border border-purple-500/15 rounded-md px-2 py-1"
+                          >
+                            <Paperclip className="w-3 h-3" />
+                            {p?.label || p?.url || 'Proof link'}
+                          </a>
+                        ))}
+                      </div>
                     )}
                   </div>
                 </div>

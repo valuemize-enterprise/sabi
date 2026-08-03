@@ -216,6 +216,8 @@ export default function ImportTasksPage() {
   const [brandsLoading, setBrandsLoading] = useState(true);
   const fileRef = useRef<HTMLInputElement>(null);
 
+  console.log('brands', brands)
+
   // Fetch brands on mount
   useEffect(() => {
     authFetch('/api/task-import/brands')

@@ -14,30 +14,38 @@
  * verification pipeline just like tasks created in the UI.
  */
 
-'use strict';
+"use strict";
 
 const supabase = require("../config/supabase");
 const notify = require("../services/notification-triggers.service");
 
-
-
- // ← adjust to your db helper path
+// ← adjust to your db helper path
 
 // ── Priority normalisation ────────────────────────────────────────
 // Maps every common spreadsheet value to Sabi's three priority levels.
 const PRIORITY_ALIASES = {
-  high:   ['high', 'urgent', 'critical', 'asap', 'h', '1', 'p1', 'p0', 'must'],
-  medium: ['medium', 'med', 'normal', 'moderate', 'mid', 'average', 'm', '2', 'p2'],
-  low:    ['low', 'minor', 'nice to have', 'whenever', 'l', '3', 'p3', 'p4'],
+  high: ["high", "urgent", "critical", "asap", "h", "1", "p1", "p0", "must"],
+  medium: [
+    "medium",
+    "med",
+    "normal",
+    "moderate",
+    "mid",
+    "average",
+    "m",
+    "2",
+    "p2",
+  ],
+  low: ["low", "minor", "nice to have", "whenever", "l", "3", "p3", "p4"],
 };
 
 function normalizePriority(raw) {
-  if (!raw) return 'medium';
+  if (!raw) return "medium";
   const v = String(raw).toLowerCase().trim();
   for (const [level, aliases] of Object.entries(PRIORITY_ALIASES)) {
     if (aliases.includes(v)) return level;
   }
-  return 'medium'; // safe default
+  return "medium"; // safe default
 }
 
 // ── Date parsing ─────────────────────────────────────────────────
@@ -47,7 +55,7 @@ function parseDate(raw) {
   if (!raw && raw !== 0) return null;
 
   // Excel serial number (e.g. 46253 = 2026-08-15)
-  if (typeof raw === 'number') {
+  if (typeof raw === "number") {
     try {
       // Excel epoch starts 1900-01-01 (with off-by-one quirk)
       const date = new Date(Date.UTC(1900, 0, raw - 1));
@@ -74,7 +82,9 @@ function parseDate(raw) {
   if (dmy) {
     const [, d, m, y] = dmy;
     const year = y.length === 2 ? `20${y}` : y;
-    const date = new Date(`${year}-${m.padStart(2, '0')}-${d.padStart(2, '0')}`);
+    const date = new Date(
+      `${year}-${m.padStart(2, "0")}-${d.padStart(2, "0")}`,
+    );
     if (!isNaN(date.getTime())) return date.toISOString().slice(0, 10);
   }
 
@@ -86,35 +96,39 @@ function parseDate(raw) {
 function normalizeTags(raw) {
   if (!raw) return [];
   if (Array.isArray(raw)) return raw.map(String).filter(Boolean);
-  return String(raw).split(/[,;|]/).map(t => t.trim()).filter(Boolean);
+  return String(raw)
+    .split(/[,;|]/)
+    .map((t) => t.trim())
+    .filter(Boolean);
 }
 
 // ── Permission check ─────────────────────────────────────────────
 async function isBrandAdminForBrand(userId, brandId) {
-  const { data } = await supabase.from('brand_admins')
-    .select('brand_id')
-    .eq('user_id', userId)
-    .eq('brand_id', brandId);
+  const { data } = await supabase
+    .from("brands")
+    .select("id, name")
+    .eq("account_manager_id", userId);
   return (data || []).length > 0;
 }
 
 // ── Get brands this user can import into ─────────────────────────
 async function getImportableBrands(caller) {
-  const isLeadership = ['super_admin', 'admin', 'md'].includes(caller.role);
+  const isLeadership = ["super_admin", "admin", "md"].includes(caller.role);
+  const { data: links } = await supabase
+    .from("brands")
+    .select("id, name")
+    .order("name")
+    .eq("account_manager_id", caller.id);
 
   if (isLeadership) {
-    const { data } = await supabase.from('brands')
-      .select('id, name').order('name');
+    const { data } = await supabase
+      .from("brands")
+      .select("id, name")
+      .order("name");
     return data || [];
   }
-
-  // Scoped to brands where user is brand_admin
-  const { data: links } = await supabase.from('brand_admins')
-    .select('brand:brands(id, name)')
-    .eq('user_id', caller.id);
-
   return (links || [])
-    .map(l => l.brand)
+    .map((l) => l)
     .filter(Boolean)
     .sort((a, b) => a.name.localeCompare(b.name));
 }
@@ -124,12 +138,14 @@ async function getImportableBrands(caller) {
 //   full name (case-insensitive), first name (if unique), email.
 async function resolveBrandUsers(brandId) {
   const [{ data: staffLinks }, { data: adminLinks }] = await Promise.all([
-    supabase.from('brand_staff')
-      .select('user:users(id, full_name, email)')
-      .eq('brand_id', brandId),
-    supabase.from('brand_admins')
-      .select('user:users(id, full_name, email)')
-      .eq('brand_id', brandId),
+    supabase
+      .from("brand_staff")
+      .select("user:users(id, full_name, email)")
+      .eq("brand_id", brandId),
+    supabase
+      .from("brand_admins")
+      .select("user:users(id, full_name, email)")
+      .eq("brand_id", brandId),
   ]);
 
   const seen = new Set();
@@ -141,17 +157,17 @@ async function resolveBrandUsers(brandId) {
     users.push(u);
   }
 
-  const nameMap  = new Map(); // lowercase full name → user_id
+  const nameMap = new Map(); // lowercase full name → user_id
   const firstMap = new Map(); // lowercase first name → user_id (only if unique)
   const emailMap = new Map(); // lowercase email → user_id
   const firstCount = new Map();
 
   for (const u of users) {
-    const full  = (u.full_name || '').toLowerCase().trim();
-    const first = full.split(' ')[0];
-    const email = (u.email || '').toLowerCase().trim();
+    const full = (u.full_name || "").toLowerCase().trim();
+    const first = full.split(" ")[0];
+    const email = (u.email || "").toLowerCase().trim();
 
-    if (full)  nameMap.set(full, u.id);
+    if (full) nameMap.set(full, u.id);
     if (email) emailMap.set(email, u.id);
 
     // Track first-name collisions so we don't misattribute
@@ -163,10 +179,11 @@ async function resolveBrandUsers(brandId) {
     resolve(raw) {
       if (!raw) return null;
       const key = String(raw).toLowerCase().trim();
-      if (nameMap.has(key))  return nameMap.get(key);
+      if (nameMap.has(key)) return nameMap.get(key);
       if (emailMap.has(key)) return emailMap.get(key);
-      const first = key.split(' ')[0];
-      if ((firstCount.get(first) || 0) === 1) return firstMap.get(first) || null;
+      const first = key.split(" ")[0];
+      if ((firstCount.get(first) || 0) === 1)
+        return firstMap.get(first) || null;
       return null;
     },
     userCount: users.length,
@@ -177,17 +194,17 @@ async function resolveBrandUsers(brandId) {
 async function bulkImportTasks({ brandId, tasks, callerId, callerName }) {
   const resolver = await resolveBrandUsers(brandId);
 
-  const toInsert  = [];
-  const warnings  = [];
-  const skipped   = [];
+  const toInsert = [];
+  const warnings = [];
+  const skipped = [];
 
   for (let i = 0; i < tasks.length; i++) {
     const t = tasks[i];
     const rowNum = i + 1;
 
-    const title = (t.title || '').trim();
+    const title = (t.title || "").trim();
     if (!title) {
-      skipped.push({ row: rowNum, reason: 'No task title' });
+      skipped.push({ row: rowNum, reason: "No task title" });
       continue;
     }
 
@@ -203,15 +220,15 @@ async function bulkImportTasks({ brandId, tasks, callerId, callerName }) {
     }
 
     toInsert.push({
-      brand_id:    brandId,
+      brand_id: brandId,
       title,
-      description: (t.description || '').trim() || null,
-      status:      'todo',
-      priority:    normalizePriority(t.priority),
-      due_date:    parseDate(t.due_date),
+      description: (t.description || "").trim() || null,
+      status: "todo",
+      priority: normalizePriority(t.priority),
+      due_date: parseDate(t.due_date),
       assignee_id,
-      created_by:  callerId,
-      tags:        normalizeTags(t.tags),
+      created_by: callerId,
+      tags: normalizeTags(t.tags),
     });
   }
 
@@ -226,9 +243,12 @@ async function bulkImportTasks({ brandId, tasks, callerId, callerName }) {
     };
   }
 
-  const { data, error } = await supabase.from('tasks')
+  const { data, error } = await supabase
+    .from("tasks")
     .insert(toInsert)
-    .select('id, title, assignee_id, priority, due_date, status, brand_id, strategy_id');
+    .select(
+      "id, title, assignee_id, priority, due_date, status, brand_id, strategy_id",
+    );
 
   if (error) throw new Error(`Database insert failed: ${error.message}`);
 
@@ -236,16 +256,16 @@ async function bulkImportTasks({ brandId, tasks, callerId, callerName }) {
   // Don't await sequentially — fire in parallel, and don't let a notify
   // failure block the response (safe() already swallows errors internally).
   (data || [])
-    .filter(task => task.assignee_id)
-    .forEach(task => notify.onTaskAssigned(task, callerName));
+    .filter((task) => task.assignee_id)
+    .forEach((task) => notify.onTaskAssigned(task, callerName));
 
   return {
-    created:         (data || []).length,
-    warnings:        warnings.length,
-    skipped:         skipped.length,
-    tasks_created:   data || [],
+    created: (data || []).length,
+    warnings: warnings.length,
+    skipped: skipped.length,
+    tasks_created: data || [],
     warnings_detail: warnings,
-    skipped_detail:  skipped,
+    skipped_detail: skipped,
   };
 }
 

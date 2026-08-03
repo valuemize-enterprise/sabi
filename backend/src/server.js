@@ -110,6 +110,10 @@ const pipelineRouter = require('./routes/pipeline.routes');
 const commandCentreRouter = require('./routes/command-centre.routes');
 const weeklyReportRouter = require('./routes/weekly-report.routes');
 const pipelinePhase3Router = require('./routes/pipeline-phase3.routes');
+// platform connect routes
+
+const platformRouter = require('./routes/platform-connect.routes');
+
 
 
 
@@ -260,6 +264,7 @@ app.use('/api/task-import', taskImportRouter);
 app.use('/api/goals', goalRouter);
 
 app.use('/api/finance', financeP2);
+app.use('/api/platforms', platformRouter);
 
 
 

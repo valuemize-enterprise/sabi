@@ -61,18 +61,31 @@ export default function MyWorkPage() {
 
   useEffect(() => {
     Promise.all([
-      apiFetch('/api/agency/brands/brandlist').catch(() => ({ data: [] })),
-      apiFetch('/api/agency/work-logs?limit=100').catch(() => ({ data: [] })),
-    ]).then(([b, l]) => {
-      setMyBrands(b.data ?? []);
-      setLogs(l.data ?? []);
-    })
+      apiFetch('/api/agency/brands/brandlist').catch((err) => {
+        console.error('Failed to load brands:', err);
+        return { data: [] };
+      }),
+      apiFetch('/api/agency/work-logs?limit=100').catch((err) => {
+        console.error('Failed to load work logs:', err);
+        return { data: [] };
+      }),
+    ])
+      .then(([b, l]) => {
+        setMyBrands(b.data ?? []);
+        setLogs(l.data ?? []);
+      })
       .finally(() => setLoading(false));
 
     apiFetch('/api/agency/contribution-claims/mine')
-      .then((r: any) => { setMyClaims(r.data?.claims ?? []); setWeekClaimCount(r.data?.thisWeekCount ?? 0); })
-      .catch(() => { });
+      .then((r: any) => {
+        setMyClaims(r.data?.claims ?? []);
+        setWeekClaimCount(r.data?.thisWeekCount ?? 0);
+      })
+      .catch((err) => {
+        console.error('Failed to load contribution claims:', err);
+      });
   }, []);
+
 
   // Load goals + strategies when brand changes
   useEffect(() => {
@@ -81,6 +94,7 @@ export default function MyWorkPage() {
       goalsApi.list({ brand_id: form.brand_id, status: 'active', limit: '20' }),
       stratApi.list({ brand_id: form.brand_id, status: 'active', limit: '10' }),
     ]).then(([gr, sr]: any) => {
+
       setBrandGoals(gr.data ?? []);
       setBrandStrats(sr.data ?? []);
     }).catch(() => { });
@@ -123,7 +137,7 @@ export default function MyWorkPage() {
     } catch (err: any) { setError(err.message || 'Failed to save'); }
     finally { setSaving(false); }
   };
-  
+
 
   const submitClaim = async () => {
     if (!claimForm.brand_id || !claimForm.title || !claimForm.description || !claimForm.beneficiary) { setError('All fields are required'); return; }
@@ -247,7 +261,9 @@ export default function MyWorkPage() {
                     {brandStrategies.map(s => (
                       <StrategyCard key={s.id} strategy={s} compact
                         selected={form.strategy_id === s.id}
-                        onClick={() => setF('strategy_id', form.strategy_id === s.id ? '' : s.id)} />
+                        onClick={() => {
+                          setF('strategy_id', form.strategy_id === s.id ? '' : s.id)
+                        }} />
                     ))}
                   </div>
                   {selectedStrategy && (
@@ -361,7 +377,7 @@ export default function MyWorkPage() {
                 <label className="text-xs text-white/50 mb-1.5 block">What did you do? *</label>
                 <input className="sabi-input" required
                   placeholder="e.g. Created July content calendar with 30 posts"
-                  value={claimForm.title} onChange={e => setClaimForm(p => ({ ...p, title: e.target.value }))}/>
+                  value={claimForm.title} onChange={e => setClaimForm(p => ({ ...p, title: e.target.value }))} />
               </div>
 
 

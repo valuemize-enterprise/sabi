@@ -22,8 +22,8 @@
 
 const express = require('express');
 const router  = express.Router();
-const { authenticate } = require('../middleware/auth');
-const { sendSuccess, sendError } = require('../utils/response');
+const { authenticate } = require('../middleware/auth.middleware');
+const { sendSuccess, sendError } = require('../utils/response.utils');
 const inv = require('../services/invoices.service');
 
 const canAccess = (user) => inv.FINANCE_ROLES.has(user?.role) || user?.role === 'brand_admin';

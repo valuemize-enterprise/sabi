@@ -33,7 +33,7 @@ router.get('/', authenticate, async (req, res, next) => {
       .from('work_logs')
       .select(`
         id, title, description, category, hours,
-        evidence_files, created_at, updated_at,
+        evidence_files, created_at, updated_at, proof_links,
         brand_id, goal_id, user_id,
         brands  ( id, name, primary_color ),
         goals   ( id, title, metric_type, unit ),
@@ -76,7 +76,7 @@ router.get('/', authenticate, async (req, res, next) => {
 // ── POST /api/agency/work-logs ────────────────────────────────
 router.post('/', authenticate, async (req, res, next) => {
   try {
-    const { brand_id, category, title, description, goal_id, hours, evidence_files } = req.body;
+    const { brand_id, category, title, description, goal_id, hours, evidence_files, proof_links } = req.body;
 
     if (!brand_id)  return sendError(res, 400, 'brand_id is required');
     if (!title)     return sendError(res, 400, 'title is required');
@@ -100,9 +100,10 @@ router.post('/', authenticate, async (req, res, next) => {
         goal_id:        goal_id || null,
         hours:          parseFloat(hours) || 0,
         evidence_files: evidence_files || [],
+        proof_links:    proof_links || [],
       })
       .select(`
-        id, title, description, category, hours,
+        id, title, description, category, hours, proof_links,
         evidence_files, created_at,
         brands ( id, name ),
         goals  ( id, title ),
@@ -136,7 +137,7 @@ router.put('/:id', authenticate, async (req, res, next) => {
       return sendError(res, 403, 'You can only edit your own work logs');
     }
 
-    const allowed = ['title','description','category','hours','goal_id','evidence_files'];
+    const allowed = ['title','description','category','hours','goal_id','evidence_files','proof_links'];
     const updates = {};
     allowed.forEach(k => { if (req.body[k] !== undefined) updates[k] = req.body[k]; });
     updates.updated_at = new Date().toISOString();
