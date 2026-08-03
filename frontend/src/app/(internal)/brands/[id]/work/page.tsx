@@ -67,19 +67,35 @@ export default function BrandWorkPage() {
     if (!form.title) { setError('Please describe what you did'); return; }
     setSaving(true); setError('');
 
-    console.log('Saving work log:', { ...form, proof_links: proofLinks, files });
+    const formData = new FormData();
+
+    formData.append("brand_id", brandId);
+    formData.append("category", form.category);
+    formData.append("title", form.title);
+    formData.append("description", form.description || "");
+    formData.append("goal_id", form.goal_id || "");
+    formData.append("hours", String(parseFloat(form.hours) || 0));
+
+  const proofLinksJson = JSON.stringify(proofLinks);
+  formData.append("proof_links", proofLinksJson);
+
+    files.forEach(file => {
+      formData.append("evidence_files", file);
+    });
+
     try {
-      const res: any = await workLogs.create({
-        brand_id: brandId,
-        category: form.category,
-        title: form.title,
-        description: form.description || null,
-        goal_id: form.goal_id || null,
-        hours: parseFloat(form.hours) || 0,
-        proof_links: proofLinks,
-        evidence_files: files
-      });
-      setLogs(p => [res.data, ...p]);
+      const res: any = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/agency/work-logs`, {
+        headers: { Authorization: `Bearer ${localStorage.getItem('sabi_token')}` },
+        method: "POST",
+        body: formData,
+    });
+      if (!res.ok) {
+        const error = await res.json().catch(() => null);
+        throw new Error(error?.message || "Failed to save");
+      }
+
+      const data = await res.json();
+      setLogs(prev => [data.data, ...prev]);
       setForm({ ...EMPTY_FORM }); setFiles([]); setShowForm(false);
     } catch (err: any) { setError(err.message || 'Failed to save'); }
     finally { setSaving(false); }
@@ -328,6 +344,22 @@ export default function BrandWorkPage() {
                           >
                             <Paperclip className="w-3 h-3" />
                             {p?.label || p?.url || 'Proof link'}
+                          </a>
+                        ))}
+                      </div>
+                    )}
+                    {Array.isArray(l.evidence_files) && l.evidence_files.length > 0 && (
+                      <div className="flex items-center gap-2 mt-2 flex-wrap">
+                        {l.evidence_files.map((f: any, j: number) => (
+                          <a
+                            key={j}
+                            href={f?.url || '#'}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex items-center gap-1 text-xs text-purple-400/70 hover:text-purple-300 transition-colors bg-purple-500/5 border border-purple-500/15 rounded-md px-2 py-1"
+                          >
+                            <Paperclip className="w-3 h-3" />
+                            {f?.name || f?.url || 'Evidence file'}
                           </a>
                         ))}
                       </div>

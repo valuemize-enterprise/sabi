@@ -374,7 +374,7 @@ export const deliverables = {
 
 export const workLogs = {
   list:   (params?: Record<string,string>) => agFetch(`/api/agency/work-logs?${new URLSearchParams(params)}`),
-  create: (data: any) => agFetch('/api/agency/work-logs', { method:'POST', body: JSON.stringify(data) }),
+  create: (data: any) => agFetch('/api/agency/work-logs', { method:'POST', body: data }),
   update: (id: string, data: any) => agFetch(`/api/agency/work-logs/${id}`, { method:'PUT', body: JSON.stringify(data) }),
   delete: (id: string) => agFetch(`/api/agency/work-logs/${id}`, { method:'DELETE' }),
 };

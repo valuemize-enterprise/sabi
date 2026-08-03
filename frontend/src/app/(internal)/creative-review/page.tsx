@@ -120,6 +120,16 @@ export default function CreativeReviewPage() {
                               ))}
                             </div>
                           )}
+                          {(e.evidence_files ?? []).length > 0 && (
+                            <div className="flex flex-wrap gap-2 mt-2">
+                              {e.evidence_files.map((file: any, i: number) => (
+                                <a key={i} href={file.original_url} target="_blank" rel="noopener noreferrer"
+                                  className="flex items-center gap-1 text-xs px-2 py-1 rounded-lg bg-white/5 border border-white/10 text-white/50 hover:text-white transition-all">
+                                  {file.name} <ExternalLink className="w-3 h-3"/>
+                                </a>
+                              ))}
+                            </div>
+                          )}
                         </div>
                       ))}
                     </div>

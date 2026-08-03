@@ -16,12 +16,24 @@ const supabase        = require('../../config/supabase');
 const { authenticate } = require('../../middleware/auth.middleware');
 const { sendSuccess, sendError, sendPaginated } = require('../../utils/response.utils');
 const { auditLog }    = require('../../middleware/logger.middleware');
+const multer   = require('multer');
 
 const VALID_CATEGORIES = [
   'strategy', 'content_copy', 'design', 'social_media',
   'analytics', 'video', 'community', 'client_comms',
   'ads', 'seo', 'other',
 ];
+
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 5 * 1024 * 1024 },
+  fileFilter: (req, file, cb) => {
+    if (!file.mimetype.startsWith('image/')) {
+      return cb(new Error('Only image files are allowed'));
+    }
+    cb(null, true);
+  },
+});
 
 // ── GET /api/agency/work-logs ─────────────────────────────────
 router.get('/', authenticate, async (req, res, next) => {
@@ -74,13 +86,14 @@ router.get('/', authenticate, async (req, res, next) => {
 });
 
 // ── POST /api/agency/work-logs ────────────────────────────────
-router.post('/', authenticate, async (req, res, next) => {
+router.post('/', authenticate, upload.array("evidence_files"), async (req, res, next) => {
   try {
-    const { brand_id, category, title, description, goal_id, hours, evidence_files, proof_links } = req.body;
-
-    if (!brand_id)  return sendError(res, 400, 'brand_id is required');
-    if (!title)     return sendError(res, 400, 'title is required');
-    if (!category)  return sendError(res, 400, 'category is required');
+    const evidenceFiles = req.files || [];
+    const { brand_id, category, title, description, goal_id, hours, proof_links } = req.body;
+    
+    if (!brand_id) return sendError(res, 400, 'brand_id is required');
+    if (!title) return sendError(res, 400, 'title is required');
+    if (!category) return sendError(res, 400, 'category is required');
     if (!VALID_CATEGORIES.includes(category)) {
       return sendError(res, 400, `category must be one of: ${VALID_CATEGORIES.join(', ')}`);
     }
@@ -89,25 +102,73 @@ router.post('/', authenticate, async (req, res, next) => {
       return sendError(res, 403, 'Super admin cannot create work logs');
     }
 
+    // Upload files and get processed Supabase image URLs
+    let uploadedFiles = [];
+    if (evidenceFiles.length > 0) {
+      uploadedFiles = await Promise.all(
+        evidenceFiles.map(async (file) => {
+          const filePath = `evidence/${brand_id}/${crypto.randomUUID()}-${file.originalname}`;
+
+          const { error } = await supabase.storage
+            .from("logs_files")
+            .upload(filePath, file.buffer, {
+              contentType: file.mimetype,
+            });
+
+          if (error) throw error;
+
+          const { data: urlData } = supabase.storage
+            .from("logs_files")
+            .getPublicUrl(filePath);
+
+          const processedUrl = `${urlData.publicUrl}?width=800&height=800&resize=fit&quality=80`;
+
+          return {
+            path: filePath,
+            name: file.originalname,
+            size: file.size,
+            type: file.mimetype,
+            url: processedUrl,
+            original_url: urlData.publicUrl
+          };
+        })
+      );
+    }
+
+    // Parse proof_links - now expecting JSON string of ProofLink objects
+    let parsedProofLinks = [];
+    if (proof_links) {
+      try {
+        parsedProofLinks = JSON.parse(proof_links);
+        // Ensure it's an array
+        if (!Array.isArray(parsedProofLinks)) {
+          parsedProofLinks = [parsedProofLinks];
+        }
+      } catch (e) {
+        console.error('Failed to parse proof_links:', e);
+        parsedProofLinks = [];
+      }
+    }
+
     const { data, error } = await supabase
       .from('work_logs')
       .insert({
         brand_id,
-        user_id:        req.user.role !== 'super_admin' ? req.user.id : null,
+        user_id: req.user.role !== 'super_admin' ? req.user.id : null,
         category,
-        title:          title.trim(),
-        description:    description || null,
-        goal_id:        goal_id || null,
-        hours:          parseFloat(hours) || 0,
-        evidence_files: evidence_files || [],
-        proof_links:    proof_links || [],
+        title: title.trim(),
+        description: description || null,
+        goal_id: goal_id || null,
+        hours: parseFloat(hours) || 0,
+        evidence_files: uploadedFiles,
+        proof_links: parsedProofLinks, // Now stores the full ProofLink objects
       })
       .select(`
         id, title, description, category, hours, proof_links,
         evidence_files, created_at,
         brands ( id, name ),
-        goals  ( id, title ),
-        users  ( id, full_name, role )
+        goals ( id, title ),
+        users ( id, full_name, role )
       `)
       .single();
 
