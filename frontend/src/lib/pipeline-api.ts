@@ -14,9 +14,41 @@ export type PipelineStage =
   | 'under_review'
   | 'negotiating'
   | 'won'
-  | 'lost_paused';
+  | 'lost_paused'
+  | 'introduction'
+  | 'proposal'
+  | 'pitch'
+  | 'second_pitch'
+  | 'decision'
+  | 'agreement'
+  | 'onboarded';
 
 export type ServiceType = 'digital' | 'pr' | 'strategy' | 'activation' | 'experiential';
+
+export type ServiceScope =
+  | 'brand_strategy'
+  | 'digital'
+  | 'social'
+  | 'content'
+  | 'pr'
+  | 'creative'
+  | 'media'
+  | 'activation'
+  | 'experiential';
+
+export type Industry =
+  | 'finance'
+  | 'retail'
+  | 'fmcg'
+  | 'real_estate'
+  | 'technology'
+  | 'healthcare'
+  | 'education'
+  | 'hospitality'
+  | 'fashion'
+  | 'other';
+
+export type DealType = 'retainer' | 'campaign' | 'project';
 
 export type OpportunitySource =
   | 'inbound'
@@ -41,11 +73,21 @@ export interface Opportunity {
   deal_title: string;
   description?: string;
   service_types: ServiceType[];
+  service_scope?: ServiceScope[];
   source?: OpportunitySource;
   stage: PipelineStage;
   stage_changed_at: string;
   days_in_stage: number;
   staleness: Staleness;
+  deal_type?: DealType;
+  industry?: Industry;
+  contact_name?: string;
+  contact_position?: string;
+  contact_email?: string;
+  contact_phone?: string;
+  retainer_monthly_amount?: number;
+  retainer_duration_months?: number;
+  campaign_total_amount?: number;
   estimated_value?: number;
   date_briefed?: string;
   client_deadline?: string;
@@ -245,6 +287,13 @@ export const STAGE_LABELS: Record<PipelineStage, string> = {
   negotiating: 'Negotiating',
   won: 'Won',
   lost_paused: 'Lost / Paused',
+  introduction: 'Introduction',
+  proposal: 'Proposal',
+  pitch: 'Pitch',
+  second_pitch: 'Second Pitch',
+  decision: 'Decision',
+  agreement: 'Agreement',
+  onboarded: 'Onboarded',
 };
 
 export const STAGE_ORDER: PipelineStage[] = [
@@ -255,6 +304,13 @@ export const STAGE_ORDER: PipelineStage[] = [
   'negotiating',
   'won',
   'lost_paused',
+  'introduction',
+  'proposal',
+  'pitch',
+  'second_pitch',
+  'decision',
+  'agreement',
+  'onboarded',
 ];
 
 export const STAGE_COLOURS: Record<PipelineStage, { bg: string; text: string; border: string }> = {
@@ -265,6 +321,13 @@ export const STAGE_COLOURS: Record<PipelineStage, { bg: string; text: string; bo
   negotiating:   { bg: 'rgba(16,185,129,0.12)',  text: '#34d399', border: 'rgba(16,185,129,0.25)' },
   won:           { bg: 'rgba(52,211,153,0.15)',  text: '#10b981', border: 'rgba(16,185,129,0.4)' },
   lost_paused:   { bg: 'rgba(239,68,68,0.08)',   text: '#f87171', border: 'rgba(239,68,68,0.2)' },
+  introduction: { bg: 'rgba(148,163,184,0.12)', text: '#94a3b8', border: 'rgba(148,163,184,0.25)' },
+  proposal:     { bg: 'rgba(59,130,246,0.12)',  text: '#60a5fa', border: 'rgba(59,130,246,0.25)' },
+  pitch:        { bg: 'rgba(168,85,247,0.12)',  text: '#c084fc', border: 'rgba(168,85,247,0.25)' },
+  second_pitch: { bg: 'rgba(245,158,11,0.12)',  text: '#fbbf24', border: 'rgba(245,158,11,0.25)' },
+  decision:     { bg: 'rgba(16,185,129,0.12)',  text: '#34d399', border: 'rgba(16,185,129,0.25)' },
+  agreement:    { bg: 'rgba(52,211,153,0.15)',  text: '#10b981', border: 'rgba(16,185,129,0.4)' },
+  onboarded:    { bg: 'rgba(20,184,166,0.12)',  text: '#2dd4bf', border: 'rgba(20,184,166,0.35)' },
 };
 
 export const STALENESS_COLOURS: Record<Staleness, string> = {
@@ -274,11 +337,42 @@ export const STALENESS_COLOURS: Record<Staleness, string> = {
 };
 
 export const SERVICE_TYPE_LABELS: Record<ServiceType, string> = {
-  digital:     'Digital',
-  pr:          'PR',
-  strategy:    'Strategy',
-  activation:  'Activation',
-  experiential:'Experiential',
+  digital:      'Digital',
+  pr:           'PR',
+  strategy:     'Strategy',
+  activation:   'Activation',
+  experiential: 'Experiential',
+};
+
+export const SERVICE_SCOPE_LABELS: Record<ServiceScope, string> = {
+  brand_strategy: 'Brand Strategy',
+  digital:        'Digital',
+  social:         'Social',
+  content:        'Content',
+  pr:             'PR',
+  creative:       'Creative',
+  media:          'Media',
+  activation:     'Activation',
+  experiential:   'Experiential',
+};
+
+export const INDUSTRY_LABELS: Record<Industry, string> = {
+  finance:      'Finance',
+  retail:       'Retail',
+  fmcg:         'FMCG',
+  real_estate:  'Real Estate',
+  technology:   'Technology',
+  healthcare:   'Healthcare',
+  education:    'Education',
+  hospitality:  'Hospitality',
+  fashion:      'Fashion',
+  other:        'Other',
+};
+
+export const DEAL_TYPE_LABELS: Record<DealType, string> = {
+  retainer: 'Retainer',
+  campaign: 'Campaign',
+  project:  'Project',
 };
 
 export const SOURCE_LABELS: Record<OpportunitySource, string> = {

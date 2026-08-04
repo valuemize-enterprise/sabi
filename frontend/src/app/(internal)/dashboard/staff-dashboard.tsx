@@ -13,6 +13,7 @@ import { isGlobalAdmin } from '@/lib/permissions';
 import { StrategyCard } from '@/components/internal/StrategyCard';
 import { StatCard } from '@/components/ui';
 import StaffRequestLeave from '@/components/Staffrequestleave';
+import { DashboardPursuitWidget } from '@/components/book-of-deals/DashboardPursuitWidget';
 import { handleError, formatErrorMessage } from '@/lib/errorHandler';
 import { safeApiCall } from '@/lib/safeRequest';
 import toast from 'react-hot-toast';
@@ -199,6 +200,9 @@ export default function StaffDashboard() {
       </div>
       {/* Greeting */}
 
+      <div className="mb-8">
+        <DashboardPursuitWidget />
+      </div>
 
       {/* Stats */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">

@@ -36,6 +36,7 @@ const C = {
   amber: "#b45309", // admin / MD
   indigo: "#4338ca", // brand admin
   green: "#059669", // client
+  mint: "#10b981", // leave / confirmation
   red: "#b91c1c", // super admin / disciplinary
   gold: "#c58a1a", // celebration
 };
@@ -1316,6 +1317,127 @@ T.leave_request = (d) => ({
       ) +
       cta("Decide in People OS →", `${APP}/people?tab=leave`, C.indigo),
     `Leave request from ${d.staffName}`,
+  ),
+});
+
+// 37b · Leave request submitted — leadership heads-up
+T.leave_request_submitted = (d) => ({
+  category: "people",
+  tone: "informational",
+  subject: `🏖 Leave Request — ${d.staffName} (${d.daysCount} day${Number(d.daysCount) !== 1 ? "s" : ""})`,
+  preheader: `${d.staffName} has requested ${d.leaveType} leave from ${d.startDate} to ${d.endDate}.`,
+  html: base(
+    C.indigo,
+    "🏖️",
+    "Leave Request Submitted",
+    esc(d.staffName),
+    greeting(d.recipientName || d.name) +
+      p(
+        `<strong>${esc(d.staffName)}</strong> <span style="color:#64748b;">(${esc(d.staffRole || "Staff")})</span> has submitted a leave request that needs review.`,
+      ) +
+      `<table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:24px 0;">
+        <tr>
+          <td style="background: rgba(109,40,217,0.08); border: 1px solid rgba(109,40,217,0.22); border-radius: 10px; padding: 20px 22px;">
+            <table width="100%" cellpadding="0" cellspacing="0" border="0">
+              <tr>
+                <td colspan="3" style="padding-bottom:14px; border-bottom:1px solid rgba(255,255,255,0.06);">
+                  <p style="margin:0 0 4px; font-family:'JetBrains Mono',monospace; font-size:10px; letter-spacing:.1em; text-transform:uppercase; color:#64748b;">Leave Type</p>
+                  <p style="margin:0; font-family:'Space Grotesk',sans-serif; font-size:16px; font-weight:800; color:#c4b5fd;">${esc(d.leaveType)} Leave</p>
+                </td>
+              </tr>
+              <tr>
+                <td width="40%" style="padding-top:14px; padding-right:12px; vertical-align:top;">
+                  <p style="margin:0 0 3px; font-family:'JetBrains Mono',monospace; font-size:10px; letter-spacing:.08em; text-transform:uppercase; color:#64748b;">From</p>
+                  <p style="margin:0; font-family:'Space Grotesk',sans-serif; font-size:14px; font-weight:700; color:#f1f5f9;">${esc(d.startDate)}</p>
+                </td>
+                <td width="20%" style="padding-top:14px; text-align:center; vertical-align:middle;">
+                  <p style="margin:0; font-family:'JetBrains Mono',monospace; font-size:18px; color:#374151;">→</p>
+                </td>
+                <td width="40%" style="padding-top:14px; padding-left:12px; vertical-align:top;">
+                  <p style="margin:0 0 3px; font-family:'JetBrains Mono',monospace; font-size:10px; letter-spacing:.08em; text-transform:uppercase; color:#64748b;">To</p>
+                  <p style="margin:0; font-family:'Space Grotesk',sans-serif; font-size:14px; font-weight:700; color:#f1f5f9;">${esc(d.endDate)}</p>
+                </td>
+              </tr>
+              <tr>
+                <td colspan="3" style="padding-top:14px; border-top:1px solid rgba(255,255,255,0.06);">
+                  <table width="100%" cellpadding="0" cellspacing="0" border="0">
+                    <tr>
+                      <td width="50%" style="vertical-align:top;">
+                        <p style="margin:0 0 3px; font-family:'JetBrains Mono',monospace; font-size:10px; letter-spacing:.08em; text-transform:uppercase; color:#64748b;">Duration</p>
+                        <p style="margin:0; font-family:'Space Grotesk',sans-serif; font-size:20px; font-weight:800; color:#10b981;">
+                          ${esc(String(d.daysCount))} <span style="font-size:14px; font-weight:400; color:#64748b;">day${Number(d.daysCount) !== 1 ? "s" : ""}</span>
+                        </p>
+                      </td>
+                      ${d.reason ? `<td width="50%" style="vertical-align:top; padding-left:16px; border-left:1px solid rgba(255,255,255,0.06);">
+                        <p style="margin:0 0 3px; font-family:'JetBrains Mono',monospace; font-size:10px; letter-spacing:.08em; text-transform:uppercase; color:#64748b;">Reason</p>
+                        <p style="margin:0; font-family:'Inter',sans-serif; font-size:13px; color:#cbd5e1; line-height:1.5;">${esc(d.reason)}</p>
+                      </td>` : ""}
+                    </tr>
+                  </table>
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+      </table>` +
+      cta("Review Leave Request in Sabi", d.reviewUrl || `${APP}/people?tab=leave`, C.indigo) +
+      p(
+        `Approve or decline this request in People OS → Leave. ` +
+        `Approving the request will update ${esc(d.staffName)}'s employment status to "On Leave" automatically on their first day.`,
+      ) +
+      p(
+        `<span style="font-size:12px; color:#64748b; font-style:italic;">You received this because you have HR, Super Admin, or MD access in Sabi.</span>`,
+      ),
+    `Leave request from ${d.staffName}`,
+  ),
+});
+
+// 37c · Leave request confirmation — to the requester
+T.leave_request_confirmed = (d) => ({
+  category: "people",
+  tone: "informational",
+  subject: `Your Leave Request Has Been Received`,
+  preheader: `We've received your ${d.leaveType} leave request (${d.daysCount} days). Pending HR approval.`,
+  html: base(
+    C.mint,
+    "✅",
+    "Leave Request Received",
+    "Pending approval",
+    greeting(d.recipientName || d.name) +
+      p(
+        `Your leave request has been submitted and is now pending approval from HR. ` +
+        `You will receive a notification as soon as it is reviewed.`,
+      ) +
+      `<table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:24px 0;">
+        <tr>
+          <td style="background: rgba(16,185,129,0.07); border: 1px solid rgba(16,185,129,0.22); border-radius: 10px; padding: 20px 22px;">
+            <table width="100%" cellpadding="0" cellspacing="0" border="0">
+              <tr>
+                <td width="33%" style="vertical-align:top; padding-right:10px;">
+                  <p style="margin:0 0 4px; font-family:'JetBrains Mono',monospace; font-size:10px; letter-spacing:.08em; text-transform:uppercase; color:#64748b;">Type</p>
+                  <p style="margin:0; font-family:'Space Grotesk',sans-serif; font-size:14px; font-weight:700; color:#f1f5f9;">${esc(d.leaveType)}</p>
+                </td>
+                <td width="33%" style="vertical-align:top; padding-right:10px;">
+                  <p style="margin:0 0 4px; font-family:'JetBrains Mono',monospace; font-size:10px; letter-spacing:.08em; text-transform:uppercase; color:#64748b;">Dates</p>
+                  <p style="margin:0; font-family:'Space Grotesk',sans-serif; font-size:13px; font-weight:600; color:#f1f5f9;">${esc(d.startDate)}</p>
+                  <p style="margin:2px 0 0; font-family:'JetBrains Mono',monospace; font-size:10px; color:#64748b;">to ${esc(d.endDate)}</p>
+                </td>
+                <td width="33%" style="vertical-align:top;">
+                  <p style="margin:0 0 4px; font-family:'JetBrains Mono',monospace; font-size:10px; letter-spacing:.08em; text-transform:uppercase; color:#64748b;">Duration</p>
+                  <p style="margin:0; font-family:'Space Grotesk',sans-serif; font-size:20px; font-weight:800; color:#10b981;">
+                    ${esc(String(d.daysCount))}<span style="font-size:13px; font-weight:400; color:#64748b;"> day${Number(d.daysCount) !== 1 ? "s" : ""}</span>
+                  </p>
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+      </table>` +
+      cta("View My Leave Requests", d.reviewUrl || `${APP}/people?tab=leave`, C.green) +
+      p(
+        `<span style="font-size:12px; color:#64748b; font-style:italic;">If your leave is urgent, contact your HR manager directly. Do not make travel or other arrangements until your request has been formally approved.</span>`,
+      ),
+    `Leave request received`,
   ),
 });
 

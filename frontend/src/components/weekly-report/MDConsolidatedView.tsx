@@ -12,6 +12,7 @@ import {
   formatWeekLabel,
   STATUS_COLOURS,
 } from '@/lib/weekly-report-api';
+import { WeekVsGoalPanel } from '@/components/agency-goals/WeekVsGoalPanel';
 
 interface MDConsolidatedViewProps {
   report: WeeklyReport | null;
@@ -213,6 +214,11 @@ export function MDConsolidatedView({
               Click "Generate Briefing" to get ARIA's cross-brand intelligence summary for this week.
             </p>
           )}
+        </div>
+
+        {/* Week vs Goal panel */}
+        <div style={{ marginBottom: '28px' }}>
+          <WeekVsGoalPanel weekLabel={weekLabel} />
         </div>
 
         {/* Entries */}

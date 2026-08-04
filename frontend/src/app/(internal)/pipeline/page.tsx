@@ -13,8 +13,20 @@ import { ListView } from '@/components/pipeline/ListView';
 import { PipelineAnalytics } from '@/components/pipeline/PipelineAnalytics';
 import { AddOpportunityModal } from '@/components/pipeline/AddOpportunityModal';
 import { OpportunityDetailSlideOver } from '@/components/pipeline/OpportunityDetailSlideOver';
+import { PitchArchive, DebriefInsightsPanel } from '@/components/pipeline/PitchArchive';
+import { RevenueWaterfall } from '@/components/pipeline/RevenueWaterfall';
 
-type ViewMode = 'kanban' | 'list';
+const useUser = () => {
+  if (typeof window === 'undefined') return { role: 'md' };
+  try {
+    const u = JSON.parse(localStorage.getItem('sabi_user') || '{}');
+    return { role: u.role || 'md' };
+  } catch {
+    return { role: 'md' };
+  }
+};
+
+type ViewMode = 'kanban' | 'list' | 'analytics';
 
 export default function PipelinePage() {
   const [opportunities, setOpportunities] = useState<Opportunity[]>([]);
@@ -23,6 +35,8 @@ export default function PipelinePage() {
   const [loading, setLoading] = useState(true);
   const [analyticsLoading, setAnalyticsLoading] = useState(true);
   const [viewMode, setViewMode] = useState<ViewMode>('kanban');
+  const user = useUser();
+  const canViewAnalytics = ['super_admin', 'md', 'admin'].includes(user.role);
 
   // Modal state
   const [addModal, setAddModal] = useState<{ open: boolean; defaultStage: PipelineStage }>({
@@ -129,25 +143,27 @@ export default function PipelinePage() {
               padding: '3px',
             }}
           >
-            {(['kanban', 'list'] as ViewMode[]).map(mode => (
-              <button
-                key={mode}
-                onClick={() => setViewMode(mode)}
-                style={{
-                  padding: '5px 12px',
-                  borderRadius: '6px',
-                  fontSize: '12px',
-                  fontWeight: 600,
-                  cursor: 'pointer',
-                  border: 'none',
-                  fontFamily: 'Inter, sans-serif',
-                  background: viewMode === mode ? 'rgba(109,40,217,0.2)' : 'transparent',
-                  color: viewMode === mode ? '#c4b5fd' : '#64748b',
-                  transition: 'all .15s',
-                }}
-              >
-                {mode === 'kanban' ? '⊞ Kanban' : '☰ List'}
-              </button>
+            {(['kanban', 'list'] as ViewMode[])
+              .concat(canViewAnalytics ? ['analytics' as ViewMode] : [])
+              .map(mode => (
+                <button
+                  key={mode}
+                  onClick={() => setViewMode(mode)}
+                  style={{
+                    padding: '5px 12px',
+                    borderRadius: '6px',
+                    fontSize: '12px',
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                    border: 'none',
+                    fontFamily: 'Inter, sans-serif',
+                    background: viewMode === mode ? 'rgba(109,40,217,0.2)' : 'transparent',
+                    color: viewMode === mode ? '#c4b5fd' : '#64748b',
+                    transition: 'all .15s',
+                  }}
+                >
+                  {mode === 'kanban' ? '⊞ Kanban' : mode === 'list' ? '☰ List' : '◎ Analytics'}
+                </button>
             ))}
           </div>
 
@@ -225,11 +241,56 @@ export default function PipelinePage() {
           onCardClick={opp => setDetailId(opp.id)}
           onAddInStage={stage => setAddModal({ open: true, defaultStage: stage })}
         />
-      ) : (
+      ) : viewMode === 'list' ? (
         <ListView
           opportunities={opportunities}
           onRowClick={opp => setDetailId(opp.id)}
         />
+      ) : (
+        <div style={{ maxWidth: '1200px' }}>
+          <div style={{ marginBottom: '24px' }}>
+            <p style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: '10px', color: '#64748b', textTransform: 'uppercase', letterSpacing: '.1em', marginBottom: '6px' }}>
+              Pipeline Intelligence
+            </p>
+            <h2 style={{ fontFamily: 'Space Grotesk, sans-serif', fontSize: '20px', fontWeight: 800, color: '#f1f5f9' }}>
+              Revenue Waterfall Forecast
+            </h2>
+            <p style={{ fontSize: '13px', color: '#64748b', marginTop: '4px' }}>
+              Forward-looking revenue from active deals in three probability layers. Bars show when revenue is expected to land, not just the weighted total.
+            </p>
+          </div>
+
+          <div style={{ display: 'grid', gap: '24px' }}>
+            <div style={{
+              background: 'rgba(255,255,255,0.025)',
+              border: '1px solid rgba(255,255,255,0.07)',
+              borderRadius: '14px',
+              padding: '18px',
+            }}>
+              <RevenueWaterfall months={6} />
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 0.8fr', gap: '24px' }}>
+              <div style={{
+                background: 'rgba(255,255,255,0.025)',
+                border: '1px solid rgba(255,255,255,0.07)',
+                borderRadius: '14px',
+                padding: '18px',
+              }}>
+                <PitchArchive compact />
+              </div>
+
+              <div style={{
+                background: 'rgba(255,255,255,0.025)',
+                border: '1px solid rgba(255,255,255,0.07)',
+                borderRadius: '14px',
+                padding: '18px',
+              }}>
+                <DebriefInsightsPanel />
+              </div>
+            </div>
+          </div>
+        </div>
       )}
 
       {/* ── Add Opportunity Modal ────────────────────────────────── */}

@@ -207,11 +207,13 @@ const getLossPatterns = async () => {
  * Stage probability weights from the blueprint.
  */
 const STAGE_WEIGHTS = {
-  identified:    0.05,
-  in_progress:   0.15,
-  proposal_sent: 0.30,
-  under_review:  0.50,
-  negotiating:   0.70,
+  introduction: 0.05,
+  proposal: 0.15,
+  pitch: 0.30,
+  second_pitch: 0.50,
+  decision: 0.70,
+  agreement: 0.85,
+  onboarded: 1,
 };
 
 const getConversionForecast = async () => {
@@ -222,7 +224,7 @@ const getConversionForecast = async () => {
        COALESCE(SUM(estimated_value), 0)     AS raw_value,
        COUNT(*) FILTER (WHERE estimated_value IS NOT NULL) AS with_value_count
      FROM opportunities
-     WHERE stage NOT IN ('won', 'lost_paused')
+     WHERE stage NOT IN ('agreement', 'onboarded', 'lost_paused')
      GROUP BY stage`
   ).catch(() => ({ rows: [] }));
 
@@ -240,16 +242,16 @@ const getConversionForecast = async () => {
   });
 
   // Sort by stage order
-  const ORDER = ['identified', 'in_progress', 'proposal_sent', 'under_review', 'negotiating'];
+  const ORDER = ['introduction', 'proposal', 'pitch', 'second_pitch', 'decision'];
   stageData.sort((a, b) => ORDER.indexOf(a.stage) - ORDER.indexOf(b.stage));
 
   const totalWeightedValue = stageData.reduce((s, r) => s + r.weighted_value, 0);
   const totalRawValue = stageData.reduce((s, r) => s + r.raw_value, 0);
   const totalDeals = stageData.reduce((s, r) => s + r.deal_count, 0);
 
-  // High-confidence deals (negotiating only, 70%)
+  // High-confidence deals (decision only, 70%)
   const highConfidence = stageData
-    .filter(r => r.stage === 'negotiating')
+    .filter(r => r.stage === 'decision')
     .reduce((s, r) => s + r.weighted_value, 0);
 
   return {

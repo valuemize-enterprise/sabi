@@ -48,14 +48,17 @@ async function authenticate(req, res, next) {
 
     const { data: user, error } = await supabase
       .from('users')
-      .select('id, email, full_name, role, department, is_active')
+      .select('id, email, full_name, role, department, is_active, deal_book_full_access')
       .eq('id', decoded.userId)
       .single();
 
     if (error || !user) return sendError(res, 401, 'Invalid token — user not found');
     if (!user.is_active) return sendError(res, 403, 'Account deactivated');
 
-    req.user = user;
+    req.user = {
+      ...user,
+      deal_book_full_access: Boolean(user.deal_book_full_access),
+    };
     next();
   } catch (err) {
     if (err.name === 'TokenExpiredError') return sendError(res, 401, 'Token expired');

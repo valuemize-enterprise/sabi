@@ -10,7 +10,11 @@ import {
   DollarSign,
   Activity,
   ListChecks, Lock, Trophy, Target, Palette, X, Command, Workflow,
-  Files
+  Files,
+  UsersIcon,
+  TargetIcon,
+  CalendarIcon,
+  BookOpenIcon
 } from 'lucide-react';
 import { useState } from 'react';
 import { useAgencyStore } from '@/lib/store';
@@ -25,6 +29,7 @@ const SHARED_NAV = [
   { href:'/dashboard',      label:'Dashboard',     icon:LayoutDashboard },
   { href:'/ask',            label:'Ask ARIA',      icon:Brain, badge:'AI' },
   { href:'/notifications',  label:'Notifications', icon:Bell  },
+  { href: '/leave', label: 'My Leave', icon: CalendarIcon, }
 ];
 
 // {['brand_admin', 'admin', 'md', 'super_admin'].includes(user?.role) && (
@@ -49,8 +54,11 @@ const ADMIN_NAV = [
   { href: '/my-score', label: 'My Score', icon: BarChart3 },
   { href: '/leaderboard', label: 'Leaderboard', icon: Trophy },
   { href: '/audit',    label: 'Audit Log', icon: ClipboardList  },
+  { href: '/book-of-deals', label: 'Book of Deals', icon: BookOpenIcon, },
   { href: '/pulse',    label: 'Pulse', icon: Activity  },
-  { href: '/people',   label: 'People', icon: Users, roles: ['super_admin','admin','md','hr'] },
+  // { href: '/people',   label: 'People', icon: Users, roles: ['super_admin','admin','md','hr'] },
+  { href: '/people', label: 'People OS', icon: UsersIcon, roles: ['hr', 'super_admin', 'md'] },
+  { href: '/agency-goals', label: 'Agency Goals', icon: TargetIcon, roles: ['super_admin', 'md', 'admin'] },
 ];
 
 const SA_NAV = [

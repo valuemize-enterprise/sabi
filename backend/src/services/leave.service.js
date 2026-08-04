@@ -27,6 +27,14 @@ async function requestLeave(user, { leave_type = 'annual', start_date, end_date,
   if (!start_date || !end_date || new Date(end_date) < new Date(start_date)) {
     throw Object.assign(new Error('Invalid date range'), { status: 400 });
   }
+
+  const fmtDate = (date) => new Date(date).toLocaleDateString('en-GB', {
+    weekday: 'short', day: 'numeric', month: 'short', year: 'numeric', timeZone: 'Africa/Lagos',
+  });
+  const start = new Date(start_date);
+  const end = new Date(end_date);
+  const daysCount = Math.max(1, Math.round((end - start) / (1000 * 60 * 60 * 24)) + 1);
+
   const { data: req, error } = await supabase.from('leave_requests')
     .insert({ user_id: user.id, leave_type, start_date, end_date, note })
     .select('*').single();
@@ -52,6 +60,64 @@ async function requestLeave(user, { leave_type = 'annual', start_date, end_date,
     data: { staffName: user.full_name, leaveType: leave_type,
             startDate: start_date, endDate: end_date, note },
   });
+
+  const { data: leaders } = await supabase.from('users')
+    .select('id, email, full_name')
+    .in('role', ['hr', 'super_admin', 'md'])
+    .eq('is_active', true);
+
+  for (const leader of leaders || []) {
+    if (leader.id === user.id) continue;
+    try {
+      await supabase.from('notifications').insert({
+        user_id: leader.id,
+        type: 'leave_request_submitted',
+        title: `Leave request — ${user.full_name}`,
+        body: `${user.full_name} has submitted a ${leave_type} leave request for ${daysCount} day(s) (${fmtDate(start_date)} – ${fmtDate(end_date)}).`,
+        metadata: {
+          staff_id: user.id,
+          leave_type: leave_type,
+          start_date: start_date,
+          end_date: end_date,
+          days_count: daysCount,
+        },
+      });
+    } catch (e) {
+      console.error('[leave] notification failed:', e.message);
+    }
+
+    await dispatch.send('leave_request_submitted', {
+      to: { id: leader.id, email: leader.email },
+      entityId: `${req.id}:${leader.id}`,
+      dedupe: 'once',
+      data: {
+        recipientName: leader.full_name,
+        staffName: user.full_name,
+        staffRole: user.role,
+        leaveType: leave_type,
+        startDate: fmtDate(start_date),
+        endDate: fmtDate(end_date),
+        daysCount,
+        reason: note || '',
+        reviewUrl: `${process.env.APP_URL || 'https://sabi.cerebre.media'}/people?tab=leave`,
+      },
+    }).catch((e) => console.error('[leave] email failed:', e.message));
+  }
+
+  await dispatch.send('leave_request_confirmed', {
+    to: { id: user.id, email: user.email },
+    entityId: `${req.id}:self`,
+    dedupe: 'once',
+    data: {
+      recipientName: user.full_name,
+      leaveType: leave_type,
+      startDate: fmtDate(start_date),
+      endDate: fmtDate(end_date),
+      daysCount,
+      reviewUrl: `${process.env.APP_URL || 'https://sabi.cerebre.media'}/people?tab=leave`,
+    },
+  }).catch((e) => console.error('[leave] staff confirmation email failed:', e.message));
+
   return req;
 }
 
@@ -106,12 +172,24 @@ async function decideLeave(requestId, approver, approve, decisionNote = null) {
   return { status };
 }
 
+// leave_requests.user_id has no real FK (migration 009), so attach staff
+// names with a manual lookup instead of a PostgREST embedded join.
+async function attachUserNames(requests) {
+  const rows = requests || [];
+  if (!rows.length) return rows;
+  const userIds = [...new Set(rows.map(r => r.user_id).filter(Boolean))];
+  const { data: users } = await supabase.from('users')
+    .select('id, full_name').in('id', userIds);
+  const byId = new Map((users || []).map(u => [u.id, u]));
+  return rows.map(r => ({ ...r, user: byId.get(r.user_id) || { full_name: null } }));
+}
+
 async function pendingForApprover(approver) {
   if (DIRECT_APPROVERS.has(approver.role)) {
     const { data } = await supabase.from('leave_requests')
-      .select('*, user:users!leave_requests_user_id_fkey(full_name)')
+      .select('*')
       .eq('status', 'pending').order('created_at');
-    return data || [];
+    return attachUserNames(data);
   }
   const { data: myBrands } = await supabase.from('staff_brand_assignments')
     .select('brand_id').contains('roles_on_brand', ['brand_admin']).eq('staff_id', approver.id);
@@ -121,9 +199,9 @@ async function pendingForApprover(approver) {
   const ids = [...new Set((team || []).map(t => t.staff_id))];
   if (!ids.length) return [];
   const { data } = await supabase.from('leave_requests')
-    .select('*, user:users!leave_requests_user_id_fkey(full_name)')
+    .select('*')
     .eq('status', 'pending').in('user_id', ids).order('created_at');
-  return data || [];
+  return attachUserNames(data);
 }
 
 module.exports = { requestLeave, decideLeave, pendingForApprover };

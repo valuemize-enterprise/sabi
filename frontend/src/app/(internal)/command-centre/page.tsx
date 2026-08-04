@@ -5,7 +5,8 @@ import { useRouter } from 'next/navigation';
 import { Dial, DialId, WeeklyIntelligenceHeader, commandCentreApi } from '@/lib/command-centre-api';
 import { DialCard } from '@/components/command-centre/DialCard';
 import { ExpandedDialPanel } from '@/components/command-centre/ExpandedDialPanel';
-
+import { GoalPulseStrip } from '@/components/agency-goals/GoalPulseStrip';
+import { WorkforceSnapshot } from '@/components/command-centre/WorkforceSnapshot';
 // ── Import the MDConsolidatedView from Phase 1 ────────────────────
 // This reuses the already-built component from the Weekly Report phase.
 // Adjust the import path if your component lives elsewhere.
@@ -321,6 +322,8 @@ export default function CommandCentrePage() {
                   />
                 );
               })()}
+              <GoalPulseStrip />
+              <WorkforceSnapshot />
 
               {/* Footer note */}
               <div style={{ marginTop: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>

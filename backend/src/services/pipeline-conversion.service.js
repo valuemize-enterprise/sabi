@@ -180,6 +180,25 @@ const createBrandFromOpportunity = async (opportunity_id, config, created_by) =>
     );
     brief = briefResult.rows[0];
 
+    // Best-effort deck sync: attach the opportunity deck URL to the brand Brief
+    // if the schema supports deck/source URL columns. This is intentionally non-breaking.
+    if (opp.deck_url) {
+      await client.query(
+        `UPDATE briefs
+         SET source_url = $1,
+             deck_url = $1,
+             updated_at = NOW()
+         WHERE id = $2`,
+        [opp.deck_url, brief.id]
+      ).catch(() => client.query(
+        `UPDATE briefs
+         SET description = COALESCE(description, '') || $1,
+             updated_at = NOW()
+         WHERE id = $2`,
+        [`\n\nDeck / source link: ${opp.deck_url}`, brief.id]
+      ).catch(() => {}));
+    }
+
     // ── 3e. Create draft retainer invoice (optional) ──────────────
     if (create_invoice && retainer_amount && Number(retainer_amount) > 0) {
       const invoiceResult = await client.query(

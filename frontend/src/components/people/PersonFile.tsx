@@ -1,369 +1,363 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import StampAvatar from './StampAvatar';
-import AddDocumentForm from './AddDocumentForm';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
-  getPersonFile, offboardPerson, regenerateProfile, addDocument,
-  type PersonFilePayload, type PersonRow,
-  StaffProfile,
-  updateRole,
-} from './types';
-import { Check, Loader2, SquarePen, X } from 'lucide-react';
+  peopleEditApi, STATUS_LABELS, STATUS_COLOURS,
+  FIELD_LABELS, EmploymentStatus,
+} from '@/lib/people-edit-api';
+import { InlineFieldEdit }  from './InlineFieldEdit';
+import { HistoryTab, DisciplinaryTab } from './PeopleTabComponents';
 
-const Fact = ({ label, value }: { label: string; value: React.ReactNode }) => (
-  <div className="pp-dr-fact"><span>{label}</span><b>{value ?? '—'}</b></div>
+// ── Status transition map (allowed transitions from each state) ────
+const ALLOWED_TRANSITIONS: Record<EmploymentStatus, EmploymentStatus[]> = {
+  probation:  ['active', 'terminated'],
+  active:     ['on_leave', 'suspended', 'resigned', 'terminated'],
+  on_leave:   ['active'],
+  suspended:  ['active', 'terminated'],
+  resigned:   [],
+  terminated: [],
+};
+
+// ── Tier badge ─────────────────────────────────────────────────────
+const TierBadge = ({ tier }: { tier: 1 | 2 | 3 }) => {
+  const colours = {
+    1: { bg: 'rgba(16,185,129,0.1)',  text: '#10b981' },
+    2: { bg: 'rgba(245,158,11,0.1)',  text: '#f59e0b' },
+    3: { bg: 'rgba(244,63,94,0.1)',   text: '#fb7185' },
+  };
+  return (
+    <span style={{
+      padding: '1px 6px', borderRadius: '3px', fontSize: '9px',
+      fontFamily: 'JetBrains Mono, monospace', fontWeight: 700,
+      background: colours[tier].bg, color: colours[tier].text,
+    }}>
+      TIER {tier}
+    </span>
+  );
+};
+
+// ── Field row in Profile tab ───────────────────────────────────────
+const FieldRow = ({ label, tier, children }: {
+  label: string; tier: 1 | 2 | 3; children: React.ReactNode;
+}) => (
+  <div style={{
+    display: 'flex', gap: '12px',
+    padding: '10px 0',
+    borderBottom: '1px solid rgba(255,255,255,0.05)',
+    alignItems: 'flex-start',
+  }}>
+    <div style={{ width: '130px', flexShrink: 0, paddingTop: '2px' }}>
+      <span style={{ fontSize: '11px', fontFamily: 'JetBrains Mono, monospace', color: '#64748b', textTransform: 'uppercase', letterSpacing: '.07em' }}>
+        {label}
+      </span>
+    </div>
+    <div style={{ flex: 1, minWidth: 0 }}>{children}</div>
+    <TierBadge tier={tier} />
+  </div>
 );
 
-export default function PersonFile({ person, isHR, onClose, onChanged, Staff }: {
-  person: PersonRow; isHR: boolean; onClose: () => void; onChanged: () => void; Staff: StaffProfile | null;
-}) {
-  const [file, setFile] = useState<PersonFilePayload | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [confirmOffboard, setConfirmOffboard] = useState(false);
-  const [busy, setBusy] = useState(false);
-  const [showAddDoc, setShowAddDoc] = useState(false);
-  const [visible, setVisible] = useState(false);
-  const [mode, setMode] = useState<'view' | 'edit'>('view');
+// ── PersonFile Drawer ──────────────────────────────────────────────
+interface PersonFileProps {
+  userId: string;
+  onClose: () => void;
+  viewerRole: string;  // 'hr' | 'super_admin' | 'md' | etc.
+}
 
-  const r = file?.record;
+type Tab = 'profile' | 'performance' | 'leave' | 'history' | 'disciplinary';
 
+const EMPLOYMENT_STATUS_OPTIONS = Object.entries(STATUS_LABELS).map(([v, l]) => ({ value: v, label: l }));
 
-  const [draft, setDraft] = useState({
-    start_date: r?.start_date ?? '',
-    employment_type: r?.employment_type ?? '',
-    role_title: r?.role_title ?? '',
-    spark_line: r?.spark_line ?? '',
-  });
-  const [saving, setSaving] = useState(false);
+export function PersonFile({ userId, onClose, viewerRole }: PersonFileProps) {
+  const isHR      = ['hr', 'super_admin'].includes(viewerRole);
+  const isMD      = viewerRole === 'md';
+  const canEdit   = isHR;
 
-  const startEdit = () => {
-    setDraft({
-      start_date: r?.start_date ?? '',
-      employment_type: r?.employment_type ?? '',
-      role_title: r?.role_title ?? '',
-      spark_line: r?.spark_line ?? '',
-    });
-    setMode('edit');
-  };
+  const [activeTab, setActiveTab] = useState<Tab>('profile');
+  const [person,    setPerson]    = useState<Record<string, unknown> | null>(null);
+  const [loading,   setLoading]   = useState(true);
 
-  const cancelEdit = () => setMode('view');
-
-  const handleSave = async () => {
-    setError("")
-    const payload = {
-      userId: person.user_id,
-      start_date: draft.start_date,
-      employment_type: draft.employment_type,
-      role_title: draft.role_title,
-      spark_line: draft.spark_line
-    }
-    setSaving(true);
+  const load = useCallback(async () => {
+    setLoading(true);
     try {
-      await updateRole(payload)
-      setMode('view');
-      onChanged?.();
-    } catch (e: any) {
-      setError(e.message);
-      // surface a toast/error here
-    } finally {
-      setSaving(false);
-    }
+      // Reuse existing people API for person data
+      const res = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api'}/people/${userId}`,
+        {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem('sabi_token') || ''}`,
+          },
+        }
+      );
+      const data = await res.json();
+      setPerson(data.person || data);
+    } catch { /* graceful */ }
+    finally { setLoading(false); }
+  }, [userId]);
+
+  useEffect(() => { load(); }, [load]);
+
+  const handleFieldSaved = (field: string, value: string) => {
+    setPerson(prev => prev ? { ...prev, [field]: value } : prev);
   };
 
+  const tabs: { id: Tab; label: string; hidden?: boolean }[] = [
+    { id: 'profile',      label: 'Profile' },
+    { id: 'performance',  label: 'Performance' },
+    { id: 'leave',        label: 'Leave' },
+    { id: 'history',      label: 'History',      hidden: !isHR },
+    { id: 'disciplinary', label: 'Disciplinary',  hidden: !isHR },
+  ];
 
-  useEffect(() => {
-    setVisible(true);
-    getPersonFile(person.user_id).then(setFile).catch((e) => setError(e.message));
-  }, [person.user_id]);
-
-  const close = () => { setVisible(false); setTimeout(onClose, 200); };
-
-  const doOffboard = async () => {
-    setBusy(true);
-    try { await offboardPerson(person.user_id); onChanged(); close(); }
-    catch (e: any) { setError(e.message); }
-    finally { setBusy(false); }
-  };
-  const doRegenerate = async () => {
-    setBusy(true);
-    try {
-      await regenerateProfile(person.user_id);
-      onChanged();
-    } catch (e: any) {
-      setError(e.message);
-    } finally {
-      setBusy(false);
-    }
-  };
-
-
-
-  // if (!Staff) return null
-
-  // console.log('r', r)
+  const rawEmploymentStatus = typeof person?.employment_status === 'string' ? person.employment_status as EmploymentStatus : null;
+  const statusValue = rawEmploymentStatus ?? 'active';
+  const statusColour = STATUS_COLOURS[statusValue];
+  const displayName  = (person?.display_name as string) || (person?.full_name as string) || 'Staff Member';
+  const recordId     = (person?.record_id as string) || (person?.id as string) || '';
+  const roleText     = String(person?.role_title ?? person?.role_key ?? '—');
 
   return (
     <>
-      <div className="pp-overlay" onClick={close} style={{ opacity: visible ? 1 : 0, transition: 'opacity .2s' }} />
-      <div className="pp-drawer" style={{ transform: visible ? 'translateX(0)' : 'translateX(100%)', transition: 'transform .28s cubic-bezier(.16,1,.3,1)' }}>
-        <div style={{ padding: 22 }}>
-          <div className="pp-dr-head">
-            <StampAvatar name={person.display_name} size={52} />
-            <div style={{ minWidth: 0 }}>
-              <div className="pp-dr-name">{person.display_name}</div>
-              <div className="pp-dr-role">{person.role_title}{person.department ? ` · ${person.department}` : ''}</div>
-              <div style={{ display: 'flex', gap: 6, marginTop: 6, flexWrap: 'wrap' }}>
-                {Staff && (<span
-                  className={`pp-ribbon ${Staff?.profile_state === "submitted" ? "pp-rib-live" : "pp-rib-draft"
-                    }`}
-                >
-                  {Staff?.profile_state === "submitted"
-                    ? "Profile live"
-                    : Staff?.profile_state === "draft"
-                      ? `Draft · ${person.profile_draft_days ?? 0}d`
-                      : "No profile"}
-                </span>)}
-                {person.probation_active && <span className="pp-ribbon pp-rib-probation">Probation → {person.probation_end}</span>}
-                {person.on_leave_now && <span className="pp-ribbon pp-rib-leave">On leave</span>}
-              </div>
+      {/* Overlay */}
+      <div
+        onClick={onClose}
+        style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', zIndex: 40 }}
+      />
+
+      {/* Drawer */}
+      <div style={{
+        position: 'fixed', top: 0, right: 0, bottom: 0,
+        width: '520px', background: '#0c0c1e',
+        border: '1px solid rgba(255,255,255,0.1)',
+        zIndex: 50, display: 'flex', flexDirection: 'column',
+        boxShadow: '-20px 0 60px rgba(0,0,0,0.6)',
+      }}>
+
+        {/* Header */}
+        <div style={{
+          padding: '20px 24px',
+          background: 'rgba(109,40,217,0.07)',
+          borderBottom: '1px solid rgba(255,255,255,0.07)',
+          flexShrink: 0,
+        }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+            <div>
+              {loading ? (
+                <div style={{ width: '160px', height: '22px', background: 'rgba(255,255,255,0.06)', borderRadius: '6px' }} />
+              ) : (
+                <>
+                  <h2 style={{ fontFamily: 'Space Grotesk, sans-serif', fontSize: '20px', fontWeight: 800, color: '#f1f5f9', marginBottom: '4px' }}>
+                    {displayName}
+                  </h2>
+                  <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
+                    <span style={{ fontSize: '13px', color: '#94a3b8' }}>
+                      {roleText}
+                    </span>
+                    {rawEmploymentStatus && (
+                      <span style={{
+                        padding: '2px 8px', borderRadius: '4px', fontSize: '11px',
+                        fontFamily: 'JetBrains Mono, monospace', fontWeight: 700,
+                        background: statusColour.bg, color: statusColour.text,
+                        border: `1px solid ${statusColour.border}`,
+                      }}>
+                        {STATUS_LABELS[statusValue]}
+                      </span>
+                    )}
+                  </div>
+                </>
+              )}
             </div>
-            <div className="pp-dr-close" onClick={close}>
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 6L6 18M6 6l12 12" /></svg>
-            </div>
+            <button
+              onClick={onClose}
+              style={{ background: 'none', border: 'none', color: '#64748b', fontSize: '20px', cursor: 'pointer' }}
+            >
+              ✕
+            </button>
           </div>
 
-          {error && (
-            <div className="pp-dr-section" style={{ borderColor: 'var(--ember-soft)', background: 'var(--ember-soft)', color: 'var(--ember)', fontSize: 12.5 }}>
-              {error}
-            </div>
-          )}
+          {/* Tabs */}
+          <div style={{ display: 'flex', gap: '2px', marginTop: '16px', overflowX: 'auto', scrollbarWidth: 'none' }}>
+            {tabs.filter(t => !t.hidden).map(tab => (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                style={{
+                  padding: '6px 14px', borderRadius: '7px', cursor: 'pointer',
+                  fontSize: '12px', fontWeight: 600, fontFamily: 'Inter, sans-serif',
+                  border: 'none', whiteSpace: 'nowrap',
+                  background: activeTab === tab.id ? 'rgba(109,40,217,0.25)' : 'transparent',
+                  color: activeTab === tab.id ? '#c4b5fd' : '#64748b',
+                  transition: 'all .15s',
+                }}
+              >
+                {tab.label}
+              </button>
+            ))}
+          </div>
+        </div>
 
-          {!file ? (
-            <div style={{ display: 'grid', gap: 12 }}>
-              {[1, 2, 3].map(i => <div key={i} className="pp-dr-section" style={{ height: 90, background: 'var(--paper)', opacity: .6 }} />)}
+        {/* Content */}
+        <div style={{ flex: 1, overflowY: 'auto', padding: '20px 24px' }}>
+          {loading ? (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              {Array.from({ length: 6 }).map((_, i) => (
+                <div key={i} style={{ height: '40px', background: 'rgba(255,255,255,0.03)', borderRadius: '6px', animation: 'pulse 1.5s ease-in-out infinite' }} />
+              ))}
+              <style>{`@keyframes pulse{0%,100%{opacity:.4}50%{opacity:.7}}`}</style>
             </div>
           ) : (
             <>
-              <div className="pp-dr-section">
-                <div className="flex items-center justify-between">
-                  <h5>📇 Employment</h5>
-                  {isHR && (
-                    mode === 'view' ? (
-                      <div onClick={startEdit} role="button" aria-label="Edit employment">
-                        <SquarePen size={16} />
-                      </div>
-                    ) : (
-                      <div className="flex items-center gap-2">
-                        <div onClick={cancelEdit} role="button" aria-label="Cancel">
-                          <X size={16} />
-                        </div>
-                        <div onClick={handleSave} role="button" aria-label="Save" aria-disabled={saving}>
-                          {saving ? <Loader2 size={16} className="animate-spin" /> : <Check size={16} />}
-                        </div>
-                      </div>
-                    )
-                  )}
-                </div>
+              {/* ── PROFILE TAB ────────────────────────────────── */}
+              {activeTab === 'profile' && person && (
+                <div>
+                  {/* Tier 1 fields */}
+                  <p style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: '10px', color: '#10b981', textTransform: 'uppercase', letterSpacing: '.1em', marginBottom: '8px' }}>
+                    Tier 1 — Visible to all
+                  </p>
 
-                <div className="pp-dr-fact-grid">
-                  {mode === 'view' ? (
+                  {[
+                    { field: 'display_name',  label: 'Display Name', type: 'text' as const },
+                    { field: 'role_title',    label: 'Title',        type: 'text' as const },
+                    { field: 'role_key',      label: 'Role',         type: 'text' as const },
+                    { field: 'department',    label: 'Department',   type: 'text' as const },
+                    { field: 'start_date',    label: 'Start Date',   type: 'date' as const },
+                    { field: 'spark_line',    label: 'Bio',          type: 'text' as const },
+                  ].map(f => (
+                    <FieldRow key={f.field} label={FIELD_LABELS[f.field] || f.field} tier={1}>
+                      <InlineFieldEdit
+                        recordId={recordId}
+                        fieldName={f.field}
+                        currentValue={person[f.field] as string}
+                        isEditable={canEdit}
+                        inputType={f.type}
+                        onSaved={v => handleFieldSaved(f.field, v)}
+                      />
+                    </FieldRow>
+                  ))}
+
+                  {/* Tier 2 fields */}
+                  <p style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: '10px', color: '#f59e0b', textTransform: 'uppercase', letterSpacing: '.1em', margin: '20px 0 8px' }}>
+                    Tier 2 — HR / Super Admin / MD
+                  </p>
+
+                  <FieldRow label="Employment Type" tier={2}>
+                    <InlineFieldEdit
+                      recordId={recordId} fieldName="employment_type"
+                      currentValue={person.employment_type as string}
+                      isEditable={canEdit}
+                      inputType="select"
+                      selectOptions={[
+                        { value: 'full_time', label: 'Full Time' },
+                        { value: 'contract',  label: 'Contract' },
+                        { value: 'intern',    label: 'Intern' },
+                      ]}
+                      onSaved={v => handleFieldSaved('employment_type', v)}
+                    />
+                  </FieldRow>
+
+                  <FieldRow label="Employment Status" tier={2}>
+                    <InlineFieldEdit
+                      recordId={recordId} fieldName="employment_status"
+                      currentValue={person.employment_status as string}
+                      displayValue={STATUS_LABELS[(person.employment_status as EmploymentStatus) || 'active']}
+                      isEditable={canEdit && !['resigned','terminated'].includes(person.employment_status as string)}
+                      inputType="select"
+                      selectOptions={
+                        ALLOWED_TRANSITIONS[(person.employment_status as EmploymentStatus) || 'active']
+                          .map(s => ({ value: s, label: STATUS_LABELS[s] }))
+                      }
+                      onSaved={v => handleFieldSaved('employment_status', v)}
+                    />
+                  </FieldRow>
+
+                  {[
+                    { field: 'work_phone',      label: 'Work Phone',         type: 'text' as const },
+                    { field: 'probation_end',   label: 'Probation End Date', type: 'date' as const },
+                    { field: 'contract_end_date', label: 'Contract End Date', type: 'date' as const },
+                    { field: 'tp_cohort',        label: "Tomorrow's People Cohort", type: 'text' as const },
+                  ].map(f => (
+                    <FieldRow key={f.field} label={FIELD_LABELS[f.field] || f.label} tier={2}>
+                      <InlineFieldEdit
+                        recordId={recordId} fieldName={f.field}
+                        currentValue={person[f.field] as string}
+                        isEditable={canEdit} inputType={f.type}
+                        onSaved={v => handleFieldSaved(f.field, v)}
+                      />
+                    </FieldRow>
+                  ))}
+
+                  {/* Tier 3 fields — HR and SA only (MD sees with audit log via backend) */}
+                  {(isHR || isMD) && (
                     <>
-                      <Fact label="Started" value={r?.start_date} />
-                      <Fact label="Type" value={r?.employment_type?.replace('_', '-')} />
-                      {r?.tp_cohort && <Fact label="Cohort" value={r.tp_cohort} />}
-                      {Staff && (
-                        <Fact
-                          label="Status"
-                          value={Staff?.profile_state === 'submitted' ? 'SUBMITTED' : r?.status}
-                        />
-                      )}
-                      <Fact label="Digital signature" value={r?.role_title} />
-                      {r?.spark_line && (
-                        <div style={{ gridColumn: '1/-1' }}>
-                          <Fact label="Spark line" value={<i>&ldquo;{r.spark_line}&rdquo;</i>} />
-                        </div>
-                      )}
-                    </>
-                  ) : (
-                    <>
-                      <div className="pp-dr-fact">
-                        <span>Started</span>
-                        <input
-                          type="date"
-                          value={draft.start_date}
-                          onChange={(e) => setDraft((d) => ({ ...d, start_date: e.target.value }))}
-                        />
-                      </div>
-                      <div className="pp-dr-fact">
-                        <span>Type</span>
-                        <select
-                          value={draft.employment_type}
-                          onChange={(e) => setDraft((d) => ({ ...d, employment_type: e.target.value }))}
-                        >
-                          <option value="full_time">full-time</option>
-                          <option value="part_time">part-time</option>
-                          <option value="contract">contract</option>
-                        </select>
-                      </div>
-
-                      <div className="pp-dr-fact">
-                        <span>Digital signature</span>
-                        <input
-                          type="text"
-                          value={draft.role_title}
-                          onChange={(e) => setDraft((d) => ({ ...d, role_title: e.target.value }))}
-                        />
-                      </div>
-
-                      <div style={{ gridColumn: '1/-1' }} className="pp-dr-fact">
-                        <span>Spark line</span>
-                        <input
-                          type="text"
-                          value={draft.spark_line}
-                          onChange={(e) => setDraft((d) => ({ ...d, spark_line: e.target.value }))}
-                        />
-                      </div>
-                    </>
-                  )}
-                </div>
-
-                {isHR && Staff?.profile_state !== 'none' && (
-                  <button
-                    className="pp-btn pp-btn-ghost"
-                    style={{ marginTop: 12, fontSize: 11.5 }}
-                    onClick={doRegenerate}
-                    disabled={busy}
-                  >
-                    {busy ? (
-                      <>
-                        <Loader2 size={12} className="animate-spin" style={{ marginRight: 4 }} />
-                        Regenerating…
-                      </>
-                    ) : (
-                      <>↻ Regenerate profile draft</>
-                    )}
-                  </button>
-                )}
-              </div>
-
-              {r?.personal_email !== undefined && (
-                <div className="pp-dr-section confidential">
-                  <h5>🔒 Confidential</h5>
-                  <div className="pp-dr-fact-grid">
-                    <Fact label="Personal email" value={Staff?.personal_email} />
-                    <Fact label="Personal phone" value={Staff?.phone} />
-                    <Fact label="Comp band" value={r.comp_band} />
-                    <div style={{ gridColumn: '1/-1' }}>
-                      <Fact label="Emergency contact" value={Staff?.emergency_contact_phone
-                        ? `${Staff?.emergency_contact_name} · ${Staff?.emergency_contact_phone}` : '—'} />
-                    </div>
-                  </div>
-                  {r.hr_notes && <p style={{ fontSize: 12, color: 'var(--soft)', marginTop: 10, whiteSpace: 'pre-wrap' }}>{r.hr_notes}</p>}
-                  <div className="pp-audit-note">
-                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="11" width="18" height="10" rx="2" /><path d="M7 11V7a5 5 0 0110 0v4" /></svg>
-                    This view is logged to the audit trail.
-                  </div>
-                </div>
-              )}
-
-              {file.documents && (
-                <div className="pp-dr-section">
-                  <h5>📁 Document vault
-                    {isHR && <button onClick={() => setShowAddDoc(true)} style={{ marginLeft: 'auto', border: 'none', background: 'none', color: 'var(--volt)', fontFamily: 'var(--mono)', fontSize: 10, fontWeight: 700, cursor: 'pointer' }}>+ add</button>}
-                  </h5>
-                  {file.documents.length === 0
-                    ? <p style={{ fontSize: 12, color: 'var(--soft)' }}>No documents on file.</p>
-                    : <div style={{ display: 'grid', gap: 8 }}>{file.documents.map(doc => (
-                      <div key={doc.id} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12 }}>
-                        <span><b>{doc.label}</b> <span style={{ color: 'var(--soft)' }}>· {doc.doc_type}</span></span>
-                        {doc.expiry_date && (
-                          <span className="pp-ribbon" style={{
-                            background: new Date(doc.expiry_date) < new Date(Date.now() + 30 * 86400000) ? 'var(--ember-soft)' : 'var(--paper)',
-                            color: new Date(doc.expiry_date) < new Date(Date.now() + 30 * 86400000) ? 'var(--ember)' : 'var(--soft)',
-                          }}>exp {doc.expiry_date}</span>
-                        )}
-                      </div>
-                    ))}</div>}
-                </div>
-              )}
-
-              <div className="pp-dr-section">
-                <h5>⭐ Performance · HR lens</h5>
-                <div className="pp-perf-score">
-                  <b>{file.performance.rolling_avg != null ? Math.round(file.performance.rolling_avg) : '—'}</b>
-                  <span>/ 100 · rolling avg</span>
-                </div>
-                {file.performance.low_ratings.length > 0 && (
-                  <div style={{ marginBottom: 8 }}>
-                    <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--ember)', textTransform: 'uppercase', marginBottom: 4 }}>Low ratings (≤2) with notes</div>
-                    {file.performance.low_ratings.map((lr, i) => (
-                      <p key={i} style={{ fontSize: 12, color: 'var(--soft)', marginBottom: 4 }}><b style={{ color: 'var(--ink)' }}>{lr.rating}/5</b> — {lr.note || 'no note recorded'}</p>
-                    ))}
-                  </div>
-                )}
-                {file.performance.recognition.length > 0 && (
-                  <div>
-                    <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--moss)', textTransform: 'uppercase', marginBottom: 4 }}>Recognition</div>
-                    {file.performance.recognition.map((rec, i) => (
-                      <p key={i} style={{ fontSize: 12, color: 'var(--soft)' }}>⭐ {rec.title} (+{rec.points})</p>
-                    ))}
-                  </div>
-                )}
-                {!file.performance.low_ratings.length && !file.performance.recognition.length && (
-                  <p style={{ fontSize: 12, color: 'var(--soft)' }}>Nothing flagged either way.</p>
-                )}
-              </div>
-
-              <div className="pp-dr-section">
-                <h5>🌴 Leave history</h5>
-                {file.leave_history.length === 0
-                  ? <p style={{ fontSize: 12, color: 'var(--soft)' }}>No leave recorded.</p>
-                  : <div style={{ display: 'grid', gap: 7 }}>{file.leave_history.map(l => (
-                    <div key={l.id} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12 }}>
-                      <span>{l.leave_type} · {l.start_date} → {l.end_date}</span>
-                      <span className="pp-ribbon" style={{
-                        background: l.status === 'approved' ? 'var(--moss-soft)' : l.status === 'declined' ? 'var(--ember-soft)' : 'var(--amber-soft)',
-                        color: l.status === 'approved' ? 'var(--moss)' : l.status === 'declined' ? 'var(--ember)' : 'var(--amber)',
-                      }}>{l.status}</span>
-                    </div>
-                  ))}</div>}
-              </div>
-
-              {isHR && r?.status !== 'offboarding' && (
-                <div className="pp-dr-section" style={{ borderColor: 'var(--ember-soft)' }}>
-                  {!confirmOffboard ? (
-                    <button className="pp-btn pp-btn-danger-ghost" style={{ fontSize: 11.5 }} onClick={() => setConfirmOffboard(true)}>
-                      Begin offboarding…
-                    </button>
-                  ) : (
-                    <div>
-                      <p style={{ fontSize: 12, color: 'var(--soft)', marginBottom: 10 }}>
-                        This deactivates their account, removes them from client Team pages, releases brand assignments,
-                        and flags open tasks for reassignment. History is preserved.
+                      <p style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: '10px', color: '#fb7185', textTransform: 'uppercase', letterSpacing: '.1em', margin: '20px 0 8px' }}>
+                        Tier 3 — HR / Super Admin only · Audit logged
                       </p>
-                      <div style={{ display: 'flex', gap: 8 }}>
-                        <button className="pp-btn pp-btn-primary" style={{ background: 'var(--ember)', fontSize: 12 }} onClick={doOffboard} disabled={busy}>
-                          {busy ? 'Running checklist…' : 'Confirm offboarding'}
-                        </button>
-                        <button className="pp-btn pp-btn-ghost" style={{ fontSize: 12 }} onClick={() => setConfirmOffboard(false)}>Cancel</button>
-                      </div>
-                    </div>
+                      {[
+                        { field: 'personal_email', label: 'Personal Email',   type: 'text' as const },
+                        { field: 'personal_phone', label: 'Personal Phone',   type: 'text' as const },
+                        { field: 'date_of_birth',  label: 'Date of Birth',    type: 'date' as const },
+                        { field: 'comp_band',      label: 'Salary Band',      type: 'text' as const },
+                        { field: 'hr_notes',       label: 'HR Notes',         type: 'textarea' as const },
+                      ].map(f => (
+                        <FieldRow key={f.field} label={FIELD_LABELS[f.field] || f.field} tier={3}>
+                          <InlineFieldEdit
+                            recordId={recordId} fieldName={f.field}
+                            currentValue={person[f.field] as string}
+                            isEditable={isHR}  // MD reads but cannot edit Tier 3
+                            inputType={f.type as any}
+                            onSaved={v => handleFieldSaved(f.field, v)}
+                          />
+                        </FieldRow>
+                      ))}
+                    </>
                   )}
                 </div>
+              )}
+
+              {/* ── PERFORMANCE TAB ──────────────────────────── */}
+              {activeTab === 'performance' && (
+                <div>
+                  <p style={{ fontFamily: 'Space Grotesk, sans-serif', fontSize: '15px', fontWeight: 700, color: '#f1f5f9', marginBottom: '12px' }}>
+                    Performance Summary
+                  </p>
+                  <p style={{ fontSize: '13px', color: '#64748b' }}>
+                    Score history, manager ratings, and contribution claims for {displayName} are pulled from the existing scoring system. This tab surfaces the full picture in People OS context.
+                  </p>
+                  {/* Score chart would be wired to the existing /api/agency/scores/:userId endpoint */}
+                  <div style={{ marginTop: '16px', padding: '16px', background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '10px' }}>
+                    <p style={{ fontSize: '12px', color: '#475569', fontFamily: 'JetBrains Mono, monospace' }}>
+                      Wire to: GET /api/agency/scores/{userId} for the score chart and rating history.
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {/* ── LEAVE TAB ────────────────────────────────── */}
+              {activeTab === 'leave' && (
+                <div>
+                  <p style={{ fontFamily: 'Space Grotesk, sans-serif', fontSize: '15px', fontWeight: 700, color: '#f1f5f9', marginBottom: '12px' }}>
+                    Leave History
+                  </p>
+                  <div style={{ padding: '16px', background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '10px' }}>
+                    <p style={{ fontSize: '12px', color: '#475569', fontFamily: 'JetBrains Mono, monospace' }}>
+                      Wire to: GET /api/leave/by-user/{userId} for leave history. Approve/reject actions call existing leave routes.
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {/* ── HISTORY TAB ──────────────────────────────── */}
+              {activeTab === 'history' && isHR && recordId && (
+                <HistoryTab recordId={recordId} />
+              )}
+
+              {/* ── DISCIPLINARY TAB ─────────────────────────── */}
+              {activeTab === 'disciplinary' && isHR && (
+                <DisciplinaryTab userId={userId} isHR={isHR} />
               )}
             </>
           )}
         </div>
       </div>
-
-      {showAddDoc && (
-        <AddDocumentForm
-          personName={person.display_name}
-          onClose={() => setShowAddDoc(false)}
-          onAdded={async (input) => { await addDocument(person.user_id, input); const f = await getPersonFile(person.user_id); setFile(f); }}
-        />
-      )}
     </>
   );
 }

@@ -30,11 +30,14 @@ const fmtDate = (d) =>
   d ? new Date(d).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) : 'No date';
 
 const STAGE_LABELS = {
-  identified: 'Identified',
-  in_progress: 'In Progress',
-  proposal_sent: 'Proposal Sent',
-  under_review: 'Under Review',
-  negotiating: 'Negotiating',
+  introduction: 'Introduction',
+  proposal: 'Proposal',
+  pitch: 'Pitch',
+  second_pitch: 'Second Pitch',
+  decision: 'Decision',
+  agreement: 'Agreement',
+  onboarded: 'Onboarded',
+  lost_paused: 'Lost / Paused',
 };
 
 // ── Core generation function ──────────────────────────────────────

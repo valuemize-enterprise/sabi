@@ -89,6 +89,7 @@ const scoringRoutes             = require('./routes/agency/scoring.routes');
 const agencyTargetsRoutes       = require('./routes/agency/agency-targets.routes');
 const pulseRoutes               = require('./routes/agency/pulse.routes');
 const leaderboardRoutes         = require('./routes/agency/leaderboard.routes');
+const analyticsRouter = require('./routes/pipeline-analytics.routes');
 
 
 const financeP2 = require('./routes/finance-phase2.routes');
@@ -113,6 +114,13 @@ const pipelinePhase3Router = require('./routes/pipeline-phase3.routes');
 // platform connect routes
 
 const platformRouter = require('./routes/platform-connect.routes');
+
+const agencyGoalsRouter = require('./routes/agency/agency-goals.routes');
+const peopleEditRouter = require('./routes/people-edit.routes');
+const workforceRouter = require('./routes/workforce.routes');
+const bodRouter = require('./routes/book-of-deals.routes');
+const debriefRouter = require('./routes/deal-debrief.routes');
+
 
 
 
@@ -253,8 +261,7 @@ app.use('/api/agency/pulse',            pulseRoutes);
 app.use('/api/agency/leaderboard',      leaderboardRoutes);
 
 // Phase 4 — People OS
-app.use('/api/people',                  peopleRouter);
-app.use('/api/leave',                   leaveRouter);
+
 app.use('/api/people',                  profileFormRouter);
 
 // ── Task Import
@@ -273,17 +280,7 @@ app.use('/api/finance', financeRouter);
 
 // Client portal (separate auth — no staff JWT required)
 app.use('/api/client-portal', clientPortalRouter);
-// ── 404 Handler ───────────────────────────────────────────────
-app.use('*', (req, res) => {
-  res.status(404).json({
-    success: false,
-    error: `Route ${req.method} ${req.originalUrl} not found`,
-    data: null
-  });
-});
 
-// ── Error Handler ─────────────────────────────────────────────
-app.use(errorHandler);
 
 // ── Start Server ──────────────────────────────────────────────
 // Render free-tier cold start: respond to health checks immediately
@@ -310,10 +307,40 @@ setInterval(() => {
   }
 }, 10 * 60 * 1000);
 
+const { runFullSweep } = require('./services/alert-sweep.service');
+
+// Example: Run daily at 8:00 AM Lagos time (UTC+1)
+// If using node-cron:
+const cron = require('node-cron');
+cron.schedule('0 7 * * *', async () => {
+  console.log('[cron] Running HR alert sweep…');
+  await runFullSweep().catch(e => console.error('[cron] Sweep error:', e.message));
+}, { timezone: 'Africa/Lagos' });
+
 app.use('/api/pipeline', authenticate, pipelineRouter);
 app.use('/api/command-centre', authenticate, commandCentreRouter);
 app.use('/api/weekly-report', authenticate, weeklyReportRouter); 
 app.use('/api/pipeline', authenticate, pipelinePhase3Router);
+app.use('/api/people',  authenticate,     peopleRouter);
+app.use('/api/leave',   authenticate,     leaveRouter);
+app.use('/api/agency-goals', authenticate, agencyGoalsRouter);
+app.use('/api/people', authenticate, peopleEditRouter);
+app.use('/api/workforce', authenticate, workforceRouter);
+app.use('/api/book-of-deals', authenticate, bodRouter);
+app.use('/api/pipeline-analytics', authenticate, analyticsRouter);
+app.use('/api/debriefs', authenticate, debriefRouter);
+
+// ── 404 Handler ───────────────────────────────────────────────
+app.use('*', (req, res) => {
+  res.status(404).json({
+    success: false,
+    error: `Route ${req.method} ${req.originalUrl} not found`,
+    data: null
+  });
+});
+
+// ── Error Handler ─────────────────────────────────────────────
+app.use(errorHandler);
 
 // Graceful shutdown
 process.on('SIGTERM', () => {

@@ -154,7 +154,7 @@ router.patch('/opportunities/:id/stage', requireRoles(...PIPELINE_READERS), asyn
   try {
     const { stage, change_notes, lost_reason, lost_notes, converted_brand_id } = req.body;
 
-    const validStages = ['identified', 'in_progress', 'proposal_sent', 'under_review', 'negotiating', 'won', 'lost_paused'];
+    const validStages = ['introduction', 'proposal', 'pitch', 'second_pitch', 'decision', 'agreement', 'onboarded', 'lost_paused'];
     if (!validStages.includes(stage)) {
       return res.status(400).json({ error: `Invalid stage. Must be one of: ${validStages.join(', ')}` });
     }

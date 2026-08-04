@@ -16,6 +16,8 @@ import {
   formatNaira,
   pipelineApi,
 } from '@/lib/pipeline-api';
+import { DealDebriefModal } from '@/components/pipeline/DealDebriefModal';
+import { SmartFollowUpPanel } from '@/components/pipeline/SmartFollowUpPanel';
 
 interface OpportunityDetailSlideOverProps {
   opportunityId: string;
@@ -55,7 +57,9 @@ export function OpportunityDetailSlideOver({ opportunityId, onClose, onUpdated }
 
   // Stage change state
   const [showStageChange, setShowStageChange] = useState(false);
+  const [showDebriefModal, setShowDebriefModal] = useState(false);
   const [newStage, setNewStage] = useState<PipelineStage | ''>('');
+  const [debriefOutcome, setDebriefOutcome] = useState<'won' | 'lost'>('won');
   const [stageNote, setStageNote] = useState('');
   const [lostReason, setLostReason] = useState<LostReason | ''>('');
   const [lostNotes, setLostNotes] = useState('');
@@ -105,6 +109,12 @@ export function OpportunityDetailSlideOver({ opportunityId, onClose, onUpdated }
       setStageNote('');
       setLostReason('');
       setLostNotes('');
+
+      if (newStage === 'won' || newStage === 'lost_paused') {
+        setDebriefOutcome(newStage === 'won' ? 'won' : 'lost');
+        setShowDebriefModal(true);
+      }
+
       await loadDetail();
       onUpdated();
     } catch (e) {
@@ -461,6 +471,13 @@ export function OpportunityDetailSlideOver({ opportunityId, onClose, onUpdated }
           {/* ── NOTES TAB ── */}
           {activeTab === 'notes' && (
             <div>
+              <SmartFollowUpPanel
+                opportunityId={opp.id}
+                companyName={opp.company_name}
+                daysInStage={opp.days_in_stage}
+                stage={opp.stage}
+              />
+
               {/* ARIA draft section */}
               <div
                 style={{
@@ -469,6 +486,7 @@ export function OpportunityDetailSlideOver({ opportunityId, onClose, onUpdated }
                   borderRadius: '10px',
                   padding: '14px 16px',
                   marginBottom: '20px',
+                  marginTop: '20px',
                 }}
               >
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px' }}>
@@ -655,6 +673,19 @@ export function OpportunityDetailSlideOver({ opportunityId, onClose, onUpdated }
           )}
         </div>
       </div>
+
+      {showDebriefModal && (
+        <DealDebriefModal
+          opportunityId={opportunityId}
+          companyName={opp.company_name}
+          outcome={debriefOutcome}
+          onSubmitted={() => {
+            setShowDebriefModal(false);
+            onUpdated();
+          }}
+          onSkip={() => setShowDebriefModal(false)}
+        />
+      )}
     </>
   );
 }

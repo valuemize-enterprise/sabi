@@ -161,7 +161,7 @@ const getOpportunityById = async (id) => {
 const createOpportunity = async (data, created_by) => {
   const {
     company_name, deal_title, description, service_types = [],
-    source, stage = 'identified', estimated_value,
+    source, stage = 'introduction', estimated_value,
     date_briefed, client_deadline, agency_deadline,
     lead_ba_id, accountable_team_text, notes,
   } = data;
@@ -256,7 +256,7 @@ const changeStage = async (id, new_stage, changed_by, { change_notes, lost_reaso
   const params = [new_stage, id];
   let idx = 3;
 
-  if (new_stage === 'won' && converted_brand_id) {
+  if (new_stage === 'agreement' && converted_brand_id) {
     extraUpdates.push(`converted_brand_id = $${idx++}`);
     params.splice(params.length - 1, 0, converted_brand_id);
   }
@@ -362,7 +362,7 @@ const getAnalytics = async () => {
        COALESCE(SUM(estimated_value), 0)     AS total_pipeline_value,
        COALESCE(AVG(estimated_value), 0)     AS avg_deal_size
      FROM opportunities
-     WHERE stage NOT IN ('won', 'lost_paused')`
+     WHERE stage NOT IN ('agreement', 'onboarded', 'lost_paused')`
   );
 
   // Deals by stage
@@ -370,10 +370,10 @@ const getAnalytics = async () => {
     `SELECT stage, COUNT(*) AS count,
        COALESCE(SUM(estimated_value), 0) AS stage_value
      FROM opportunities
-     WHERE stage NOT IN ('won', 'lost_paused')
+     WHERE stage NOT IN ('agreement', 'onboarded', 'lost_paused')
      GROUP BY stage
      ORDER BY ARRAY_POSITION(
-       ARRAY['identified','in_progress','proposal_sent','under_review','negotiating'],
+       ARRAY['introduction','proposal','pitch','second_pitch','decision'],
        stage
      )`
   );
@@ -381,11 +381,11 @@ const getAnalytics = async () => {
   // Win rate this quarter
   const winRateResult = await query(
     `SELECT
-       COUNT(*) FILTER (WHERE stage = 'won')                                          AS won_count,
-       COUNT(*) FILTER (WHERE stage IN ('won', 'lost_paused'))                        AS closed_count,
+       COUNT(*) FILTER (WHERE stage IN ('agreement', 'onboarded'))                    AS won_count,
+       COUNT(*) FILTER (WHERE stage IN ('agreement', 'onboarded', 'lost_paused'))     AS closed_count,
        ROUND(
-         100.0 * COUNT(*) FILTER (WHERE stage = 'won') /
-         NULLIF(COUNT(*) FILTER (WHERE stage IN ('won', 'lost_paused')), 0), 1
+         100.0 * COUNT(*) FILTER (WHERE stage IN ('agreement', 'onboarded')) /
+         NULLIF(COUNT(*) FILTER (WHERE stage IN ('agreement', 'onboarded', 'lost_paused')), 0), 1
        )                                                                               AS win_rate_pct
      FROM opportunities
      WHERE created_at >= DATE_TRUNC('quarter', NOW())`
@@ -398,8 +398,8 @@ const getAnalytics = async () => {
      ), 1) AS avg_days_to_close
      FROM opportunities o
      JOIN opportunity_stage_history sh ON sh.opportunity_id = o.id
-     WHERE o.stage = 'won'
-       AND sh.to_stage = 'won'
+     WHERE o.stage IN ('agreement', 'onboarded')
+       AND sh.to_stage IN ('agreement', 'onboarded')
        AND sh.changed_at >= DATE_TRUNC('quarter', NOW())`
   );
 
@@ -410,24 +410,24 @@ const getAnalytics = async () => {
        COUNT(*) FILTER (WHERE EXTRACT(EPOCH FROM (NOW() - stage_changed_at)) / 86400 BETWEEN 7 AND 14) AS amber_count,
        COUNT(*) FILTER (WHERE EXTRACT(EPOCH FROM (NOW() - stage_changed_at)) / 86400 > 14)   AS red_count
      FROM opportunities
-     WHERE stage NOT IN ('won', 'lost_paused')`
+     WHERE stage NOT IN ('agreement', 'onboarded', 'lost_paused')`
   );
 
   // Weighted pipeline forecast (for MD view integration)
-  // Weights: negotiating=70%, under_review=50%, proposal_sent=30%, in_progress=15%, identified=5%
+  // Weights: decision=70%, second_pitch=50%, pitch=30%, proposal=15%, introduction=5%
   const forecastResult = await query(
     `SELECT COALESCE(SUM(
        estimated_value * CASE stage
-         WHEN 'negotiating'    THEN 0.70
-         WHEN 'under_review'   THEN 0.50
-         WHEN 'proposal_sent'  THEN 0.30
-         WHEN 'in_progress'    THEN 0.15
-         WHEN 'identified'     THEN 0.05
+         WHEN 'decision'      THEN 0.70
+         WHEN 'second_pitch'  THEN 0.50
+         WHEN 'pitch'         THEN 0.30
+         WHEN 'proposal'      THEN 0.15
+         WHEN 'introduction'  THEN 0.05
          ELSE 0
        END
      ), 0) AS weighted_forecast
      FROM opportunities
-     WHERE stage NOT IN ('won', 'lost_paused')
+     WHERE stage NOT IN ('agreement', 'onboarded', 'lost_paused')
        AND estimated_value IS NOT NULL`
   );
 
@@ -495,18 +495,21 @@ const getStalenessAlerts = async () => {
 const buildStalenessMessage = (opp) => {
   const days = Number(opp.days_in_stage);
   const stageLabel = {
-    identified: 'Identified',
-    in_progress: 'In Progress',
-    proposal_sent: 'Proposal Sent',
-    under_review: 'Under Review',
-    negotiating: 'Negotiating',
+    introduction: 'Introduction',
+    proposal: 'Proposal',
+    pitch: 'Pitch',
+    second_pitch: 'Second Pitch',
+    decision: 'Decision',
+    agreement: 'Agreement',
+    onboarded: 'Onboarded',
+    lost_paused: 'Lost / Paused',
   }[opp.stage] || opp.stage;
 
-  if (opp.stage === 'proposal_sent' && days > 14) {
+  if (opp.stage === 'pitch' && days > 14) {
     return `${opp.company_name} — pitch was shared ${days} days ago with no update logged. Recommend a follow-up call before Friday's report.`;
   }
-  if (opp.stage === 'negotiating' && days > 28) {
-    return `${opp.company_name} — ${opp.deal_title} has been in Negotiating for ${days} days. Escalate to MD if not closing this week.`;
+  if (opp.stage === 'decision' && days > 28) {
+    return `${opp.company_name} — ${opp.deal_title} has been in Decision for ${days} days. Escalate to MD if not closing this week.`;
   }
   return `${opp.company_name} — ${days} days in "${stageLabel}" without a stage update.`;
 };
