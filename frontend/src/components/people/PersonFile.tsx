@@ -297,6 +297,7 @@ export function PersonFile({ userId, onClose, viewerRole }: PersonFileProps) {
                         { field: 'personal_email', label: 'Personal Email', type: 'text' as const },
                         { field: 'personal_phone', label: 'Personal Phone', type: 'text' as const },
                         { field: 'date_of_birth', label: 'Date of Birth', type: 'date' as const },
+                        { field: 'emergency_contact', label: 'Emergency Contact', type: 'text' as const },
                         { field: 'comp_band', label: 'Salary Band', type: 'text' as const },
                         { field: 'hr_notes', label: 'HR Notes', type: 'textarea' as const },
                       ].map(f => (

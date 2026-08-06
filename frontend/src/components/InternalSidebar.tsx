@@ -20,7 +20,7 @@ import { useState } from 'react';
 import { useAgencyStore } from '@/lib/store';
 import { useMobileSidebar } from '@/lib/MobileSidebarContext';
 
-const ADMIN_ROLES = ['super_admin','ceo','managing_director','creative_director','strategy_director','account_director','brand_admin', 'Staff'];
+const ADMIN_ROLES = ['super_admin','ceo','managing_director','strategy_director','account_director','brand_admin', 'Staff'];
 const isAdmin = (role: string) => ADMIN_ROLES.includes(role);
 const isSA    = (role: string) => role === 'super_admin';
 const isHR    = (role: string) => role === 'hr';
@@ -50,7 +50,7 @@ const ADMIN_NAV = [
   { href: '/reports',  label: 'Reports',   icon: FileText       },
   { href: '/calendar', label: 'Calendar',  icon: Calendar       },
   { href: '/contribution-claims', label: 'Claims', icon: ListChecks },
-  { href: '/creative-review', label: 'Creative Review', icon: Palette, roles: ['super_admin','managing_director','creative_director'] },
+  { href: '/creative-review', label: 'Creative Review', icon: Palette, roles: ['super_admin','managing_director'] },
   { href: '/my-score', label: 'My Score', icon: BarChart3 },
   { href: '/leaderboard', label: 'Leaderboard', icon: Trophy },
   { href: '/audit',    label: 'Audit Log', icon: ClipboardList  },
@@ -72,6 +72,7 @@ const STAFF_NAV = [
   { href:'/my-score', label:'My Score', icon:BarChart3 },
   { href:'/leaderboard', label: 'Leaderboard', icon:Trophy },
   { href:'/my-profile',   label:'My Profile',   icon:Mail   },
+  { href: '/creative-review', label: 'Creative Review', icon: Palette, roles: ['creative_director'] },
 ];
 
 const SETTINGS_SUB = [
@@ -174,7 +175,7 @@ export function InternalSidebar() {
             <div className="pt-3 pb-1">
               <p className="text-[10px] text-white/20 font-semibold uppercase tracking-widest px-3">My Work</p>
             </div>
-            {STAFF_NAV.map(n => <NavLink key={n.href} {...n} />)}
+            {STAFF_NAV.filter(n => !n.roles || n.roles.includes(role)).map(n => <NavLink key={n.href} {...n} />)}
           </>
         )}
 

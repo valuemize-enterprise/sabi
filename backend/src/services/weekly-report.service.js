@@ -8,6 +8,7 @@
 // ═══════════════════════════════════════════════════════════════════
 
 const supabase = require('../config/supabase');
+const { notify } = require('../services/notification.service');
 
 // ── Week helpers ──────────────────────────────────────────────────
 
@@ -270,6 +271,15 @@ const submitEntry = async (entry_id, brand_admin_id) => {
     .single();
 
   if (error) throw new Error(error.message);
+
+  // after is_submitted = true update...
+await notify(
+  brand_admin_id,
+  'info',
+  'Report Submitted',
+  `Your weekly report for ${entry.brand_name || 'your brand'} has been submitted for MD review.`,
+  { entry_id }
+);
   return data;
 };
 

@@ -543,6 +543,8 @@ router.delete("/:id", authenticate, async (req, res, next) => {
           entityId: `${req.params.id}:${accountManager.id}`,
           dedupe: "once",
         });
+
+        
       }
       return sendSuccess(res, { task: { id: req.params.id, status: "pending_deletion" }, deleted: false }, "Deletion request submitted for approval");
     }

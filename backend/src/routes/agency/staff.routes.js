@@ -280,6 +280,13 @@ router.post('/:id/reset-password', authenticate, async (req, res, next) => {
       isClient:    false,
     }).catch(() => {});
 
+    await notify(
+  user?.id,
+  'info',
+  'Password Reset',
+  'Your password has been reset by an administrator. Use the temporary password sent to your email to log in.',
+);
+
     sendSuccess(res, { temp_password: temp }, 'Password reset. Share this with the staff member securely.');
   } catch (err) { next(err); }
 });

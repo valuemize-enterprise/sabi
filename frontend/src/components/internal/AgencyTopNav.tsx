@@ -10,11 +10,12 @@ interface TopNavProps {
   title?:    string;
   subtitle?: string;
   breadcrumb?: { label: string; href: string }[];
+  unreadCount?: number;
 }
 
-export function TopNav({ title, subtitle, breadcrumb }: TopNavProps) {
+export function TopNav({ title, subtitle, breadcrumb, unreadCount = 0 }: TopNavProps) {
   const { user } = useAgencyStore();
-  const pathname  = usePathname();
+  const pathname = usePathname();
   const { toggle } = useMobileSidebar();
 
   return (
@@ -43,10 +44,14 @@ export function TopNav({ title, subtitle, breadcrumb }: TopNavProps) {
       {/* Right: notifications + user chip */}
       <div className="flex items-center gap-3 flex-shrink-0">
         <Link href="/notifications"
-          className="w-8 h-8 rounded-lg bg-white/4 border border-white/6 flex items-center justify-center text-white/40 hover:text-white hover:bg-white/8 transition-all relative">
-          <Bell className="w-4 h-4" />
-          <span className="absolute top-1.5 right-1.5 w-1.5 h-1.5 rounded-full bg-purple-500" />
-        </Link>
+  className="w-8 h-8 rounded-lg bg-white/4 border border-white/6 flex items-center justify-center text-white/40 hover:text-white hover:bg-white/8 transition-all relative">
+  <Bell className="w-4 h-4" />
+  {unreadCount > 0 && (
+    <span className="absolute -top-1 -right-1 min-w-[16px] h-4 px-1 rounded-full bg-purple-500 flex items-center justify-center text-[10px] font-medium text-white leading-none">
+      {unreadCount > 99 ? '99+' : unreadCount}
+    </span>
+  )}
+</Link>
 
         <div className="flex items-center gap-2 pl-2 border-l border-white/8">
           <div className="w-7 h-7 rounded-full bg-purple-500/25 border border-purple-500/20 flex items-center justify-center text-xs font-bold text-purple-300 flex-shrink-0">

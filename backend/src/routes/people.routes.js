@@ -604,6 +604,8 @@ leaveRouter.post("/:id/decide", async (req, res) => {
         status: 400,
         message: "approve: true|false required.",
       });
+
+      
     res.json({
       success: true,
       ...(await leave.decideLeave(req.params.id, req.user, approve, note)),

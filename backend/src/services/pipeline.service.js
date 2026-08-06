@@ -145,7 +145,7 @@ const getOpportunityById = async (id) => {
 const createOpportunity = async (data, created_by) => {
   const {
     company_name, deal_title, description, service_scope = [],
-    source, stage = 'introduction', estimated_value,
+    source, stage, estimated_value,
     date_briefed, client_deadline, agency_deadline,
     business_bringer_id, accountable_team_text, notes,
   } = data;

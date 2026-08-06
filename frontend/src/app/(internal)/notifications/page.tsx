@@ -181,7 +181,7 @@ export default function NotificationsPage() {
 
   return (
     <div className="p-4 sm:p-6 max-w-3xl mx-auto">
-      <AgencyTopNav title="Notifications" />
+      <AgencyTopNav title="Notifications" unreadCount={unreadCount} />
 
       {/* Header */}
       <div className="flex items-start justify-between mb-6">

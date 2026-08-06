@@ -45,7 +45,7 @@ const ACTIVE_STAGES = STAGE_ORDER.filter(s => s !== 'won' && s !== 'lost_paused'
 const SERVICE_TYPES = Object.keys(SERVICE_TYPE_LABELS) as ServiceType[];
 const SOURCES = Object.keys(SOURCE_LABELS) as OpportunitySource[];
 
-export function AddOpportunityModal({ defaultStage = 'identified', onClose, onCreated }: AddOpportunityModalProps) {
+export function AddOpportunityModal({ defaultStage = 'introduction', onClose, onCreated }: AddOpportunityModalProps) {
   const [form, setForm] = useState<CreateOpportunityPayload>({
     company_name: '',
     deal_title: '',
@@ -190,7 +190,7 @@ export function AddOpportunityModal({ defaultStage = 'identified', onClose, onCr
                 onChange={e => set('stage', e.target.value as PipelineStage)}
               >
                 {ACTIVE_STAGES.map(s => (
-                  <option key={s} value={s}>{STAGE_LABELS[s]}</option>
+                  <option className='bg-black' key={s} value={s}>{STAGE_LABELS[s]}</option>
                 ))}
               </select>
             </div>
@@ -203,7 +203,7 @@ export function AddOpportunityModal({ defaultStage = 'identified', onClose, onCr
               >
                 <option value="">Select source…</option>
                 {SOURCES.map(s => (
-                  <option key={s} value={s}>{SOURCE_LABELS[s]}</option>
+                  <option className='bg-black' key={s} value={s}>{SOURCE_LABELS[s]}</option>
                 ))}
               </select>
             </div>

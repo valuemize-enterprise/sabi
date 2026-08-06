@@ -41,7 +41,7 @@ export default function PipelinePage() {
   // Modal state
   const [addModal, setAddModal] = useState<{ open: boolean; defaultStage: PipelineStage }>({
     open: false,
-    defaultStage: 'identified',
+    defaultStage: 'introduction',
   });
   const [detailId, setDetailId] = useState<string | null>(null);
 
@@ -169,7 +169,7 @@ export default function PipelinePage() {
 
           {/* Add deal button */}
           <button
-            onClick={() => setAddModal({ open: true, defaultStage: 'identified' })}
+            onClick={() => setAddModal({ open: true, defaultStage: 'introduction' })}
             style={{
               padding: '9px 18px',
               borderRadius: '9px',
@@ -297,9 +297,9 @@ export default function PipelinePage() {
       {addModal.open && (
         <AddOpportunityModal
           defaultStage={addModal.defaultStage}
-          onClose={() => setAddModal({ open: false, defaultStage: 'identified' })}
+          onClose={() => setAddModal({ open: false, defaultStage: 'introduction' })}
           onCreated={() => {
-            setAddModal({ open: false, defaultStage: 'identified' });
+            setAddModal({ open: false, defaultStage: 'introduction' });
             handleRefresh();
           }}
         />

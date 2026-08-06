@@ -29,7 +29,7 @@ export function KanbanView({ opportunities, onCardClick, onAddInStage }: KanbanV
 
   // Active stages (exclude won/lost from main columns - show as smaller side columns)
   const ACTIVE_STAGES: PipelineStage[] = [
-    'identified', 'in_progress', 'proposal_sent', 'under_review', 'negotiating',
+     'introduction', 'in_progress', 'proposal_sent', 'under_review', 'negotiating',
   ];
   const CLOSED_STAGES: PipelineStage[] = ['won', 'lost_paused'];
 
