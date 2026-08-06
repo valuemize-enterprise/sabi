@@ -198,17 +198,16 @@ const getRevenueWaterfall = async (monthCount = 6) => {
   }
 
   // Fetch monthly revenue target from agency_targets
-  const targetResult = await supabase
+  const { data: targetRow, error: targetError } = await supabase
     .from('agency_targets')
-    .select('target_value')
-    .eq('category', 'new_business')
-    .ilike('title', '%revenue%')
-    .eq('status', 'active')
-    .limit(1)
-    .catch(() => ({ data: [] }));
+    .select('monthly_retainer_revenue_target')
+    .eq('year', new Date().getFullYear())
+    .single()
 
-  const annualTarget = Number(targetResult.data?.[0]?.target_value || 0);
-  const monthlyTarget = annualTarget > 0 ? Math.round(annualTarget / 12) : null;
+    if(targetError) throw new Error(targetError.message);
+
+const monthlyTarget = Number(targetRow?.monthly_retainer_revenue_target || 0) || null;
+const annualTarget  = monthlyTarget ? monthlyTarget * 12 : null;
 
   // Summary stats
   const totalConfirmed = months.reduce((s, m) => s + m.confirmed, 0);

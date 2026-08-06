@@ -176,33 +176,33 @@ export const pipelinePhase3Api = {
   // ── Conversion ─────────────────────────────────────────────────
 
   getConversionStatus: (opportunityId: string) =>
-    apiFetch<ConversionStatus>(`/pipeline/opportunities/${opportunityId}/conversion-status`),
+    apiFetch<ConversionStatus>(`/api/pipeline/opportunities/${opportunityId}/conversion-status`),
 
   convert: (opportunityId: string, config: ConversionConfig) =>
-    apiFetch<ConversionResult>(`/pipeline/opportunities/${opportunityId}/convert`, {
+    apiFetch<ConversionResult>(`/api/pipeline/opportunities/${opportunityId}/convert`, {
       method: 'POST',
       body: JSON.stringify(config),
     }),
 
   listConverted: () =>
-    apiFetch<{ conversions: ConvertedOpportunity[] }>('/pipeline/converted'),
+    apiFetch<{ conversions: ConvertedOpportunity[] }>('/api/pipeline/converted'),
 
   // ── Intelligence ───────────────────────────────────────────────
 
   getFullReport: () =>
-    apiFetch<IntelligenceReport>('/pipeline/intelligence'),
+    apiFetch<IntelligenceReport>('/api/pipeline/intelligence'),
 
   getWinPatterns: () =>
-    apiFetch<WinPatterns>('/pipeline/intelligence/win-patterns'),
+    apiFetch<WinPatterns>('/api/pipeline/intelligence/win-patterns'),
 
   getLossPatterns: () =>
-    apiFetch<LossPatterns>('/pipeline/intelligence/loss-patterns'),
+    apiFetch<LossPatterns>('/api/pipeline/intelligence/loss-patterns'),
 
   getForecast: () =>
-    apiFetch<ConversionForecast>('/pipeline/intelligence/forecast'),
+    apiFetch<ConversionForecast>('/api/pipeline/intelligence/forecast'),
 
   getQuarterSummary: () =>
-    apiFetch<{ quarters: QuarterRow[] }>('/pipeline/intelligence/quarter-summary'),
+    apiFetch<{ quarters: QuarterRow[] }>('/api/pipeline/intelligence/quarter-summary'),
 };
 
 // ── Display helpers ───────────────────────────────────────────────

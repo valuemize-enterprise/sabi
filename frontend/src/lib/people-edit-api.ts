@@ -119,65 +119,65 @@ export const peopleEditApi = {
     internship_start_date?: string;
     internship_end_date?: string;
   }) =>
-    apiFetch<{ record: Record<string, unknown> }>(`/people/${recordId}/internship`, {
+    apiFetch<{ record: Record<string, unknown> }>(`/api/people/${recordId}/internship`, {
       method: 'PATCH',
       body:   JSON.stringify(payload),
     }),
 
   // History
   getHistory: (recordId: string) =>
-    apiFetch<{ history: ChangeHistoryEntry[] }>(`/people/${recordId}/history`),
+    apiFetch<{ history: ChangeHistoryEntry[] }>(`/api/people/${recordId}/history`),
 
   // Disciplinary
   getDisciplinary: (userId: string) =>
-    apiFetch<{ disciplinary: DisciplinaryEntry[] }>(`/people/${userId}/disciplinary`),
+    apiFetch<{ disciplinary: DisciplinaryEntry[] }>(`/api/people/${userId}/disciplinary`),
 
   addDisciplinary: (userId: string, payload: {
     type: DisciplinaryType; date_issued: string; description: string; outcome?: string;
   }) =>
-    apiFetch<{ entry: DisciplinaryEntry }>(`/people/${userId}/disciplinary`, {
+    apiFetch<{ entry: DisciplinaryEntry }>(`/api/people/${userId}/disciplinary`, {
       method: 'POST', body: JSON.stringify(payload),
     }),
 
   resolveDisciplinary: (entryId: string, outcome: string) =>
-    apiFetch<{ entry: DisciplinaryEntry }>(`/people/disciplinary/${entryId}/resolve`, {
+    apiFetch<{ entry: DisciplinaryEntry }>(`/api/people/disciplinary/${entryId}/resolve`, {
       method: 'PATCH', body: JSON.stringify({ outcome }),
     }),
 
   // Support staff
   getSupportStaff: () =>
-    apiFetch<{ staff: SupportStaff[] }>('/people/support-staff'),
+    apiFetch<{ staff: SupportStaff[] }>('/api/people/support-staff'),
 
   createSupportStaff: (payload: Omit<SupportStaff, 'id' | 'created_at'>) =>
-    apiFetch<{ staff: SupportStaff }>('/people/support-staff', {
+    apiFetch<{ staff: SupportStaff }>('/api/people/support-staff', {
       method: 'POST', body: JSON.stringify(payload),
     }),
 
   updateSupportStaff: (id: string, payload: Partial<SupportStaff>) =>
-    apiFetch<{ staff: SupportStaff }>(`/people/support-staff/${id}`, {
+    apiFetch<{ staff: SupportStaff }>(`/api/people/support-staff/${id}`, {
       method: 'PATCH', body: JSON.stringify(payload),
     }),
 
   // Vacancies
   getVacancies: () =>
-    apiFetch<{ vacancies: Vacancy[] }>('/people/vacancies'),
+    apiFetch<{ vacancies: Vacancy[] }>('/api/people/vacancies'),
 
   createVacancy: (payload: { role_name: string; department?: string; description?: string }) =>
-    apiFetch<{ vacancy: Vacancy }>('/people/vacancies', {
+    apiFetch<{ vacancy: Vacancy }>('/api/people/vacancies', {
       method: 'POST', body: JSON.stringify(payload),
     }),
 
   updateVacancy: (id: string, payload: Partial<Vacancy>) =>
-    apiFetch<{ vacancy: Vacancy }>(`/people/vacancies/${id}`, {
+    apiFetch<{ vacancy: Vacancy }>(`/api/people/vacancies/${id}`, {
       method: 'PATCH', body: JSON.stringify(payload),
     }),
 
   // Alerts
   getAlerts: () =>
-    apiFetch<AlertsData>('/people/alerts'),
+    apiFetch<AlertsData>('/api/people/alerts'),
 
   runSweep: () =>
-    apiFetch<Record<string, unknown>>('/people/run-sweep', { method: 'POST' }),
+    apiFetch<Record<string, unknown>>('/api/people/run-sweep', { method: 'POST' }),
 };
 
 // ── Display helpers ───────────────────────────────────────────────

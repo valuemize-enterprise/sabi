@@ -75,15 +75,14 @@ const updatePeopleRecord = async (recordId, fieldName, newValue, reason, caller)
   }
 
   // 3. Load current record
-  // NB: no `users!user_id(...)` join — people_records.user_id has no real
-  // FK constraint (migration 009), so PostgREST can't resolve the relationship.
   const { data: record, error: fetchErr } = await supabase
     .from('people_records')
-    .select('*')
-    .eq('id', recordId)
-    .single();
+    .select('*, users!user_id(id, full_name, role, email)')
+    .eq('user_id', recordId)
+    .maybeSingle();
 
   if (fetchErr || !record) {
+    console.log('fetchErr :', fetchErr)
     throw Object.assign(new Error('Person record not found'), { status: 404 });
   }
 
@@ -92,9 +91,9 @@ const updatePeopleRecord = async (recordId, fieldName, newValue, reason, caller)
   const tier      = TIER_3_FIELDS.has(fieldName) ? 3 : EDITABLE_FIELDS.has(fieldName) ? 2 : 1;
 
   // 4. Employment status machine validation
-  if (fieldName === 'employment_status') {
-    validateTransition(record.employment_status, newValue);
-  }
+ if (fieldName === 'employment_status' && record.employment_status !== newValue) {
+  validateTransition(record.employment_status, newValue);
+}
 
   // 5. Serialise value for storage in change log
   const serialise = v => (v == null ? null : typeof v === 'object' ? JSON.stringify(v) : String(v));
@@ -103,7 +102,7 @@ const updatePeopleRecord = async (recordId, fieldName, newValue, reason, caller)
   const { data: updated, error: updateErr } = await supabase
     .from('people_records')
     .update({ [fieldName]: newValue, updated_at: new Date().toISOString() })
-    .eq('id', recordId)
+    .eq('id', record.id)
     .select('*')
     .single();
 
@@ -111,34 +110,31 @@ const updatePeopleRecord = async (recordId, fieldName, newValue, reason, caller)
     throw new Error(`Failed to update record: ${updateErr.message}`);
   }
 
-  // 7. Write to change log (non-blocking — the update already succeeded)
-  try {
-    await supabase.from('people_record_changes').insert({
-      record_id:  recordId,
-      user_id:    userId,
-      changed_by: caller.id,
-      field_name: fieldName,
-      old_value:  serialise(oldValue),
-      new_value:  serialise(newValue),
-      reason:     reason || null,
-      tier,
-    });
-  } catch (e) {
-    console.error('[people-edit] Change log insert failed:', e.message);
-  }
+  // 7. Write to change log
+  const {error:ChangesError} =  await supabase.from('people_record_changes').insert({
+    record_id:  record.id,
+    user_id:    userId,
+    changed_by: caller.id,
+    field_name: fieldName,
+    old_value:  serialise(oldValue),
+    new_value:  serialise(newValue),
+    reason:     reason || null,
+    tier,
+  })
+   if(ChangesError) {
+    throw new Error(`Failed to log change: ${ChangesError.message}`);
+   }
 
   // 8. Tier-3 extra audit log
   if (TIER_3_FIELDS.has(fieldName)) {
-    try {
-      await supabase.from('tier3_access_log').insert({
-        accessor_id:  caller.id,
-        subject_id:   userId,
-        accessed_at:  new Date().toISOString(),
-        action:       'write',
-        field:        fieldName,
-        notes:        reason || 'HR edit',
-      });
-    } catch { /* non-blocking */ }
+    await supabase.from('tier3_access_log').insert({
+      accessor_id:  caller.id,
+      subject_id:   userId,
+      accessed_at:  new Date().toISOString(),
+      action:       'write',
+      field:        fieldName,
+      notes:        reason || 'HR edit',
+    }).catch(() => {}); // non-blocking
   }
 
   // 9. Apply side effects
@@ -315,45 +311,49 @@ const updateVacancy = async (id, payload, callerId) => {
 };
 
 // ── Alerts dashboard ──────────────────────────────────────────────
+// Uses supabase client only — no raw pg query() dependency.
+// Date thresholds computed in JS to avoid SQL date arithmetic.
 
 const getAlertsData = async () => {
+  const now     = new Date();
+  const in14d   = new Date(now.getTime() + 14  * 86400000).toISOString().split('T')[0];
+  const in30d   = new Date(now.getTime() + 30  * 86400000).toISOString().split('T')[0];
+  const today   = now.toISOString().split('T')[0];
+
   const [internships, probations, contracts, disciplinary] = await Promise.allSettled([
+
     // Interns completing within 30 days
-    query(
-      `SELECT pr.id, pr.internship_type, pr.internship_end_date,
-              u.full_name, u.id AS user_id,
-              (pr.internship_end_date::date - CURRENT_DATE) AS days_remaining
-       FROM people_records pr
-       JOIN users u ON u.id = pr.user_id
-       WHERE pr.employment_category = 'intern'
-         AND pr.employment_status = 'active'
-         AND pr.internship_end_date IS NOT NULL
-         AND pr.internship_end_date::date <= (CURRENT_DATE + INTERVAL '30 days')::date
-       ORDER BY pr.internship_end_date ASC`
-    ),
-    // Staff on probation with end date within 14 days
-    query(
-      `SELECT pr.id, pr.probation_end, u.full_name, u.id AS user_id,
-              (pr.probation_end::date - CURRENT_DATE) AS days_remaining
-       FROM people_records pr
-       JOIN users u ON u.id = pr.user_id
-       WHERE pr.employment_status = 'probation'
-         AND pr.probation_end IS NOT NULL
-         AND pr.probation_end::date <= (CURRENT_DATE + INTERVAL '14 days')::date
-       ORDER BY pr.probation_end ASC`
-    ),
+    supabase
+      .from('people_records')
+      .select('id, internship_type, internship_end_date, user_id, users!user_id(full_name)')
+      .eq('employment_category', 'intern')
+      .eq('employment_status', 'active')
+      .not('internship_end_date', 'is', null)
+      .gte('internship_end_date', today)
+      .lte('internship_end_date', in30d)
+      .order('internship_end_date', { ascending: true }),
+
+    // Staff on probation ending within 14 days
+    supabase
+      .from('people_records')
+      .select('id, probation_end, user_id, users!user_id(full_name)')
+      .eq('employment_status', 'probation')
+      .not('probation_end', 'is', null)
+      .gte('probation_end', today)
+      .lte('probation_end', in14d)
+      .order('probation_end', { ascending: true }),
+
     // Contracts expiring within 30 days
-    query(
-      `SELECT pr.id, pr.contract_end_date, u.full_name, u.id AS user_id,
-              (pr.contract_end_date::date - CURRENT_DATE) AS days_remaining
-       FROM people_records pr
-       JOIN users u ON u.id = pr.user_id
-       WHERE pr.employment_type = 'contract'
-         AND pr.employment_status = 'active'
-         AND pr.contract_end_date IS NOT NULL
-         AND pr.contract_end_date::date <= (CURRENT_DATE + INTERVAL '30 days')::date
-       ORDER BY pr.contract_end_date ASC`
-    ),
+    supabase
+      .from('people_records')
+      .select('id, contract_end_date, employment_type, user_id, users!user_id(full_name)')
+      .eq('employment_type', 'contract')
+      .eq('employment_status', 'active')
+      .not('contract_end_date', 'is', null)
+      .gte('contract_end_date', today)
+      .lte('contract_end_date', in30d)
+      .order('contract_end_date', { ascending: true }),
+
     // Unresolved disciplinary records
     supabase
       .from('disciplinary_records')
@@ -362,13 +362,35 @@ const getAlertsData = async () => {
       .order('date_issued', { ascending: false }),
   ]);
 
+  // Normalise each result — Supabase returns { data, error } not rows[]
+  const toRows = (settled) => {
+    if (settled.status !== 'fulfilled') return [];
+    const val = settled.value;
+    // Supabase result shape: { data: [...], error: null }
+    if (val && Array.isArray(val.data)) {
+      return val.data.map(r => ({
+        ...r,
+        full_name: r.users?.full_name || null,
+        days_remaining: r.internship_end_date
+          ? Math.ceil((new Date(r.internship_end_date) - now) / 86400000)
+          : r.probation_end
+          ? Math.ceil((new Date(r.probation_end) - now) / 86400000)
+          : r.contract_end_date
+          ? Math.ceil((new Date(r.contract_end_date) - now) / 86400000)
+          : null,
+      }));
+    }
+    return [];
+  };
+
   return {
-    internships:  internships.status  === 'fulfilled' ? internships.value.rows  : [],
-    probations:   probations.status   === 'fulfilled' ? probations.value.rows   : [],
-    contracts:    contracts.status    === 'fulfilled' ? contracts.value.rows    : [],
-    disciplinary: disciplinary.status === 'fulfilled' ? (disciplinary.value.data || []) : [],
+    internships:  toRows(internships),
+    probations:   toRows(probations),
+    contracts:    toRows(contracts),
+    disciplinary: toRows(disciplinary),
   };
 };
+
 
 module.exports = {
   updatePeopleRecord,

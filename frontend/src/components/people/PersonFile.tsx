@@ -5,25 +5,27 @@ import {
   peopleEditApi, STATUS_LABELS, STATUS_COLOURS,
   FIELD_LABELS, EmploymentStatus,
 } from '@/lib/people-edit-api';
-import { InlineFieldEdit }  from './InlineFieldEdit';
+import { InlineFieldEdit } from './InlineFieldEdit';
 import { HistoryTab, DisciplinaryTab } from './PeopleTabComponents';
+import { PerformanceTab } from '../PerformanceTab';
+import { LeaveHistoryTab } from '../LeaveHistoryTab';
 
 // ── Status transition map (allowed transitions from each state) ────
 const ALLOWED_TRANSITIONS: Record<EmploymentStatus, EmploymentStatus[]> = {
-  probation:  ['active', 'terminated'],
-  active:     ['on_leave', 'suspended', 'resigned', 'terminated'],
-  on_leave:   ['active'],
-  suspended:  ['active', 'terminated'],
-  resigned:   [],
+  probation: ['active', 'terminated'],
+  active: ['on_leave', 'suspended', 'resigned', 'terminated'],
+  on_leave: ['active'],
+  suspended: ['active', 'terminated'],
+  resigned: [],
   terminated: [],
 };
 
 // ── Tier badge ─────────────────────────────────────────────────────
 const TierBadge = ({ tier }: { tier: 1 | 2 | 3 }) => {
   const colours = {
-    1: { bg: 'rgba(16,185,129,0.1)',  text: '#10b981' },
-    2: { bg: 'rgba(245,158,11,0.1)',  text: '#f59e0b' },
-    3: { bg: 'rgba(244,63,94,0.1)',   text: '#fb7185' },
+    1: { bg: 'rgba(16,185,129,0.1)', text: '#10b981' },
+    2: { bg: 'rgba(245,158,11,0.1)', text: '#f59e0b' },
+    3: { bg: 'rgba(244,63,94,0.1)', text: '#fb7185' },
   };
   return (
     <span style={{
@@ -68,20 +70,20 @@ type Tab = 'profile' | 'performance' | 'leave' | 'history' | 'disciplinary';
 const EMPLOYMENT_STATUS_OPTIONS = Object.entries(STATUS_LABELS).map(([v, l]) => ({ value: v, label: l }));
 
 export function PersonFile({ userId, onClose, viewerRole }: PersonFileProps) {
-  const isHR      = ['hr', 'super_admin'].includes(viewerRole);
-  const isMD      = viewerRole === 'md';
-  const canEdit   = isHR;
+  const isHR = ['hr', 'super_admin'].includes(viewerRole);
+  const isMD = viewerRole === 'md';
+  const canEdit = isHR;
 
   const [activeTab, setActiveTab] = useState<Tab>('profile');
-  const [person,    setPerson]    = useState<Record<string, unknown> | null>(null);
-  const [loading,   setLoading]   = useState(true);
+  const [person, setPerson] = useState<Record<string, unknown> | null>(null);
+  const [loading, setLoading] = useState(true);
 
   const load = useCallback(async () => {
     setLoading(true);
     try {
       // Reuse existing people API for person data
       const res = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api'}/people/${userId}`,
+        `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000'}/api/people/${userId}`,
         {
           headers: {
             Authorization: `Bearer ${localStorage.getItem('sabi_token') || ''}`,
@@ -89,7 +91,7 @@ export function PersonFile({ userId, onClose, viewerRole }: PersonFileProps) {
         }
       );
       const data = await res.json();
-      setPerson(data.person || data);
+      setPerson(data.record || data);
     } catch { /* graceful */ }
     finally { setLoading(false); }
   }, [userId]);
@@ -101,19 +103,19 @@ export function PersonFile({ userId, onClose, viewerRole }: PersonFileProps) {
   };
 
   const tabs: { id: Tab; label: string; hidden?: boolean }[] = [
-    { id: 'profile',      label: 'Profile' },
-    { id: 'performance',  label: 'Performance' },
-    { id: 'leave',        label: 'Leave' },
-    { id: 'history',      label: 'History',      hidden: !isHR },
-    { id: 'disciplinary', label: 'Disciplinary',  hidden: !isHR },
+    { id: 'profile', label: 'Profile' },
+    { id: 'performance', label: 'Performance' },
+    { id: 'leave', label: 'Leave' },
+    { id: 'history', label: 'History', hidden: !isHR },
+    { id: 'disciplinary', label: 'Disciplinary', hidden: !isHR },
   ];
 
   const rawEmploymentStatus = typeof person?.employment_status === 'string' ? person.employment_status as EmploymentStatus : null;
   const statusValue = rawEmploymentStatus ?? 'active';
   const statusColour = STATUS_COLOURS[statusValue];
-  const displayName  = (person?.display_name as string) || (person?.full_name as string) || 'Staff Member';
-  const recordId     = (person?.record_id as string) || (person?.id as string) || '';
-  const roleText     = String(person?.role_title ?? person?.role_key ?? '—');
+  const displayName = (person?.display_name as string) || (person?.full_name as string) || 'Staff Member';
+  const recordId = (person?.record_id as string) || (person?.id as string) || '';
+  const roleText = String(person?.role_title ?? person?.role_key ?? '—');
 
   return (
     <>
@@ -215,12 +217,12 @@ export function PersonFile({ userId, onClose, viewerRole }: PersonFileProps) {
                   </p>
 
                   {[
-                    { field: 'display_name',  label: 'Display Name', type: 'text' as const },
-                    { field: 'role_title',    label: 'Title',        type: 'text' as const },
-                    { field: 'role_key',      label: 'Role',         type: 'text' as const },
-                    { field: 'department',    label: 'Department',   type: 'text' as const },
-                    { field: 'start_date',    label: 'Start Date',   type: 'date' as const },
-                    { field: 'spark_line',    label: 'Bio',          type: 'text' as const },
+                    { field: 'display_name', label: 'Display Name', type: 'text' as const },
+                    { field: 'role_title', label: 'Title', type: 'text' as const },
+                    { field: 'role_key', label: 'Role', type: 'text' as const },
+                    { field: 'department', label: 'Department', type: 'text' as const },
+                    { field: 'start_date', label: 'Start Date', type: 'date' as const },
+                    { field: 'spark_line', label: 'Bio', type: 'text' as const },
                   ].map(f => (
                     <FieldRow key={f.field} label={FIELD_LABELS[f.field] || f.field} tier={1}>
                       <InlineFieldEdit
@@ -247,8 +249,8 @@ export function PersonFile({ userId, onClose, viewerRole }: PersonFileProps) {
                       inputType="select"
                       selectOptions={[
                         { value: 'full_time', label: 'Full Time' },
-                        { value: 'contract',  label: 'Contract' },
-                        { value: 'intern',    label: 'Intern' },
+                        { value: 'contract', label: 'Contract' },
+                        { value: 'intern', label: 'Intern' },
                       ]}
                       onSaved={v => handleFieldSaved('employment_type', v)}
                     />
@@ -259,7 +261,7 @@ export function PersonFile({ userId, onClose, viewerRole }: PersonFileProps) {
                       recordId={recordId} fieldName="employment_status"
                       currentValue={person.employment_status as string}
                       displayValue={STATUS_LABELS[(person.employment_status as EmploymentStatus) || 'active']}
-                      isEditable={canEdit && !['resigned','terminated'].includes(person.employment_status as string)}
+                      isEditable={canEdit && !['resigned', 'terminated'].includes(person.employment_status as string)}
                       inputType="select"
                       selectOptions={
                         ALLOWED_TRANSITIONS[(person.employment_status as EmploymentStatus) || 'active']
@@ -270,10 +272,10 @@ export function PersonFile({ userId, onClose, viewerRole }: PersonFileProps) {
                   </FieldRow>
 
                   {[
-                    { field: 'work_phone',      label: 'Work Phone',         type: 'text' as const },
-                    { field: 'probation_end',   label: 'Probation End Date', type: 'date' as const },
+                    { field: 'work_phone', label: 'Work Phone', type: 'text' as const },
+                    { field: 'probation_end', label: 'Probation End Date', type: 'date' as const },
                     { field: 'contract_end_date', label: 'Contract End Date', type: 'date' as const },
-                    { field: 'tp_cohort',        label: "Tomorrow's People Cohort", type: 'text' as const },
+                    { field: 'tp_cohort', label: "Tomorrow's People Cohort", type: 'text' as const },
                   ].map(f => (
                     <FieldRow key={f.field} label={FIELD_LABELS[f.field] || f.label} tier={2}>
                       <InlineFieldEdit
@@ -292,11 +294,11 @@ export function PersonFile({ userId, onClose, viewerRole }: PersonFileProps) {
                         Tier 3 — HR / Super Admin only · Audit logged
                       </p>
                       {[
-                        { field: 'personal_email', label: 'Personal Email',   type: 'text' as const },
-                        { field: 'personal_phone', label: 'Personal Phone',   type: 'text' as const },
-                        { field: 'date_of_birth',  label: 'Date of Birth',    type: 'date' as const },
-                        { field: 'comp_band',      label: 'Salary Band',      type: 'text' as const },
-                        { field: 'hr_notes',       label: 'HR Notes',         type: 'textarea' as const },
+                        { field: 'personal_email', label: 'Personal Email', type: 'text' as const },
+                        { field: 'personal_phone', label: 'Personal Phone', type: 'text' as const },
+                        { field: 'date_of_birth', label: 'Date of Birth', type: 'date' as const },
+                        { field: 'comp_band', label: 'Salary Band', type: 'text' as const },
+                        { field: 'hr_notes', label: 'HR Notes', type: 'textarea' as const },
                       ].map(f => (
                         <FieldRow key={f.field} label={FIELD_LABELS[f.field] || f.field} tier={3}>
                           <InlineFieldEdit
@@ -325,7 +327,7 @@ export function PersonFile({ userId, onClose, viewerRole }: PersonFileProps) {
                   {/* Score chart would be wired to the existing /api/agency/scores/:userId endpoint */}
                   <div style={{ marginTop: '16px', padding: '16px', background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '10px' }}>
                     <p style={{ fontSize: '12px', color: '#475569', fontFamily: 'JetBrains Mono, monospace' }}>
-                      Wire to: GET /api/agency/scores/{userId} for the score chart and rating history.
+                      <PerformanceTab userId={userId} displayName={displayName} />
                     </p>
                   </div>
                 </div>
@@ -339,7 +341,11 @@ export function PersonFile({ userId, onClose, viewerRole }: PersonFileProps) {
                   </p>
                   <div style={{ padding: '16px', background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '10px' }}>
                     <p style={{ fontSize: '12px', color: '#475569', fontFamily: 'JetBrains Mono, monospace' }}>
-                      Wire to: GET /api/leave/by-user/{userId} for leave history. Approve/reject actions call existing leave routes.
+                      <LeaveHistoryTab
+                        userId={userId}
+                        displayName={displayName}
+                        viewerRole={viewerRole}
+                      />
                     </p>
                   </div>
                 </div>

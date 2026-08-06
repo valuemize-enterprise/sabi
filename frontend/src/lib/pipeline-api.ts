@@ -212,21 +212,21 @@ export const pipelineApi = {
   } = {}) => {
     const qs = new URLSearchParams(params as Record<string, string>).toString();
     return apiFetch<{ opportunities: Opportunity[]; count: number }>(
-      `/pipeline/opportunities${qs ? `?${qs}` : ''}`
+      `/api/pipeline/opportunities${qs ? `?${qs}` : ''}`
     );
   },
 
   getById: (id: string) =>
-    apiFetch<{ opportunity: Opportunity }>(`/pipeline/opportunities/${id}`),
+    apiFetch<{ opportunity: Opportunity }>(`/api/pipeline/opportunities/${id}`),
 
   create: (payload: CreateOpportunityPayload) =>
-    apiFetch<{ opportunity: Opportunity }>('/pipeline/opportunities', {
+    apiFetch<{ opportunity: Opportunity }>('/api/pipeline/opportunities', {
       method: 'POST',
       body: JSON.stringify(payload),
     }),
 
   update: (id: string, payload: Partial<CreateOpportunityPayload>) =>
-    apiFetch<{ opportunity: Opportunity }>(`/pipeline/opportunities/${id}`, {
+    apiFetch<{ opportunity: Opportunity }>(`/api/pipeline/opportunities/${id}`, {
       method: 'PATCH',
       body: JSON.stringify(payload),
     }),
@@ -239,41 +239,41 @@ export const pipelineApi = {
     converted_brand_id?: string;
   }) =>
     apiFetch<{ opportunity: Opportunity; message: string }>(
-      `/pipeline/opportunities/${id}/stage`,
+      `/api/pipeline/opportunities/${id}/stage`,
       { method: 'PATCH', body: JSON.stringify(payload) }
     ),
 
   delete: (id: string) =>
-    apiFetch<{ message: string }>(`/pipeline/opportunities/${id}`, { method: 'DELETE' }),
+    apiFetch<{ message: string }>(`/api/pipeline/opportunities/${id}`, { method: 'DELETE' }),
 
   // ── Weekly Notes ───────────────────────────────────────────────
 
   getNotes: (id: string) =>
-    apiFetch<{ notes: WeeklyNote[] }>(`/pipeline/opportunities/${id}/notes`),
+    apiFetch<{ notes: WeeklyNote[] }>(`/api/pipeline/opportunities/${id}/notes`),
 
   saveNote: (id: string, payload: { notes: string; week_start?: string }) =>
-    apiFetch<{ note: WeeklyNote }>(`/pipeline/opportunities/${id}/notes`, {
+    apiFetch<{ note: WeeklyNote }>(`/api/pipeline/opportunities/${id}/notes`, {
       method: 'POST',
       body: JSON.stringify(payload),
     }),
 
   getAriaDraft: (id: string, week_start?: string) =>
     apiFetch<{ note: WeeklyNote; aria_draft: string }>(
-      `/pipeline/opportunities/${id}/notes/aria-draft`,
+      `/api/pipeline/opportunities/${id}/notes/aria-draft`,
       { method: 'POST', body: JSON.stringify({ week_start }) }
     ),
 
   // ── Analytics ──────────────────────────────────────────────────
 
   getAnalytics: () =>
-    apiFetch<{ analytics: PipelineAnalytics }>('/pipeline/analytics'),
+    apiFetch<{ analytics: PipelineAnalytics }>('/api/pipeline/analytics'),
 
   getAlerts: () =>
-    apiFetch<{ alerts: StalenessAlert[]; count: number }>('/pipeline/alerts'),
+    apiFetch<{ alerts: StalenessAlert[]; count: number }>('/api/pipeline/alerts'),
 
   getMomentum: () =>
     apiFetch<{ commentary: string; forecast_note: string | null; analytics: PipelineAnalytics }>(
-      '/pipeline/momentum'
+      '/api/pipeline/momentum'
     ),
 };
 

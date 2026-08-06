@@ -85,17 +85,17 @@ export const workforceApi = {
     days_count:  number;
     reason?:     string;
   }) =>
-    apiFetch<{ leave: LeaveRequest }>('/leave/request', {
+    apiFetch<{ leave: LeaveRequest }>('/api/leave/request', {
       method: 'POST',
       body:   JSON.stringify(payload),
     }),
 
   getMyLeave: () =>
-    apiFetch<{ requests: LeaveRequest[] }>('/leave/my-requests'),
+    apiFetch<{ requests: LeaveRequest[] }>('/api/leave/my-requests'),
 
   // Leadership: approve or decline
   updateLeaveStatus: (id: string, status: 'approved' | 'declined') =>
-    apiFetch<{ leave: LeaveRequest }>(`/leave/${id}/status`, {
+    apiFetch<{ leave: LeaveRequest }>(`/api/leave/${id}/status`, {
       method: 'PATCH',
       body:   JSON.stringify({ status }),
     }),

@@ -109,10 +109,10 @@ async function apiFetch<T>(path: string, init: RequestInit = {}): Promise<T> {
 export const bookOfDealsApi = {
 
   getMyDeals:    () =>
-    apiFetch<{ deals: Opportunity[] }>('/book-of-deals/my-deals'),
+    apiFetch<{ deals: Opportunity[] }>('/api/book-of-deals/my-deals'),
 
   getMyStats:    () =>
-    apiFetch<{ stats: MyStats }>('/book-of-deals/my-stats'),
+    apiFetch<{ stats: MyStats }>('/api/book-of-deals/my-stats'),
 
   logDeal:       (payload: LogDealPayload) =>
     apiFetch<{ opportunity: Opportunity; message: string }>('/book-of-deals/log', {
@@ -130,16 +130,16 @@ export const bookOfDealsApi = {
   },
 
   getPursuitBoard: (period: 'quarter' | 'year' = 'quarter') =>
-    apiFetch<PursuitBoard>(`/book-of-deals/pursuit-board?period=${period}`),
+    apiFetch<PursuitBoard>(`/api/book-of-deals/pursuit-board?period=${period}`),
 
   getWidget:     () =>
-    apiFetch<WidgetData>('/book-of-deals/widget'),
+    apiFetch<WidgetData>('/api/book-of-deals/widget'),
 
   getAgencyProgress: () =>
-    apiFetch<AgencyProgress>('/book-of-deals/agency-progress'),
+    apiFetch<AgencyProgress>('/api/book-of-deals/agency-progress'),
 
   toggleAccess:  (userId: string, grant: boolean) =>
-    apiFetch<{ user: unknown; message: string }>(`/book-of-deals/access/${userId}`, {
+    apiFetch<{ user: unknown; message: string }>(`/api/book-of-deals/access/${userId}`, {
       method: 'PATCH',
       body:   JSON.stringify({ grant }),
     }),

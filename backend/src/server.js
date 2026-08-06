@@ -120,6 +120,9 @@ const peopleEditRouter = require('./routes/people-edit.routes');
 const workforceRouter = require('./routes/workforce.routes');
 const bodRouter = require('./routes/book-of-deals.routes');
 const debriefRouter = require('./routes/deal-debrief.routes');
+const scoresRouter = require('./routes/scores.routes');
+const notifRouter = require('./routes/notifications.routes');
+
 
 
 
@@ -329,6 +332,8 @@ app.use('/api/workforce', authenticate, workforceRouter);
 app.use('/api/book-of-deals', authenticate, bodRouter);
 app.use('/api/pipeline-analytics', authenticate, analyticsRouter);
 app.use('/api/debriefs', authenticate, debriefRouter);
+app.use('/api/agency/scores', authenticate, scoresRouter);
+app.use('/api/notifications', authenticate, notifRouter);
 
 // ── 404 Handler ───────────────────────────────────────────────
 app.use('*', (req, res) => {

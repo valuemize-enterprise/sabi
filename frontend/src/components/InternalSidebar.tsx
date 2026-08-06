@@ -20,7 +20,7 @@ import { useState } from 'react';
 import { useAgencyStore } from '@/lib/store';
 import { useMobileSidebar } from '@/lib/MobileSidebarContext';
 
-const ADMIN_ROLES = ['super_admin','ceo','managing_director','creative_director','strategy_director','account_director','brand_admin'];
+const ADMIN_ROLES = ['super_admin','ceo','managing_director','creative_director','strategy_director','account_director','brand_admin', 'Staff'];
 const isAdmin = (role: string) => ADMIN_ROLES.includes(role);
 const isSA    = (role: string) => role === 'super_admin';
 const isHR    = (role: string) => role === 'hr';
@@ -44,7 +44,7 @@ const ADMIN_NAV = [
   { href: '/command',  label: 'Command',  icon: Command,       roles: ['super_admin','admin','md','brand_admin'] },
   { href: '/brands',   label: 'Brands',   icon: Building2      },
   { href: '/pipeline', label: 'Pipeline', icon: Workflow,      roles: ['super_admin','admin','md','brand_admin'] },
-  { href: '/weekly-report', label: 'weekly report', icon: Files,      roles: ['super_admin','admin','md','brand_admin'] },
+  { href: '/weekly-report', label: 'Weekly Report', icon: Files,      roles: ['super_admin','admin','md','brand_admin'] },
   { href: '/staff',    label: 'Staff',     icon: Users          },
   { href: '/finance',  label: 'Finance',   icon: DollarSign     },
   { href: '/reports',  label: 'Reports',   icon: FileText       },

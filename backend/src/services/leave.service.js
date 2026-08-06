@@ -80,6 +80,7 @@ async function requestLeave(user, { leave_type = 'annual', start_date, end_date,
           start_date: start_date,
           end_date: end_date,
           days_count: daysCount,
+          note: (reason || note)?.trim() || null,
         },
       });
     } catch (e) {

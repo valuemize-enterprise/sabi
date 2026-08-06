@@ -139,29 +139,29 @@ async function apiFetch<T>(path: string, options: RequestInit = {}): Promise<T> 
 export const weeklyReportApi = {
 
   getCurrentWeek: () =>
-    apiFetch<WeekRange>('/weekly-report/current-week'),
+    apiFetch<WeekRange>('/api/weekly-report/current-week'),
 
   getHistory: () =>
-    apiFetch<{ reports: WeeklyReport[] }>('/weekly-report/history'),
+    apiFetch<{ reports: WeeklyReport[] }>('/api/weekly-report/history'),
 
   getStatus: () =>
-    apiFetch<{ total: number; submitted: number; week_start: string }>('/weekly-report/status'),
+    apiFetch<{ total: number; submitted: number; week_start: string }>('/api/weekly-report/status'),
 
   getBrands: (week_start?: string) =>
     apiFetch<{ brands: BrandStatus[]; week_start: string }>(
-      `/weekly-report/brands${week_start ? `?week_start=${week_start}` : ''}`
+      `/api/weekly-report/brands${week_start ? `?week_start=${week_start}` : ''}`
     ),
 
   getEntry: (brand_id: string, week_start?: string, brand_admin_id?: string) => {
     const params = new URLSearchParams({ brand_id });
     if (week_start) params.set('week_start', week_start);
     if (brand_admin_id) params.set('brand_admin_id', brand_admin_id);
-    return apiFetch<{ entry: ReportEntry; report: WeeklyReport }>(`/weekly-report/entry?${params}`);
+    return apiFetch<{ entry: ReportEntry; report: WeeklyReport }>(`/api/weekly-report/entry?${params}`);
   },
 
   generateDrafts: (entry_id: string) =>
     apiFetch<{ entry: ReportEntry; message: string }>(
-      `/weekly-report/entry/${entry_id}/generate`,
+      `/api/weekly-report/entry/${entry_id}/generate`,
       { method: 'POST' }
     ),
 
@@ -170,36 +170,36 @@ export const weeklyReportApi = {
     'edited_goals' | 'edited_social' | 'edited_pipeline' | 'brand_admin_notes'
   >>) =>
     apiFetch<{ entry: ReportEntry }>(
-      `/weekly-report/entry/${entry_id}`,
+      `/api/weekly-report/entry/${entry_id}`,
       { method: 'PATCH', body: JSON.stringify(sections) }
     ),
 
   submitEntry: (entry_id: string) =>
     apiFetch<{ entry: ReportEntry; message: string }>(
-      `/weekly-report/entry/${entry_id}/submit`,
+      `/api/weekly-report/entry/${entry_id}/submit`,
       { method: 'POST' }
     ),
 
   getConsolidated: (week_start?: string) =>
     apiFetch<ConsolidatedView>(
-      `/weekly-report/consolidated${week_start ? `?week_start=${week_start}` : ''}`
+      `/api/weekly-report/consolidated${week_start ? `?week_start=${week_start}` : ''}`
     ),
 
   generateMDSummary: (week_start?: string, pipeline_analytics?: object) =>
     apiFetch<{ summary: string; week_start: string }>(
-      `/weekly-report/consolidated/aria-summary${week_start ? `?week_start=${week_start}` : ''}`,
+      `/api/weekly-report/consolidated/aria-summary${week_start ? `?week_start=${week_start}` : ''}`,
       { method: 'POST', body: JSON.stringify({ pipeline_analytics }) }
     ),
 
   addComment: (entry_id: string, section: ReportSection, comment: string, flagged = false) =>
     apiFetch<{ comment: ReportComment }>(
-      `/weekly-report/entry/${entry_id}/comment`,
+      `/api/weekly-report/entry/${entry_id}/comment`,
       { method: 'POST', body: JSON.stringify({ section, comment, flagged }) }
     ),
 
   resolveComment: (comment_id: string) =>
     apiFetch<{ comment: ReportComment }>(
-      `/weekly-report/comment/${comment_id}/resolve`,
+      `/api/weekly-report/comment/${comment_id}/resolve`,
       { method: 'PATCH' }
     ),
 };

@@ -98,31 +98,31 @@ export const agencyGoalsApi = {
 
   getAll: () =>
     apiFetch<{ categories: GoalCategory[]; year: number; fetched_at: string }>(
-      '/agency-goals'
+      '/api/agency-goals'
     ),
 
   getPulse: () =>
     apiFetch<{ pulse: GoalPulseItem[]; fetched_at: string }>(
-      '/agency-goals/pulse'
+      '/api/agency-goals/pulse'
     ),
 
   getWeekVsGoal: () =>
     apiFetch<{ deltas: WeekVsGoalItem[]; fetched_at: string }>(
-      '/agency-goals/week-vs-goal'
+      '/api/agency-goals/week-vs-goal'
     ),
 
   getTargets: () =>
     apiFetch<{ targets: Record<string, GoalTarget[]> }>(
-      '/agency-goals/targets'
+      '/api/agency-goals/targets'
     ),
 
   getCategory: (id: GoalCategoryId) =>
     apiFetch<{ category: GoalCategory; fetched_at: string }>(
-      `/agency-goals/${id}`
+      `/api/agency-goals/${id}`
     ),
 
   upsertTarget: (target: GoalTarget) =>
-    apiFetch<{ target: GoalTarget }>('/agency-goals/targets', {
+    apiFetch<{ target: GoalTarget }>('/api/agency-goals/targets', {
       method: 'POST',
       body:   JSON.stringify(target),
     }),

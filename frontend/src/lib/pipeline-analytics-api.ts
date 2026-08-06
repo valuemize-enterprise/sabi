@@ -102,15 +102,15 @@ export const pipelineAnalyticsApi = {
 
   // Revenue Waterfall (leadership only)
   getWaterfall: (months = 6) =>
-    apiFetch<WaterfallData>(`/pipeline-analytics/waterfall?months=${months}`),
+    apiFetch<WaterfallData>(`/api/pipeline-analytics/waterfall?months=${months}`),
 
   // Stale deals
   getStaleDeals: () =>
-    apiFetch<{ stale_deals: StaleDeal[] }>('/pipeline-analytics/stale'),
+    apiFetch<{ stale_deals: StaleDeal[] }>('/api/pipeline-analytics/stale'),
 
   // Generate ARIA follow-up drafts (may take 2-4 seconds)
   generateFollowUp: (opportunityId: string) =>
-    apiFetch<FollowUpResult>('/pipeline-analytics/follow-up-draft', {
+    apiFetch<FollowUpResult>('/api/pipeline-analytics/follow-up-draft', {
       method: 'POST',
       body:   JSON.stringify({ opportunityId }),
     }),

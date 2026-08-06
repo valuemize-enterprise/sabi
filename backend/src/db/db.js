@@ -18,34 +18,26 @@
 //   (use the "Session" mode connection string, port 5432)
 // ═══════════════════════════════════════════════════════════════════
 
-'use strict';
+"use strict";
 
-const { Pool } = require('pg');
+const { Pool } = require("pg");
 
 if (!process.env.DATABASE_URL) {
   console.error(
-    '[db/db.js] DATABASE_URL is not set. ' +
-    'Go to Supabase Dashboard → Settings → Database → Connection string → URI ' +
-    'and add DATABASE_URL to your .env file.'
+    "[db/db.js] DATABASE_URL is not set. " +
+      "Go to Supabase Dashboard → Settings → Database → Connection string → URI " +
+      "and add DATABASE_URL to your .env file.",
   );
 }
 
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
-  // Supabase requires SSL in production
-  ssl: process.env.NODE_ENV === 'production'
-    ? { rejectUnauthorized: false }
-    : false,
-  // Keep pool small — this is for pipeline queries alongside the
-  // Supabase JS client which manages its own connections
-  max: 5,
-  idleTimeoutMillis: 30_000,
-  connectionTimeoutMillis: 5_000,
+  ssl: { rejectUnauthorized: false },
 });
 
 // Log connection errors so they surface clearly
-pool.on('error', (err) => {
-  console.error('[db/db.js] Unexpected PostgreSQL pool error:', err.message);
+pool.on("error", (err) => {
+  console.error("[db/db.js] Unexpected PostgreSQL pool error:", err.message);
 });
 
 /**

@@ -133,11 +133,11 @@ export const debriefApi = {
     if (params?.industry)      q.set('industry',      params.industry);
     if (params?.service_scope) q.set('service_scope', params.service_scope);
     if (params?.search)        q.set('search',        params.search);
-    return apiFetch<{ entries: PitchArchiveEntry[]; count: number }>(`/debriefs/pitch-archive?${q}`);
+    return apiFetch<{ entries: PitchArchiveEntry[]; count: number }>(`/api/debriefs/pitch-archive?${q}`);
   },
 
   getDeckUrl: (opportunityId: string) =>
-    apiFetch<{ deck_url: string | null }>(`/debriefs/deck/${opportunityId}`),
+    apiFetch<{ deck_url: string | null }>(`/api/debriefs/deck/${opportunityId}`),
 };
 
 // ── Form option constants ─────────────────────────────────────────
