@@ -16,6 +16,7 @@
 const crypto = require('crypto');
 const jwt    = require('jsonwebtoken');
 const { supabase } = require('../config/supabase');
+const { sendRawEmail } = require('./email.service');
 
 const PORTAL_SECRET = process.env.PORTAL_JWT_SECRET || process.env.JWT_SECRET || 'sabi-portal-secret';
 
@@ -37,13 +38,12 @@ async function sendPortalInvite(brandId, email, callerId) {
 
   const link = `${process.env.FRONTEND_URL || 'https://sabi.cerebre.media'}/portal/login?token=${tokenRow.token}`;
 
-  // Send invite email — wire into your existing sendEmail dispatcher
-  console.log(`[client-portal] Invite link for ${email} (${brand.name}): ${link}`);
-  // await sendEmail({
-  //   to: email,
-  //   subject: `View your invoices from Cerebre Media Africa — ${brand.name}`,
-  //   html: buildInviteEmail(brand.name, link),
-  // });
+  // Send invite email — via the shared Resend dispatcher
+  await sendRawEmail({
+    to:      email,
+    subject: `View your invoices — ${brand.name} · Cerebre Media Africa`,
+    html:    buildInviteEmail(brand.name, link),
+  });
 
   return { sent: true, email, brand_name: brand.name, expires_in: '72 hours' };
 }

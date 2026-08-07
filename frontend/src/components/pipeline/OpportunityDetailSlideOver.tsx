@@ -18,6 +18,7 @@ import {
 } from '@/lib/pipeline-api';
 import { DealDebriefModal } from '@/components/pipeline/DealDebriefModal';
 import { SmartFollowUpPanel } from '@/components/pipeline/SmartFollowUpPanel';
+import { EditOpportunityModal } from '@/components/pipeline/EditOpportunityModal';
 
 interface OpportunityDetailSlideOverProps {
   opportunityId: string;
@@ -54,6 +55,7 @@ export function OpportunityDetailSlideOver({ opportunityId, onClose, onUpdated }
   const [opp, setOpp] = useState<Opportunity | null>(null);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'detail' | 'notes' | 'history'>('detail');
+  const [showEdit, setShowEdit] = useState(false);
 
   // Stage change state
   const [showStageChange, setShowStageChange] = useState(false);
@@ -234,38 +236,51 @@ export function OpportunityDetailSlideOver({ opportunityId, onClose, onUpdated }
             </button>
           </div>
 
-          {/* Stage badge + change button */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '14px' }}>
-            <span
-              style={{
-                padding: '4px 12px',
-                borderRadius: '20px',
-                fontSize: '12px',
-                fontFamily: 'JetBrains Mono, monospace',
-                fontWeight: 700,
-                background: sc.bg,
-                color: sc.text,
-                border: `1px solid ${sc.border}`,
-              }}
-            >
-              {STAGE_LABELS[opp.stage]}
-            </span>
-            {opp.stage !== 'won' && opp.stage !== 'lost_paused' && (
-              <button
-                onClick={() => setShowStageChange(v => !v)}
+          <div className='flex items-center justify-between '>
+            {/* Stage badge + change button */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '14px' }}>
+              <span
                 style={{
+                  padding: '4px 12px',
+                  borderRadius: '20px',
                   fontSize: '12px',
-                  fontFamily: 'Inter, sans-serif',
-                  color: '#6d28d9',
-                  background: 'none',
-                  border: 'none',
-                  cursor: 'pointer',
-                  fontWeight: 600,
+                  fontFamily: 'JetBrains Mono, monospace',
+                  fontWeight: 700,
+                  background: sc.bg,
+                  color: sc.text,
+                  border: `1px solid ${sc.border}`,
                 }}
               >
-                {showStageChange ? 'Cancel' : 'Move stage →'}
-              </button>
-            )}
+                {STAGE_LABELS[opp.stage]}
+              </span>
+              {opp.stage !== 'won' && opp.stage !== 'lost_paused' && (
+                <button
+                  onClick={() => setShowStageChange(v => !v)}
+                  style={{
+                    fontSize: '12px',
+                    fontFamily: 'Inter, sans-serif',
+                    color: '#6d28d9',
+                    background: 'none',
+                    border: 'none',
+                    cursor: 'pointer',
+                    fontWeight: 600,
+                  }}
+                >
+                  {showStageChange ? 'Cancel' : 'Move stage →'}
+                </button>
+              )}
+            </div>
+            <button
+              onClick={() => setShowEdit(true)}
+              style={{
+                padding: '6px 14px', borderRadius: '7px', cursor: 'pointer',
+                fontSize: '12px', fontWeight: 700, fontFamily: 'Inter, sans-serif',
+                background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)',
+                color: '#94a3b8',
+              }}
+            >
+              ✎ Edit
+            </button>
           </div>
 
           {/* Stage change panel */}
@@ -684,6 +699,19 @@ export function OpportunityDetailSlideOver({ opportunityId, onClose, onUpdated }
             onUpdated();
           }}
           onSkip={() => setShowDebriefModal(false)}
+        />
+      )}
+
+      {showEdit && opp && (
+        <EditOpportunityModal
+          opportunity={opp}
+          onSaved={(updated) => {
+            // updated may be a partial Opportunity; cast to full Opportunity for state update
+            setOpp(updated as unknown as Opportunity);
+            setShowEdit(false);
+            onUpdated?.();
+          }}
+          onClose={() => setShowEdit(false)}
         />
       )}
     </>

@@ -310,7 +310,7 @@ export default function PipelinePage() {
         <OpportunityDetailSlideOver
           opportunityId={detailId}
           onClose={() => setDetailId(null)}
-          onUpdated={handleRefresh}
+            onUpdated={() => { handleRefresh(); loadOpportunities(); }}
         />
       )}
     </div>

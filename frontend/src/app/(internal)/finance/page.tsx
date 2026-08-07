@@ -16,10 +16,11 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import {
   ArrowLeft, Plus, Send, CheckCircle2, AlertTriangle,
-  FileText, Loader2, X, Trash2, RefreshCw,
-  DollarSign, Clock, TrendingDown, NotepadText,
+  FileText, Loader2, X, Trash2, RefreshCw, Download,
+  DollarSign, Clock, TrendingDown, NotepadText, Wallet, BarChart3,
 } from 'lucide-react';
 import { useAgencyStore } from '@/lib/store';
 import { LoadingPage, Badge } from '@/components/ui';
@@ -287,6 +288,23 @@ function InvoiceRow({ invoice, userRole, onSend, onPay, onRefresh }: {
     finally { setActing(false); }
   };
 
+  const downloadPDF = async () => {
+    setActing(true);
+    try {
+      const res  = await fetch(`${API}/api/finance/invoices/${invoice.id}/pdf`, {
+        headers: { Authorization: `Bearer ${tok()}` },
+      });
+      if (!res.ok) throw new Error(`Download failed (${res.status})`);
+      const blob = await res.blob();
+      const a    = document.createElement('a');
+      a.href     = URL.createObjectURL(blob);
+      a.download = `${invoice.invoice_number}.pdf`;
+      a.click();
+      URL.revokeObjectURL(a.href);
+    } catch (e: any) { alert(e.message); }
+    finally { setActing(false); }
+  };
+
   return (
     <div className="sabi-card p-4 flex flex-col sm:flex-row sm:items-center gap-3">
       <div className="flex-1 min-w-0">
@@ -308,6 +326,9 @@ function InvoiceRow({ invoice, userRole, onSend, onPay, onRefresh }: {
           )}
         </div>
         <div className="flex items-center gap-2">
+          <button onClick={downloadPDF} disabled={acting} title="Download PDF" className="flex items-center gap-1.5 text-xs text-white/40 hover:text-white border border-white/10 rounded-lg px-2 py-1.5">
+            {acting ? <Loader2 className="w-3 h-3 animate-spin" /> : <Download className="w-3 h-3" />} PDF
+          </button>
           {isFinance && invoice.status === 'draft' && (
             <button onClick={handleSend} disabled={acting} className="flex items-center gap-1.5 text-xs text-blue-400 hover:text-blue-300 border border-blue-500/20 rounded-lg px-2 py-1.5">
               {acting ? <Loader2 className="w-3 h-3 animate-spin" /> : <Send className="w-3 h-3" />} Send
@@ -390,6 +411,16 @@ export default function FinancePage() {
           <button onClick={load} className="text-xs text-white/40 hover:text-white flex items-center gap-1"><RefreshCw className="w-3 h-3" /> Retry</button>
         </div>
       )}
+
+      {/* Quick links */}
+      <div className="flex gap-2 flex-wrap mb-6">
+        <Link href="/finance/expenses" className="flex items-center gap-2 text-xs font-bold px-4 py-2 rounded-full border border-white/10 text-white/60 hover:text-white hover:border-white/25 transition-colors">
+          <Wallet className="w-3.5 h-3.5" /> Expenses
+        </Link>
+        <Link href="/finance/pnl" className="flex items-center gap-2 text-xs font-bold px-4 py-2 rounded-full border border-white/10 text-white/60 hover:text-white hover:border-white/25 transition-colors">
+          <BarChart3 className="w-3.5 h-3.5" /> Reports · P&L + VAT
+        </Link>
+      </div>
 
       {/* Summary stats */}
       {summary && (

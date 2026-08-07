@@ -117,7 +117,7 @@ export const pipelineAnalyticsApi = {
 
   // Quick staleness check (no ARIA call)
   checkStaleness: (opportunityId: string) =>
-    apiFetch<StalenessCheck>(`/pipeline-analytics/follow-up-check/${opportunityId}`),
+    apiFetch<StalenessCheck>(`/api/pipeline-analytics/follow-up-check/${opportunityId}`),
 };
 
 // ── Display helpers ───────────────────────────────────────────────

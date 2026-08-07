@@ -56,6 +56,31 @@ async function send({ to, subject, template, data }) {
   }
 }
 
+/**
+ * Raw send helper — accepts a pre-built HTML string (no template file).
+ * Used by modules that compose their own HTML (e.g. client portal invites).
+ */
+async function sendRawEmail({ to, subject, html }) {
+  if (!process.env.RESEND_API_KEY) {
+    console.warn(`[email] RESEND_API_KEY not set — skipping email to ${to} (${subject})`);
+    return { skipped: true };
+  }
+  try {
+    const result = await resend.emails.send({
+      from:     FROM,
+      reply_to: REPLY_TO,
+      to,
+      subject,
+      html,
+    });
+    console.log(`[email] ✓ Sent "${subject}" to ${to}`);
+    return result;
+  } catch (err) {
+    console.error(`[email] ✗ Failed to send "${subject}" to ${to}:`, err.message);
+    return { error: err.message };
+  }
+}
+
 // ════════════════════════════════════════════════════════════════
 // PUBLIC METHODS — one per email trigger
 // ════════════════════════════════════════════════════════════════
@@ -182,4 +207,5 @@ module.exports = {
   sendPasswordReset,
   sendDeliverableApproved,
   sendGoalAchieved,
+  sendRawEmail,
 };

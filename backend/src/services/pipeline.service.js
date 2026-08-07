@@ -189,15 +189,56 @@ const createOpportunity = async (data, created_by) => {
 
 const updateOpportunity = async (id, data) => {
   const allowed = [
-    'company_name', 'deal_title', 'description', 'service_scope',
-    'source', 'estimated_value', 'date_briefed', 'client_deadline',
-    'agency_deadline', 'business_bringer_id', 'accountable_team_text',
-    'notes', 'lost_reason', 'lost_notes',
+    // ── Core ───────────────────────────────────────────────────
+    'company_name',
+    'deal_title',
+    'description',
+    'source',
+    'notes',
+    'accountable_team_text',
+
+    // ── Contact (Phase E) ──────────────────────────────────────
+    'contact_name',
+    'contact_position',
+    'contact_email',
+    'contact_phone',
+
+    // ── Deal structure (Phase E) ───────────────────────────────
+    'deal_type',           // 'retainer' | 'campaign'
+    'service_scope',       // TEXT[]
+    'industry',
+    'estimated_value',
+
+    // Retainer fields
+    'retainer_monthly_amount',
+    'retainer_duration_months',
+    'retainer_start_date',
+
+    // Campaign fields
+    'campaign_name',
+    'campaign_total_amount',
+    'campaign_start_date',
+    'campaign_end_date',
+    'campaign_goals',
+
+    // ── Attribution (Phase E) ──────────────────────────────────
+    'business_bringer_id',
+    'account_manager_id',
+    'deck_url',
+
+    // ── Timeline ───────────────────────────────────────────────
+    'date_briefed',
+    'client_deadline',
+    'agency_deadline',
   ];
 
   const update = {};
   for (const field of allowed) {
-    if (data[field] !== undefined) update[field] = data[field];
+    if (data[field] !== undefined) {
+      // Coerce empty strings to null for optional fields
+      const val = data[field];
+      update[field] = (typeof val === 'string' && val.trim() === '') ? null : val;
+    }
   }
 
   if (!Object.keys(update).length) throw new Error('No valid fields to update');
