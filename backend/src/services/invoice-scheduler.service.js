@@ -19,7 +19,7 @@
 
 'use strict';
 
-const { supabase }           = require('../config/supabase');
+const supabase            = require('../config/supabase');
 const { createInvoice }      = require('./invoice.service');
 const finEmail               = require('./finance-email.service');
 

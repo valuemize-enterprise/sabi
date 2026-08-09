@@ -11,7 +11,7 @@
 
 'use strict';
 
-const { supabase } = require('../config/supabase');
+const supabase  = require('../config/supabase');
 
 const QUARTER_MONTHS = {
   1: [1, 2, 3],
@@ -28,6 +28,8 @@ const QUARTER_DUE = {
 };
 
 // ── VAT for a specific quarter ────────────────────────────────────────────────
+const VAT_RATE = 0.075; // Nigeria standard VAT 7.5% — adjust if needed
+
 async function getQuarterlyVAT(year, quarter) {
   const months = QUARTER_MONTHS[quarter];
   if (!months) throw Object.assign(new Error('quarter must be 1, 2, 3, or 4'), { status: 400 });
@@ -38,34 +40,40 @@ async function getQuarterlyVAT(year, quarter) {
 
   const { data: invoices, error } = await supabase
     .from('invoices')
-    .select('id, invoice_number, brand_id, type, subtotal, vat_rate, vat_amount, total_amount, issued_date, brand:brands(name)')
+    .select('id, reference, brand_id, invoice_type, amount, issued_date, brand:brands(name)')
     .not('status', 'in', '("cancelled","draft")')
     .gte('issued_date', `${year}-${startMonth}-01`)
     .lte('issued_date', `${year}-${endMonth}-${lastDay}`)
-    .gt('vat_amount', 0)
     .order('issued_date');
 
   if (error) throw new Error(error.message);
 
-  const list = invoices || [];
+  const list = (invoices || []).map(inv => {
+    const net   = Number(inv.amount);
+    const vat   = Math.round(net * VAT_RATE * 100) / 100;
+    const gross = Math.round((net + vat) * 100) / 100;
+    return { ...inv, net_amount: net, vat_amount: vat, gross_amount: gross };
+  });
 
-  // Monthly breakdown within the quarter
+  // Monthly breakdown
   const byMonth = {};
-  months.forEach(m => { byMonth[m] = { invoice_count: 0, net_amount: 0, vat_amount: 0, gross_amount: 0 }; });
+  months.forEach(m => {
+    byMonth[m] = { invoice_count: 0, net_amount: 0, vat_amount: 0, gross_amount: 0 };
+  });
 
   for (const inv of list) {
     const m = new Date(inv.issued_date).getMonth() + 1;
     byMonth[m].invoice_count++;
-    byMonth[m].net_amount   += Number(inv.subtotal);
-    byMonth[m].vat_amount   += Number(inv.vat_amount);
-    byMonth[m].gross_amount += Number(inv.total_amount);
+    byMonth[m].net_amount   += inv.net_amount;
+    byMonth[m].vat_amount   += inv.vat_amount;
+    byMonth[m].gross_amount += inv.gross_amount;
   }
 
   const totals = {
     invoice_count: list.length,
-    net_amount:    list.reduce((s, i) => s + Number(i.subtotal), 0),
-    vat_amount:    list.reduce((s, i) => s + Number(i.vat_amount), 0),
-    gross_amount:  list.reduce((s, i) => s + Number(i.total_amount), 0),
+    net_amount:    list.reduce((s, i) => s + i.net_amount,   0),
+    vat_amount:    list.reduce((s, i) => s + i.vat_amount,   0),
+    gross_amount:  list.reduce((s, i) => s + i.gross_amount, 0),
   };
 
   return {
@@ -73,17 +81,17 @@ async function getQuarterlyVAT(year, quarter) {
     quarter:  Number(quarter),
     period:   `Q${quarter} ${year}`,
     due_date: QUARTER_DUE[quarter],
+    vat_rate: VAT_RATE,
     months:   byMonth,
     totals,
     invoices: list.map(i => ({
-      invoice_number: i.invoice_number,
-      brand_name:     i.brand?.name,
-      type:           i.type,
-      issued_date:    i.issued_date,
-      net_amount:     Number(i.subtotal),
-      vat_rate:       Number(i.vat_rate),
-      vat_amount:     Number(i.vat_amount),
-      gross_amount:   Number(i.total_amount),
+      reference:    i.reference,
+      brand_name:   i.brand?.name,
+      invoice_type: i.invoice_type,
+      issued_date:  i.issued_date,
+      net_amount:   i.net_amount,
+      vat_amount:   i.vat_amount,
+      gross_amount: i.gross_amount,
     })),
   };
 }

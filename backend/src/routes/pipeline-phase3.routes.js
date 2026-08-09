@@ -46,7 +46,7 @@ router.get(
 
 // POST /api/pipeline/opportunities/:id/convert
 // Convert a Won opportunity to a Brand workspace.
-// Body: { brand_name, brand_description, retainer_amount, onboarding_date, create_invoice }
+// Body: { brand_name, brand_description, retainer_billing_day, onboarding_date, create_invoice }
 router.post(
   '/opportunities/:id/convert',
   requireRoles(...ALL_PIPELINE),
@@ -56,7 +56,7 @@ router.post(
       const {
         brand_name,
         brand_description,
-        retainer_amount,
+        retainer_billing_day,
         onboarding_date,
         create_invoice = true,
       } = req.body;

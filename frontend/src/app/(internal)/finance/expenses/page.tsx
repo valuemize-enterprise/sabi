@@ -69,7 +69,7 @@ export default function ExpensesPage() {
         apiFetch('/api/finance/expenses/summary'),
       ]);
       setExpenses(expRes.expenses||[]);
-      setBrands(brandRes.brands||[]);
+      setBrands(brandRes.data?.brands||[]);
       setSummary(sumRes.summary?.by_category||{});
     } catch(e:any) { setError(e.message); }
     finally { setLoading(false); }

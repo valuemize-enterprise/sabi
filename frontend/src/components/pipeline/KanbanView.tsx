@@ -28,10 +28,10 @@ export function KanbanView({ opportunities, onCardClick, onAddInStage }: KanbanV
   );
 
   // Active stages (exclude won/lost from main columns - show as smaller side columns)
-  const ACTIVE_STAGES: PipelineStage[] = [
-     'introduction', 'in_progress', 'proposal_sent', 'under_review', 'negotiating',
-  ];
-  const CLOSED_STAGES: PipelineStage[] = ['won', 'lost_paused'];
+const ACTIVE_STAGES: PipelineStage[] = [
+  'introduction', 'proposal', 'pitch', 'second_pitch', 'decision',
+];
+const CLOSED_STAGES: PipelineStage[] = ['agreement', 'onboarded', 'lost_paused'];
 
   const stageTotal = (stage: PipelineStage) =>
     byStage[stage].reduce((sum, o) => sum + (o.estimated_value || 0), 0);
@@ -163,7 +163,9 @@ export function KanbanView({ opportunities, onCardClick, onAddInStage }: KanbanV
             <div className="px-3 py-2.5 rounded-t-xl" style={{ borderBottom: `1px solid ${colour.border}` }}>
               <div className="flex items-center justify-between">
                 <span className="text-xs font-mono font-bold tracking-wide" style={{ color: colour.text }}>
-                  {stage === 'won' ? '🏆 Won' : '⏸ Lost / Paused'}
+                 { stage === 'agreement' ? '🤝 Agreement'
+  : stage === 'onboarded' ? '✅ Onboarded'
+  : '⏸ Lost / Paused'}
                 </span>
                 <span
                   className="text-[11px] font-mono w-5 h-5 rounded-full flex items-center justify-center"

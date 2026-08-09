@@ -5,285 +5,288 @@
  * Entry point. Mounts all route groups, middleware, and error handlers.
  */
 
-'use strict';
+"use strict";
 
-const express     = require('express');
-const cors        = require('cors');
-const helmet      = require('helmet');
-const morgan      = require('morgan');
-const compression = require('compression');
+const express = require("express");
+const cors = require("cors");
+const helmet = require("helmet");
+const morgan = require("morgan");
+const compression = require("compression");
 
 // ── Route imports ─────────────────────────────────────────────
-const agencyAuthRoutes     = require('./routes/auth.routes');
-const clientAuthRoutes     = require('./routes/client/auth.routes');
-const superAdminAuthRoutes = require('./routes/super-admin/auth.routes');
+const agencyAuthRoutes = require("./routes/auth.routes");
+const clientAuthRoutes = require("./routes/client/auth.routes");
+const superAdminAuthRoutes = require("./routes/super-admin/auth.routes");
 
 // ── Agency Routes ─────────────────────────────────────────────
-const agencyDashboard     = require('./routes/agency/dashboard.routes');
-const agencyBrands        = require('./routes/agency/brands.routes');
-const agencyClients       = require('./routes/agency/clients.routes');
-const agencyStaff         = require('./routes/agency/staff.routes');
-const agencyReports       = require('./routes/agency/reports.routes');
-const agencyGoals         = require('./routes/agency/goals.routes');
-const agencyCompetitors   = require('./routes/agency/competitors.routes');
-const agencyCalendar      = require('./routes/agency/calendar.routes');
-const agencyTasks         = require('./routes/agency/tasks.routes');
-const agencyAnalytics     = require('./routes/agency/analytics.routes');
-const agencyAudience      = require('./routes/agency/audience.routes');
-const agencyStrategies    = require('./routes/agency/strategies.routes');    // NEW
-const agencyWorkLogs      = require('./routes/agency/work-logs.routes');     // NEW
-const agencyDeliverables  = require('./routes/agency/deliverables.routes');  // NEW
-const agencyNotifications = require('./routes/agency/notifications.routes'); // NEW
-const agencyBrandTeam     = require('./routes/agency/brand-team.routes');    // NEW
-const agencyAsk           = require('./routes/agency/ask.routes');    
+const agencyDashboard = require("./routes/agency/dashboard.routes");
+const agencyBrands = require("./routes/agency/brands.routes");
+const agencyClients = require("./routes/agency/clients.routes");
+const agencyStaff = require("./routes/agency/staff.routes");
+const agencyReports = require("./routes/agency/reports.routes");
+const agencyGoals = require("./routes/agency/goals.routes");
+const agencyCompetitors = require("./routes/agency/competitors.routes");
+const agencyCalendar = require("./routes/agency/calendar.routes");
+const agencyTasks = require("./routes/agency/tasks.routes");
+const agencyAnalytics = require("./routes/agency/analytics.routes");
+const agencyAudience = require("./routes/agency/audience.routes");
+const agencyStrategies = require("./routes/agency/strategies.routes"); // NEW
+const agencyWorkLogs = require("./routes/agency/work-logs.routes"); // NEW
+const agencyDeliverables = require("./routes/agency/deliverables.routes"); // NEW
+const agencyNotifications = require("./routes/agency/notifications.routes"); // NEW
+const agencyBrandTeam = require("./routes/agency/brand-team.routes"); // NEW
+const agencyAsk = require("./routes/agency/ask.routes");
 
-const agencyBriefs      = require('./routes/agency/briefs.routes');
-const agencyTasksV2     = require('./routes/agency/tasks-v2.routes');     // replaces old tasks
-const agencySocialRpts  = require('./routes/agency/social-reports.routes');
-const clientBriefs      = require('./routes/client/briefs.routes');
-const inviteRoutes      = require('./routes/auth/invite.routes');
-const ariaService       = require('./services/aria/aria-strategy.service'); // NEW
+const agencyBriefs = require("./routes/agency/briefs.routes");
+const agencyTasksV2 = require("./routes/agency/tasks-v2.routes"); // replaces old tasks
+const agencySocialRpts = require("./routes/agency/social-reports.routes");
+const clientBriefs = require("./routes/client/briefs.routes");
+const inviteRoutes = require("./routes/auth/invite.routes");
+const ariaService = require("./services/aria/aria-strategy.service"); // NEW
 
 // ── Client Portal Routes ──────────────────────────────────────
-const clientDashboard     = require('./routes/client/dashboard.routes');
-const clientReports       = require('./routes/client/reports.routes');
-const clientGoals         = require('./routes/client/goals.routes');
-const clientCompetitors   = require('./routes/client/competitors.routes');
-const clientAsk           = require('./routes/client/ask.routes');
-const clientTeam          = require('./routes/client/team.routes');          // NEW
-const clientWorkLogs      = require('./routes/client/work-logs.routes');     // NEW
-const clientDeliverables  = require('./routes/client/deliverables.routes');  // NEW
-const clientNotifications = require('./routes/client/notifications.routes'); // NEW
-const clientSatisfaction  = require('./routes/client/satisfaction.routes');  // NEW
-const clientMoments       = require('./routes/client/moments.routes');       // NEW
-const clientProofOfValue  = require('./routes/client/proof-of-value.routes');// NEW
-const clientBrandIdentity = require('./routes/client/brand-identity.routes');// NEW
-const clientStrategies    = require('./routes/client/strategies.routes');    // NEW
+const clientDashboard = require("./routes/client/dashboard.routes");
+const clientReports = require("./routes/client/reports.routes");
+const clientGoals = require("./routes/client/goals.routes");
+const clientCompetitors = require("./routes/client/competitors.routes");
+const clientAsk = require("./routes/client/ask.routes");
+const clientTeam = require("./routes/client/team.routes"); // NEW
+const clientWorkLogs = require("./routes/client/work-logs.routes"); // NEW
+const clientDeliverables = require("./routes/client/deliverables.routes"); // NEW
+const clientNotifications = require("./routes/client/notifications.routes"); // NEW
+const clientSatisfaction = require("./routes/client/satisfaction.routes"); // NEW
+const clientMoments = require("./routes/client/moments.routes"); // NEW
+const clientProofOfValue = require("./routes/client/proof-of-value.routes"); // NEW
+const clientBrandIdentity = require("./routes/client/brand-identity.routes"); // NEW
+const clientStrategies = require("./routes/client/strategies.routes"); // NEW
 
 // ── Super Admin Routes ────────────────────────────────────────
-const saAuth       = require('./routes/super-admin/auth.routes');
-const saDashboard  = require('./routes/super-admin/dashboard.routes');
-const saUsers      = require('./routes/super-admin/users.routes');
-const saBrands     = require('./routes/super-admin/brands.routes');
-const saAnalytics  = require('./routes/super-admin/analytics.routes');
-const saEmails     = require('./routes/super-admin/emails.routes');
-const saAudit      = require('./routes/super-admin/audit.routes');
-const saClients    = require('./routes/super-admin/clients.routes');         // NEW
-const saSettings   = require('./routes/super-admin/settings.routes');
+const saAuth = require("./routes/super-admin/auth.routes");
+const saDashboard = require("./routes/super-admin/dashboard.routes");
+const saUsers = require("./routes/super-admin/users.routes");
+const saBrands = require("./routes/super-admin/brands.routes");
+const saAnalytics = require("./routes/super-admin/analytics.routes");
+const saEmails = require("./routes/super-admin/emails.routes");
+const saAudit = require("./routes/super-admin/audit.routes");
+const saClients = require("./routes/super-admin/clients.routes"); // NEW
+const saSettings = require("./routes/super-admin/settings.routes");
 
-const systemNotifications = require('./routes/system.notifications.routes');
+const systemNotifications = require("./routes/system.notifications.routes");
 
-const agencyProfileRoutes      = require('./routes/agency/profile.routes');
-const agencyBrandIdentityRoutes= require('./routes/agency/brand-identity.routes');
+const agencyProfileRoutes = require("./routes/agency/profile.routes");
+const agencyBrandIdentityRoutes = require("./routes/agency/brand-identity.routes");
 
-const financialsRoutes          = require('./routes/agency/financials.routes');
-const briefClassificationRoutes = require('./routes/agency/brief-classification.routes');
-const coreFunctionsRoutes       = require('./routes/agency/core-functions.routes');
-const staffLeaveRoutes          = require('./routes/agency/staff-leave.routes');
+const financialsRoutes = require("./routes/agency/financials.routes");
+const briefClassificationRoutes = require("./routes/agency/brief-classification.routes");
+const coreFunctionsRoutes = require("./routes/agency/core-functions.routes");
+const staffLeaveRoutes = require("./routes/agency/staff-leave.routes");
 
-const taskVerificationRoutes    = require('./routes/agency/task-verification.routes');
-const contributionClaimsRoutes  = require('./routes/agency/contribution-claims.routes');
-const weeklyRatingsRoutes       = require('./routes/agency/weekly-ratings.routes');
-const scoringRoutes             = require('./routes/agency/scoring.routes');
+const taskVerificationRoutes = require("./routes/agency/task-verification.routes");
+const contributionClaimsRoutes = require("./routes/agency/contribution-claims.routes");
+const weeklyRatingsRoutes = require("./routes/agency/weekly-ratings.routes");
+const scoringRoutes = require("./routes/agency/scoring.routes");
 
-const agencyTargetsRoutes       = require('./routes/agency/agency-targets.routes');
-const pulseRoutes               = require('./routes/agency/pulse.routes');
-const leaderboardRoutes         = require('./routes/agency/leaderboard.routes');
-const analyticsRouter = require('./routes/pipeline-analytics.routes');
+const agencyTargetsRoutes = require("./routes/agency/agency-targets.routes");
+const pulseRoutes = require("./routes/agency/pulse.routes");
+const leaderboardRoutes = require("./routes/agency/leaderboard.routes");
+const analyticsRouter = require("./routes/pipeline-analytics.routes");
 
+const financeP2 = require("./routes/finance-phase2.routes");
+const {
+  financeRouter,
+  clientPortalRouter,
+} = require("./routes/finance-phase3.routes");
 
-const financeP2 = require('./routes/finance-phase2.routes');
-const { financeRouter, clientPortalRouter } = require('./routes/finance-phase3.routes');
-
-  const { profileFormRouter } = require('./routes/profile-form.routes');
-   
+const { profileFormRouter } = require("./routes/profile-form.routes");
 
 // ── People OS Routes ─────────────────────────────────────────
-const { peopleRouter, leaveRouter } = require('./routes/people.routes');
+const { peopleRouter, leaveRouter } = require("./routes/people.routes");
 
 // ── Task Import (add before existing /api/tasks route) ──
-const taskImportRouter = require('./routes/task-import.routes');
+const taskImportRouter = require("./routes/task-import.routes");
 
 // goal generator
-const goalRouter = require('./routes/goal-generator.routes');
+const goalRouter = require("./routes/goal-generator.routes");
 
-const pipelineRouter = require('./routes/pipeline.routes');
-const commandCentreRouter = require('./routes/command-centre.routes');
-const weeklyReportRouter = require('./routes/weekly-report.routes');
-const pipelinePhase3Router = require('./routes/pipeline-phase3.routes');
+const pipelineRouter = require("./routes/pipeline.routes");
+const commandCentreRouter = require("./routes/command-centre.routes");
+const weeklyReportRouter = require("./routes/weekly-report.routes");
+const pipelinePhase3Router = require("./routes/pipeline-phase3.routes");
 // platform connect routes
 
-const platformRouter = require('./routes/platform-connect.routes');
+const platformRouter = require("./routes/platform-connect.routes");
 
-const agencyGoalsRouter = require('./routes/agency/agency-goals.routes');
-const peopleEditRouter = require('./routes/people-edit.routes');
-const workforceRouter = require('./routes/workforce.routes');
-const bodRouter = require('./routes/book-of-deals.routes');
-const debriefRouter = require('./routes/deal-debrief.routes');
-const scoresRouter = require('./routes/scores.routes');
-const notifRouter = require('./routes/notifications.routes');
-
-
-
-
-
-
-
-
+const agencyGoalsRouter = require("./routes/agency/agency-goals.routes");
+const peopleEditRouter = require("./routes/people-edit.routes");
+const workforceRouter = require("./routes/workforce.routes");
+const bodRouter = require("./routes/book-of-deals.routes");
+const debriefRouter = require("./routes/deal-debrief.routes");
+const scoresRouter = require("./routes/scores.routes");
+const notifRouter = require("./routes/notifications.routes");
+const Invoices = require("./routes/invoices.routes");
+const taskGroupsRouter = require("./routes/task-groups.routes");
+const taskCommentsRouter = require("./routes/task-comments.routes");
+const supabase = require("./config/supabase");
 
 // ── Middleware ────────────────────────────────────────────────
-const { errorHandler }  = require('./middleware/error.middleware');
-const { requestLogger } = require('./middleware/logger.middleware');
+const { errorHandler } = require("./middleware/error.middleware");
+const { requestLogger } = require("./middleware/logger.middleware");
 
-const app  = express();
+const app = express();
 const PORT = process.env.PORT || 4000;
 
 // ── Core Middleware ───────────────────────────────────────────
-app.use(helmet({ crossOriginResourcePolicy: { policy: 'cross-origin' } }));
+app.use(helmet({ crossOriginResourcePolicy: { policy: "cross-origin" } }));
 
-
-app.use(cors({
-  origin: (origin, cb) => {
-    const allowed = (process.env.ALLOWED_ORIGINS || 'http://localhost:3000')
-      .split(',').map(o => o.trim());
-    if (!origin || allowed.includes(origin) || allowed.includes('*')) return cb(null, true);
-    cb(new Error(`CORS: ${origin} not allowed`));
-  },
-  credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
-}));
+app.use(
+  cors({
+    origin: (origin, cb) => {
+      const allowed = (process.env.ALLOWED_ORIGINS || "http://localhost:3000")
+        .split(",")
+        .map((o) => o.trim());
+      if (!origin || allowed.includes(origin) || allowed.includes("*"))
+        return cb(null, true);
+      cb(new Error(`CORS: ${origin} not allowed`));
+    },
+    credentials: true,
+    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization"],
+  }),
+);
 
 app.use(compression());
-app.use(morgan('combined'));
-app.use(express.json({ limit: '10mb' }));
-app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+app.use(morgan("combined"));
+app.use(express.json({ limit: "10mb" }));
+app.use(express.urlencoded({ extended: true, limit: "10mb" }));
 app.use(requestLogger);
 
 // ── Health Check ──────────────────────────────────────────────
-app.get('/health', (req, res) => {
+app.get("/health", (req, res) => {
   res.json({
-    status:    'ok',
-    service:   'Sabi Intelligence Suite API',
-    version:   process.env.npm_package_version || '1.0.0',
+    status: "ok",
+    service: "Sabi Intelligence Suite API",
+    version: process.env.npm_package_version || "1.0.0",
     timestamp: new Date().toISOString(),
   });
 });
 
 // ── Auth ──────────────────────────────────────────────────────
-app.use('/api/auth',             agencyAuthRoutes);
-app.use('/api/client/auth',      clientAuthRoutes);
-app.use('/api/super-admin/auth', superAdminAuthRoutes);
+app.use("/api/auth", agencyAuthRoutes);
+app.use("/api/client/auth", clientAuthRoutes);
+app.use("/api/super-admin/auth", superAdminAuthRoutes);
 
 // ── Agency Routes ─────────────────────────────────────────────
-app.use('/api/agency/dashboard',    agencyDashboard);
-app.use('/api/agency/brands',       agencyBrands);
-app.use('/api/agency/clients',      agencyClients);
-app.use('/api/agency/staff',        agencyStaff);
-app.use('/api/agency/reports',      agencyReports);
-app.use('/api/agency/goals',        agencyGoals);
-app.use('/api/agency/competitors',  agencyCompetitors);
-app.use('/api/agency/calendar',     agencyCalendar);
-app.use('/api/agency/tasks',        agencyTasks);
-app.use('/api/agency/analytics',    agencyAnalytics);
-app.use('/api/agency/audience',     agencyAudience);
-app.use('/api/agency/strategies',   agencyStrategies);    // NEW
-app.use('/api/agency/work-logs',    agencyWorkLogs);      // NEW
-app.use('/api/agency/deliverables', agencyDeliverables);  // NEW
-app.use('/api/agency/notifications',agencyNotifications); // NEW
-app.use('/api/agency/ask',          agencyAsk);           // NEW
+app.use("/api/agency/dashboard", agencyDashboard);
+app.use("/api/agency/brands", agencyBrands);
+app.use("/api/agency/clients", agencyClients);
+app.use("/api/agency/staff", agencyStaff);
+app.use("/api/agency/reports", agencyReports);
+app.use("/api/agency/goals", agencyGoals);
+app.use("/api/agency/competitors", agencyCompetitors);
+app.use("/api/agency/calendar", agencyCalendar);
+app.use("/api/agency/tasks", agencyTasks);
+app.use("/api/agency/analytics", agencyAnalytics);
+app.use("/api/agency/audience", agencyAudience);
+app.use("/api/agency/strategies", agencyStrategies); // NEW
+app.use("/api/agency/work-logs", agencyWorkLogs); // NEW
+app.use("/api/agency/deliverables", agencyDeliverables); // NEW
+app.use("/api/agency/notifications", agencyNotifications); // NEW
+app.use("/api/agency/ask", agencyAsk); // NEW
 
 // Brand team — uses mergeParams to access :brandId inside the router
-app.use('/api/agency/brands/:brandId/team', (req, _res, next) => {
-  next();
-}, agencyBrandTeam);                                      // NEW
+app.use(
+  "/api/agency/brands/:brandId/team",
+  (req, _res, next) => {
+    next();
+  },
+  agencyBrandTeam,
+); // NEW
 
 // ── Client Portal Routes ──────────────────────────────────────
-app.use('/api/client/dashboard',    clientDashboard);
-app.use('/api/client/reports',      clientReports);
-app.use('/api/client/goals',        clientGoals);
-app.use('/api/client/competitors',  clientCompetitors);
-app.use('/api/client/ask',          clientAsk);
-app.use('/api/client/team',         clientTeam);          // NEW
-app.use('/api/client/work-logs',    clientWorkLogs);      // NEW
-app.use('/api/client/deliverables', clientDeliverables);  // NEW
-app.use('/api/client/notifications',clientNotifications); // NEW
-app.use('/api/client/satisfaction', clientSatisfaction);  // NEW
-app.use('/api/client/moments',      clientMoments);       // NEW
-app.use('/api/client/proof-of-value',clientProofOfValue); // NEW
-app.use('/api/client/brand/identity', clientBrandIdentity);// NEW
-app.use('/api/client/strategies',    clientStrategies);    // NEW
+app.use("/api/client/dashboard", clientDashboard);
+app.use("/api/client/reports", clientReports);
+app.use("/api/client/goals", clientGoals);
+app.use("/api/client/competitors", clientCompetitors);
+app.use("/api/client/ask", clientAsk);
+app.use("/api/client/team", clientTeam); // NEW
+app.use("/api/client/work-logs", clientWorkLogs); // NEW
+app.use("/api/client/deliverables", clientDeliverables); // NEW
+app.use("/api/client/notifications", clientNotifications); // NEW
+app.use("/api/client/satisfaction", clientSatisfaction); // NEW
+app.use("/api/client/moments", clientMoments); // NEW
+app.use("/api/client/proof-of-value", clientProofOfValue); // NEW
+app.use("/api/client/brand/identity", clientBrandIdentity); // NEW
+app.use("/api/client/strategies", clientStrategies); // NEW
 
 // ── Super Admin Routes ────────────────────────────────────────
-app.use('/api/super-admin/dashboard', saDashboard);
-app.use('/api/super-admin/users',     saUsers);
-app.use('/api/super-admin/brands',    saBrands);
-app.use('/api/super-admin/analytics', saAnalytics);
-app.use('/api/super-admin/emails',    saEmails);
-app.use('/api/super-admin/audit',     saAudit);
-app.use('/api/super-admin/clients',   saClients);         // NEW
-app.use('/api/super-admin/settings',  saSettings);
+app.use("/api/super-admin/dashboard", saDashboard);
+app.use("/api/super-admin/users", saUsers);
+app.use("/api/super-admin/brands", saBrands);
+app.use("/api/super-admin/analytics", saAnalytics);
+app.use("/api/super-admin/emails", saEmails);
+app.use("/api/super-admin/audit", saAudit);
+app.use("/api/super-admin/clients", saClients); // NEW
+app.use("/api/super-admin/settings", saSettings);
 
 // ── Command Center ──────────────────────────────────────────
-app.use('/api/agency/command', require('./routes/command.routes'));
+app.use("/api/agency/command", require("./routes/command.routes"));
 
 // ── System Notifications (sweep + test) ──────────────────────
-app.use('/api/system/notifications',  systemNotifications);
+app.use("/api/system/notifications", systemNotifications);
 
 // ── Push Notifications (PWA) ────────────────────────────────
-app.use('/api/push-notifications', require('./routes/push-notifications.routes'));
+app.use(
+  "/api/push-notifications",
+  require("./routes/push-notifications.routes"),
+);
 
-
-app.use('/api/agency/briefs',           agencyBriefs);
-app.use('/api/agency/tasks',            agencyTasksV2);      // replaces old agencyTasks
-app.use('/api/agency/social-reports',   agencySocialRpts);
-app.use('/api/agency/staff',                    agencyProfileRoutes);
-app.use('/api/agency/brands/:id/identity',      agencyBrandIdentityRoutes);
+app.use("/api/agency/briefs", agencyBriefs);
+app.use("/api/agency/tasks", agencyTasksV2); // replaces old agencyTasks
+app.use("/api/agency/social-reports", agencySocialRpts);
+app.use("/api/agency/staff", agencyProfileRoutes);
+app.use("/api/agency/brands/:id/identity", agencyBrandIdentityRoutes);
 
 // Client
-app.use('/api/client/briefs',           clientBriefs);
+app.use("/api/client/briefs", clientBriefs);
 
 // Invitations (public routes — no auth middleware)
-app.use('/api/auth/invite',             inviteRoutes);
+app.use("/api/auth/invite", inviteRoutes);
 
 // Phase 1 — financials, brief classification, core functions, staff leave
-app.use('/api/agency',                  financialsRoutes);
-app.use('/api/agency',                  briefClassificationRoutes);
-app.use('/api/agency/core-functions',   coreFunctionsRoutes);
-app.use('/api/agency/staff-leave',      staffLeaveRoutes);
+app.use("/api/agency", financialsRoutes);
+app.use("/api/agency", briefClassificationRoutes);
+app.use("/api/agency/core-functions", coreFunctionsRoutes);
+app.use("/api/agency/staff-leave", staffLeaveRoutes);
 
 // Phase 2 — task verification, contribution claims, weekly ratings, scoring
-app.use('/api/agency/tasks',            taskVerificationRoutes);
-app.use('/api/agency/contribution-claims', contributionClaimsRoutes);
-app.use('/api/agency/weekly-ratings',   weeklyRatingsRoutes);
-app.use('/api/agency/scores',           scoringRoutes);
+app.use("/api/agency/tasks", taskVerificationRoutes);
+app.use("/api/agency/contribution-claims", contributionClaimsRoutes);
+app.use("/api/agency/weekly-ratings", weeklyRatingsRoutes);
+app.use("/api/agency/scores", scoringRoutes);
 
 // Phase 3 — agency targets, MD weekly pulse, leaderboard
-app.use('/api/agency/targets',          agencyTargetsRoutes);
-app.use('/api/agency/pulse',            pulseRoutes);
-app.use('/api/agency/leaderboard',      leaderboardRoutes);
+app.use("/api/agency/targets", agencyTargetsRoutes);
+app.use("/api/agency/pulse", pulseRoutes);
+app.use("/api/agency/leaderboard", leaderboardRoutes);
 
 // Phase 4 — People OS
 
-app.use('/api/people',                  profileFormRouter);
+app.use("/api/people", profileFormRouter);
 
 // ── Task Import
-app.use('/api/task-import', taskImportRouter);
+app.use("/api/task-import", taskImportRouter);
 // goal generator
 
-app.use('/api/goals', goalRouter);
+app.use("/api/goals", goalRouter);
 
-app.use('/api/finance', financeP2);
-app.use('/api/platforms', platformRouter);
-
-
+app.use("/api/finance", financeP2);
+app.use("/api/platforms", platformRouter);
 
 // Phase 3 finance endpoints (expenses, P&L, VAT, PDF, portal invite)
-app.use('/api/finance', financeRouter);
+app.use("/api/finance", financeRouter);
 
 // Client portal (separate auth — no staff JWT required)
-app.use('/api/client-portal', clientPortalRouter);
-
+app.use("/api/client-portal", clientPortalRouter);
 
 // ── Start Server ──────────────────────────────────────────────
 // Render free-tier cold start: respond to health checks immediately
@@ -291,56 +294,132 @@ const server = app.listen(PORT, () => {
   console.log(`\n🚀 Sabi Intelligence Suite API`);
   console.log(`   ➜ Local:   http://localhost:${PORT}`);
   console.log(`   ➜ Health:  http://localhost:${PORT}/health`);
-  console.log(`   ➜ Env:     ${process.env.NODE_ENV || 'development'}\n`);
+  console.log(`   ➜ Env:     ${process.env.NODE_ENV || "development"}\n`);
 });
 
 // Render cold-start: keep-alive on incoming requests
 server.keepAliveTimeout = 65_000;
-server.headersTimeout   = 66_000;
+server.headersTimeout = 66_000;
 
 // ── Fallback sweeper while server is awake (hourly) ──────────
 // Primary trigger should still be the cron ping — this only covers gaps.
-const { runSweep } = require('./services/notification-sweeper.service');
-const { authenticate } = require('./middleware/auth.middleware');
+const { runSweep } = require("./services/notification-sweeper.service");
+const { authenticate } = require("./middleware/auth.middleware");
 let lastSweep = 0;
-setInterval(() => {
-  if (Date.now() - lastSweep > 50 * 60 * 1000) {
-    lastSweep = Date.now();
-    runSweep().catch(e => console.error('[sweep]', e.message));
-  }
-}, 10 * 60 * 1000);
+setInterval(
+  () => {
+    if (Date.now() - lastSweep > 50 * 60 * 1000) {
+      lastSweep = Date.now();
+      runSweep().catch((e) => console.error("[sweep]", e.message));
+    }
+  },
+  10 * 60 * 1000,
+);
 
-const { runFullSweep } = require('./services/alert-sweep.service');
+const { runFullSweep } = require("./services/alert-sweep.service");
 
 // Example: Run daily at 8:00 AM Lagos time (UTC+1)
 // If using node-cron:
-const cron = require('node-cron');
-cron.schedule('0 7 * * *', async () => {
-  console.log('[cron] Running HR alert sweep…');
-  await runFullSweep().catch(e => console.error('[cron] Sweep error:', e.message));
-}, { timezone: 'Africa/Lagos' });
+const cron = require("node-cron");
+cron.schedule(
+  "0 7 * * *",
+  async () => {
+    console.log("[cron] Running HR alert sweep…");
+    await runFullSweep().catch((e) =>
+      console.error("[cron] Sweep error:", e.message),
+    );
+  },
+  { timezone: "Africa/Lagos" },
+);
 
-app.use('/api/pipeline', authenticate, pipelineRouter);
-app.use('/api/command-centre', authenticate, commandCentreRouter);
-app.use('/api/weekly-report', authenticate, weeklyReportRouter); 
-app.use('/api/pipeline', authenticate, pipelinePhase3Router);
-app.use('/api/people',  authenticate,     peopleRouter);
-app.use('/api/leave',   authenticate,     leaveRouter);
-app.use('/api/agency-goals', authenticate, agencyGoalsRouter);
-app.use('/api/people', authenticate, peopleEditRouter);
-app.use('/api/workforce', authenticate, workforceRouter);
-app.use('/api/book-of-deals', authenticate, bodRouter);
-app.use('/api/pipeline-analytics', authenticate, analyticsRouter);
-app.use('/api/debriefs', authenticate, debriefRouter);
-app.use('/api/agency/scores', authenticate, scoresRouter);
-app.use('/api/notifications', authenticate, notifRouter);
+app.use("/api/pipeline", authenticate, pipelineRouter);
+app.use("/api/command-centre", authenticate, commandCentreRouter);
+app.use("/api/weekly-report", authenticate, weeklyReportRouter);
+app.use("/api/pipeline", authenticate, pipelinePhase3Router);
+app.use("/api/people", authenticate, peopleRouter);
+app.use("/api/leave", authenticate, leaveRouter);
+app.use("/api/agency-goals", authenticate, agencyGoalsRouter);
+app.use("/api/people", authenticate, peopleEditRouter);
+app.use("/api/workforce", authenticate, workforceRouter);
+app.use("/api/book-of-deals", authenticate, bodRouter);
+app.use("/api/pipeline-analytics", authenticate, analyticsRouter);
+app.use("/api/debriefs", authenticate, debriefRouter);
+app.use("/api/agency/scores", authenticate, scoresRouter);
+app.use("/api/notifications", authenticate, notifRouter);
+app.use("/api/finance", authenticate, Invoices);
+app.use("/api/task-groups", authenticate, taskGroupsRouter);
 
+// Tasks (group move + nested comments) — Frontend components hit /api/tasks/...
+const taskRouter = require("express").Router();
+taskRouter.patch("/:id", async (req, res, next) => {
+  try {
+    const allowed = [
+      "group_id",
+      "title",
+      "description",
+      "status",
+      "priority",
+      "due_date",
+      "assignee_id",
+      "tag",
+      "tags",
+    ];
+    const updates = { updated_at: new Date().toISOString() };
+    allowed.forEach((k) => {
+      if (req.body[k] !== undefined) updates[k] = req.body[k];
+    });
+
+    if (!Object.keys(updates).filter((k) => k !== "updated_at").length) {
+      return res.status(400).json({ error: "Nothing to update" });
+    }
+
+    const { data, error } = await supabase
+      .from("tasks")
+      .update(updates)
+      .eq("id", req.params.id)
+      .select("id, title, status, group_id, assignee_id, updated_at")
+      .single();
+
+    if (error) throw error;
+    if (!data) return res.status(404).json({ error: "Task not found" });
+    res.json({ task: data });
+  } catch (err) {
+    next(err);
+  }
+});
+taskRouter.use("/:taskId/comments", taskCommentsRouter);
+app.use("/api/tasks", authenticate, taskRouter);
+
+// Brand members — used by TaskCommentThread for @mention suggestions
+app.get(
+  "/api/brands/:brandId/members",
+  authenticate,
+  async (req, res, next) => {
+    try {
+      const { data, error } = await supabase
+        .from("staff_brand_assignments")
+        .select("users!staff_id ( id, full_name, email )")
+        .eq("brand_id", req.params.brandId);
+
+      if (error) throw error;
+
+      res.json({
+        members: (data || [])
+          .map((m) => m.users)
+          .filter(Boolean)
+          .filter((u, i, a) => a.findIndex((x) => x.id === u.id) === i),
+      });
+    } catch (err) {
+      next(err);
+    }
+  },
+);
 // ── 404 Handler ───────────────────────────────────────────────
-app.use('*', (req, res) => {
+app.use("*", (req, res) => {
   res.status(404).json({
     success: false,
     error: `Route ${req.method} ${req.originalUrl} not found`,
-    data: null
+    data: null,
   });
 });
 
@@ -348,8 +427,8 @@ app.use('*', (req, res) => {
 app.use(errorHandler);
 
 // Graceful shutdown
-process.on('SIGTERM', () => {
-  console.log('SIGTERM received — shutting down gracefully');
+process.on("SIGTERM", () => {
+  console.log("SIGTERM received — shutting down gracefully");
   server.close(() => process.exit(0));
 });
 

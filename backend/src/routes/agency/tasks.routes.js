@@ -45,6 +45,10 @@ router.get("/", authenticate, async (req, res, next) => {
       status,
       priority,
       strategy_id,
+      month,
+      year,
+      date_field = "due_date",
+      group_id,
       page = 1,
       limit = 50,
     } = req.query;
@@ -69,6 +73,22 @@ router.get("/", authenticate, async (req, res, next) => {
     if (status) query = query.eq("status", status);
     if (priority) query = query.eq("priority", priority);
     if (strategy_id) query = query.eq("strategy_id", strategy_id);
+
+    if (year) {
+      query = query.gte(date_field, `${year}-01-01`).lte(date_field, `${year}-12-31`);
+    }
+    if (month && year) {
+      const pad = String(month).padStart(2, "0");
+      const last = new Date(Number(year), Number(month), 0).getDate();
+      query = query
+        .gte(date_field, `${year}-${pad}-01`)
+        .lte(date_field, `${year}-${pad}-${last}`);
+    }
+    if (group_id === "ungrouped") {
+      query = query.is("group_id", null);
+    } else if (group_id) {
+      query = query.eq("group_id", group_id);
+    }
 
     const ADMIN_ROLES = [
       "super_admin",
@@ -218,6 +238,7 @@ router.put("/:id", authenticate, async (req, res, next) => {
       "estimated_hours",
       "tags",
       "proof_links",
+      "group_id",
     ];
     const updates = { updated_at: new Date().toISOString() };
     allowed.forEach((k) => {

@@ -22,7 +22,7 @@
 'use strict';
 
 const crypto     = require('crypto');
-const { supabase } = require('../config/supabase');
+const supabase  = require('../config/supabase');
 
 const GRAPH_API  = 'https://graph.facebook.com/v20.0';
 const APP_ID     = process.env.META_APP_ID;

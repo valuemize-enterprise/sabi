@@ -112,7 +112,7 @@ const createBrandFromOpportunity = async (opportunity_id, config, created_by) =>
   const {
     brand_name = opp.company_name,
     brand_description = opp.description,
-    retainer_amount = opp.estimated_value,
+    retainer_billing_day = opp.estimated_value,
     onboarding_date = new Date().toISOString().split('T')[0],
     create_invoice = true,
   } = config;

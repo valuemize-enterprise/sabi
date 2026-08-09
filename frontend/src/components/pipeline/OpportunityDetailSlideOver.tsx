@@ -26,7 +26,7 @@ interface OpportunityDetailSlideOverProps {
   onUpdated: () => void;
 }
 
-const ACTIVE_STAGES = STAGE_ORDER.filter(s => s !== 'won' && s !== 'lost_paused');
+const ACTIVE_STAGES = STAGE_ORDER.filter(s => s !== 'onboarded' && s !== 'lost_paused');
 
 const sectionLabel: React.CSSProperties = {
   fontSize: '10px',
@@ -112,8 +112,8 @@ export function OpportunityDetailSlideOver({ opportunityId, onClose, onUpdated }
       setLostReason('');
       setLostNotes('');
 
-      if (newStage === 'won' || newStage === 'lost_paused') {
-        setDebriefOutcome(newStage === 'won' ? 'won' : 'lost');
+      if (newStage === 'onboarded' || newStage === 'lost_paused') {
+        setDebriefOutcome(newStage === 'onboarded' ? 'won' : 'lost');
         setShowDebriefModal(true);
       }
 
@@ -253,7 +253,7 @@ export function OpportunityDetailSlideOver({ opportunityId, onClose, onUpdated }
               >
                 {STAGE_LABELS[opp.stage]}
               </span>
-              {opp.stage !== 'won' && opp.stage !== 'lost_paused' && (
+              {opp.stage !== 'onboarded' && opp.stage !== 'lost_paused' && (
                 <button
                   onClick={() => setShowStageChange(v => !v)}
                   style={{
@@ -296,7 +296,7 @@ export function OpportunityDetailSlideOver({ opportunityId, onClose, onUpdated }
             >
               <p style={{ ...sectionLabel, marginBottom: '8px' }}>Move to Stage</p>
               <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', marginBottom: '10px' }}>
-                {[...ACTIVE_STAGES, 'won' as PipelineStage, 'lost_paused' as PipelineStage]
+                {[...ACTIVE_STAGES, 'onboarded' as PipelineStage, 'lost_paused' as PipelineStage]
                   .filter(s => s !== opp.stage)
                   .map(s => {
                     const c = STAGE_COLOURS[s];

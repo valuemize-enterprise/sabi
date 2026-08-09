@@ -12,7 +12,7 @@
 
 'use strict';
 
-const { supabase } = require('../config/supabase');
+const  supabase  = require('../config/supabase');
 
 // ── Get targets for a year ────────────────────────────────────────────────────
 async function getTargets(year) {

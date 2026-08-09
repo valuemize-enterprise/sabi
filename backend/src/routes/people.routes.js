@@ -339,7 +339,7 @@ peopleRouter.get("/:id", requireRoles(...HR_ROLES), async (req, res) => {
   error: staffProfileSubmissionsError,
 } = await supabase
   .from("staff_profile_submissions")
-  .select("personal_email, phone, date_of_birth, emergency_contact_name")
+  .select("personal_email, phone, date_of_birth, emergency_contact_name, emergency_contact_phone")
   .eq("user_id", req.params.id)
   .maybeSingle();
 
@@ -353,6 +353,7 @@ peopleRouter.get("/:id", requireRoles(...HR_ROLES), async (req, res) => {
         personal_phone: staffProfileSubmissions?.phone || null, 
         date_of_birth: staffProfileSubmissions?.date_of_birth || null, 
         emergency_contact: staffProfileSubmissions?.emergency_contact_name || null, 
+        emergency_contact_phone: staffProfileSubmissions?.emergency_contact_phone || null,
       },
     });
   } catch (err) {

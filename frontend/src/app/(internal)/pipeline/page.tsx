@@ -82,7 +82,7 @@ export default function PipelinePage() {
     loadAnalytics();
   };
 
-  const activeCount = opportunities.filter(o => o.stage !== 'won' && o.stage !== 'lost_paused').length;
+const activeCount = opportunities.filter(o => o.stage !== 'agreement' && o.stage !== 'onboarded' && o.stage !== 'lost_paused').length;
   const criticalAlerts = alerts.filter(a => a.staleness === 'red').length;
 
   return (

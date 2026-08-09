@@ -11,31 +11,33 @@
 
 'use strict';
 
-const { supabase } = require('../config/supabase');
+const supabase  = require('../config/supabase');
 
 const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 
 // ── Revenue by month for a year ───────────────────────────────────────────────
 async function getRevenueByMonth(year, brandId = null) {
   let query = supabase
-    .from('payments')
-    .select('amount, payment_date, invoice:invoices!inner(type, brand_id)')
-    .gte('payment_date', `${year}-01-01`)
-    .lt('payment_date', `${Number(year) + 1}-01-01`);
+    .from('invoices')
+    .select('amount, paid_date, invoice_type, brand_id')
+    .eq('status', 'paid')
+    .gte('paid_date', `${year}-01-01`)
+    .lt('paid_date',  `${Number(year) + 1}-01-01`);
 
-  if (brandId) query = query.eq('invoice.brand_id', brandId);
+  if (brandId) query = query.eq('brand_id', brandId);
 
   const { data, error } = await query;
   if (error) throw new Error(error.message);
 
-  // Build month → type → amount map
   const byMonth = {};
-  for (let m = 1; m <= 12; m++) byMonth[m] = { retainer: 0, project: 0, adhoc: 0, total: 0 };
+  for (let m = 1; m <= 12; m++) {
+    byMonth[m] = { retainer: 0, project: 0, adhoc: 0, total: 0 };
+  }
 
-  for (const p of data || []) {
-    const month = new Date(p.payment_date).getMonth() + 1;
-    const type  = p.invoice?.type || 'adhoc';
-    const amt   = Number(p.amount);
+  for (const inv of data || []) {
+    const month = new Date(inv.paid_date).getMonth() + 1;
+    const type  = inv.invoice_type || 'adhoc';
+    const amt   = Number(inv.amount);
     byMonth[month][type] = (byMonth[month][type] || 0) + amt;
     byMonth[month].total += amt;
   }
@@ -119,39 +121,44 @@ async function getMonthlyPnL(year, brandId = null) {
 
 // ── Annual year-over-year summary ─────────────────────────────────────────────
 async function getAnnualSummary() {
-  const { data: payments, error: pmtErr } = await supabase
-    .from('payments')
-    .select('amount, payment_date, invoice:invoices(type)');
+  const [invData, expData] = await Promise.all([
+    supabase
+      .from('invoices')
+      .select('amount, paid_date, invoice_type')
+      .eq('status', 'paid')
+      .not('paid_date', 'is', null),
+    supabase
+      .from('expenses')
+      .select('amount, date'),
+  ]);
 
-  const { data: exps, error: expErr } = await supabase
-    .from('expenses').select('amount, date');
+  if (invData.error)  throw new Error(invData.error.message);
+  if (expData.error)  throw new Error(expData.error.message);
 
-  if (pmtErr) throw new Error(pmtErr.message);
-
-  // Group by year
   const byYear = {};
 
-  for (const p of payments || []) {
-    const yr  = new Date(p.payment_date).getFullYear();
-    const amt = Number(p.amount);
-    const type = p.invoice?.type || 'adhoc';
+  for (const inv of invData.data || []) {
+    const yr   = new Date(inv.paid_date).getFullYear();
+    const amt  = Number(inv.amount);
+    const type = inv.invoice_type || 'adhoc';
     if (!byYear[yr]) byYear[yr] = { revenue: 0, retainer: 0, project: 0, expenses: 0 };
     byYear[yr].revenue += amt;
     byYear[yr][type === 'retainer' ? 'retainer' : 'project'] += amt;
   }
 
-  for (const e of exps || []) {
+  for (const e of expData.data || []) {
     const yr  = new Date(e.date).getFullYear();
     const amt = Number(e.amount);
     if (!byYear[yr]) byYear[yr] = { revenue: 0, retainer: 0, project: 0, expenses: 0 };
     byYear[yr].expenses += amt;
   }
 
-  const years = Object.keys(byYear).sort().map((yr, i, arr) => {
-    const d       = byYear[yr];
-    const profit  = d.revenue - d.expenses;
-    const margin  = d.revenue > 0 ? Math.round((profit / d.revenue) * 100) : null;
-    const prevYr  = i > 0 ? byYear[arr[i - 1]] : null;
+  const keys  = Object.keys(byYear).sort();
+  const years = keys.map((yr, i) => {
+    const d      = byYear[yr];
+    const profit = d.revenue - d.expenses;
+    const margin = d.revenue > 0 ? Math.round((profit / d.revenue) * 100) : null;
+    const prevYr = i > 0 ? byYear[keys[i - 1]] : null;
     const growthPct = prevYr && prevYr.revenue > 0
       ? Math.round(((d.revenue - prevYr.revenue) / prevYr.revenue) * 100)
       : null;

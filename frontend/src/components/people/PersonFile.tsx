@@ -9,6 +9,7 @@ import { InlineFieldEdit } from './InlineFieldEdit';
 import { HistoryTab, DisciplinaryTab } from './PeopleTabComponents';
 import { PerformanceTab } from '../PerformanceTab';
 import { LeaveHistoryTab } from '../LeaveHistoryTab';
+import { useAgencyStore } from '@/lib/store';
 
 // ── Status transition map (allowed transitions from each state) ────
 const ALLOWED_TRANSITIONS: Record<EmploymentStatus, EmploymentStatus[]> = {
@@ -70,6 +71,7 @@ type Tab = 'profile' | 'performance' | 'leave' | 'history' | 'disciplinary';
 const EMPLOYMENT_STATUS_OPTIONS = Object.entries(STATUS_LABELS).map(([v, l]) => ({ value: v, label: l }));
 
 export function PersonFile({ userId, onClose, viewerRole }: PersonFileProps) {
+  const { user } = useAgencyStore();
   const isHR = ['hr', 'super_admin'].includes(viewerRole);
   const isMD = viewerRole === 'md';
   const canEdit = isHR;
@@ -298,6 +300,7 @@ export function PersonFile({ userId, onClose, viewerRole }: PersonFileProps) {
                         { field: 'personal_phone', label: 'Personal Phone', type: 'text' as const },
                         { field: 'date_of_birth', label: 'Date of Birth', type: 'date' as const },
                         { field: 'emergency_contact', label: 'Emergency Contact', type: 'text' as const },
+                        { field: 'emergency_contact_phone', label: 'Emergency Contact Phone', type: 'text' as const },
                         { field: 'comp_band', label: 'Salary Band', type: 'text' as const },
                         { field: 'hr_notes', label: 'HR Notes', type: 'textarea' as const },
                       ].map(f => (
@@ -328,7 +331,7 @@ export function PersonFile({ userId, onClose, viewerRole }: PersonFileProps) {
                   {/* Score chart would be wired to the existing /api/agency/scores/:userId endpoint */}
                   <div style={{ marginTop: '16px', padding: '16px', background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '10px' }}>
                     <p style={{ fontSize: '12px', color: '#475569', fontFamily: 'JetBrains Mono, monospace' }}>
-                      <PerformanceTab userId={userId} displayName={displayName} />
+                      <PerformanceTab userId={userId} displayName={displayName} viewerRole={user?.role || viewerRole}/>
                     </p>
                   </div>
                 </div>

@@ -31,7 +31,7 @@ import { AgencyTopNav } from '@/components/internal/TopNav';
 
 interface LineItem { description: string; quantity: string; unit_price: string; }
 interface Brand    { id: string; name: string; }
-interface Invoice  { id: string; invoice_number: string; brand?: { name: string }; type: string; status: string; total_amount: number; amount_paid: number; due_date: string; issued_date: string; }
+interface Invoice  { id: string; invoice_number: string; brand?: { name: string }; invoice_type: string; status: string; amount: number; amount_paid: number; due_date: string; issued_date: string; }
 interface Summary  { outstanding: number; received_mtd: number; overdue_count: number; drafts_count: number; }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -70,7 +70,7 @@ const STATUS_COLOR: Record<string, string> = {
 function RecordPaymentModal({ invoice, onClose, onRecorded }: {
   invoice: Invoice; onClose: () => void; onRecorded: () => void;
 }) {
-  const balance = invoice.total_amount - invoice.amount_paid;
+  const balance = invoice.amount - invoice.amount_paid;
   const [form, setForm] = useState({ amount: String(balance.toFixed(2)), payment_date: new Date().toISOString().slice(0, 10), payment_method: 'bank_transfer', reference: '', notes: '' });
   const [saving, setSaving] = useState(false);
   const [error, setError]   = useState<string | null>(null);
@@ -277,7 +277,7 @@ function InvoiceRow({ invoice, userRole, onSend, onPay, onRefresh }: {
   onSend: () => void; onPay: () => void; onRefresh: () => void;
 }) {
   const [acting, setActing] = useState(false);
-  const balance = invoice.total_amount - invoice.amount_paid;
+  const balance = invoice.amount - invoice.amount_paid;
   const isFinance = ['accountant','super_admin','admin','md'].includes(userRole);
 
   const handleSend = async () => {
@@ -298,7 +298,7 @@ function InvoiceRow({ invoice, userRole, onSend, onPay, onRefresh }: {
       const blob = await res.blob();
       const a    = document.createElement('a');
       a.href     = URL.createObjectURL(blob);
-      a.download = `${invoice.invoice_number}.pdf`;
+      a.download = `${invoice.brand?.name}-${invoice.invoice_type}.pdf`;
       a.click();
       URL.revokeObjectURL(a.href);
     } catch (e: any) { alert(e.message); }
@@ -311,7 +311,7 @@ function InvoiceRow({ invoice, userRole, onSend, onPay, onRefresh }: {
         <div className="flex items-center gap-2 flex-wrap mb-1">
           <p className="font-semibold text-white text-sm">{invoice.invoice_number}</p>
           <Badge label={invoice.status} color={STATUS_COLOR[invoice.status] ?? 'gray'} />
-          <span className="text-[10px] text-white/30 border border-white/10 rounded px-1.5 py-0.5 capitalize">{invoice.type}</span>
+          <span className="text-[10px] text-white/30 border border-white/10 rounded px-1.5 py-0.5 capitalize">{invoice.invoice_type}</span>
         </div>
         <p className="text-xs text-white/40">
           {invoice.brand?.name || '—'} · Due {invoice.due_date}
@@ -320,8 +320,8 @@ function InvoiceRow({ invoice, userRole, onSend, onPay, onRefresh }: {
       </div>
       <div className="flex items-center gap-4 sm:gap-6 flex-shrink-0">
         <div className="text-right">
-          <p className="font-bold text-white text-sm">{fmtNGN(invoice.total_amount)}</p>
-          {balance > 0 && balance < invoice.total_amount && (
+          <p className="font-bold text-white text-sm">{fmtNGN(invoice.amount)}</p>
+          {balance > 0 && balance < invoice.amount && (
             <p className="text-xs text-amber-400">{fmtNGN(balance)} outstanding</p>
           )}
         </div>
@@ -369,9 +369,9 @@ export default function FinancePage() {
         apiFetch('/api/finance/invoices?limit=100'),
         apiFetch('/api/agency/brands?limit=100'),
       ]);
-      setSummary(sumRes.summary);
-      setInvoices(invRes.invoices || []);
-      setBrands(brRes.data?.brands || brRes.brands || []);
+      setSummary(sumRes.data?.summary);
+      setInvoices(invRes.data?.invoices || []);
+      setBrands(brRes.data || brRes.brands || []);
     } catch (e: any) { setError(e.message); }
     finally { setLoading(false); }
   }, []);
@@ -399,7 +399,7 @@ export default function FinancePage() {
           <h1 className="text-xl font-bold text-white">Finance</h1>
           <p className="text-sm text-white/40 mt-0.5">Invoice management and payment tracking</p>
         </div>
-        <button onClick={() => setShowCreate(true)} className="sabi-btn-primary flex items-center gap-2 text-sm">
+        <button onClick={() => setShowCreate(true)} className="sabi-btn-primary flex p-2 items-center gap-2 text-sm">
           <Plus className="w-4 h-4" /> Create invoice
         </button>
       </div>

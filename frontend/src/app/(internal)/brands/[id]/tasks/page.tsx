@@ -24,6 +24,9 @@ import Router from 'next/router';
 import Image from 'next/image';
 import ImportTasksModal from '@/components/ImportTasksModal';
 import ExcelIcon from '@/components/ExcelIcon';
+import { TaskGroupedView } from '@/components/tasks/TaskGroupedView';
+import { TaskDateFilter, DateFilter } from '@/components/tasks/TaskDateFilter';
+import { TaskCommentThread } from '@/components/tasks/TaskCommentThread';
 
 const tok = () => typeof window !== 'undefined' ? localStorage.getItem('sabi_token') : null;
 const api = (p: string, opts?: RequestInit) =>
@@ -109,13 +112,29 @@ export default function BrandTasksPage() {
   const [rejectTasking, setRejectTasking] = useState(false);
   const [verifyingId, setVerifyingId] = useState<string | null>(null);
 
+  const [viewMode, setViewMode] = useState<'list' | 'grouped'>(
+    () => (typeof window !== 'undefined' ? localStorage.getItem('task_view') as 'list' | 'grouped' : null) || 'list'
+  );
+  const [dateFilter, setDateFilter] = useState<DateFilter>({ month: null, year: null, date_field: 'due_date' });
+  const [openTaskId, setOpenTaskId] = useState<string | null>(null);
+
   const router = useRouter();
 
   const setF = (k: string, v: string) => setForm(p => ({ ...p, [k]: v }));
 
+  const toggleView = (mode: 'list' | 'grouped') => {
+    setViewMode(mode);
+    localStorage.setItem('task_view', mode);
+  };
+
   useEffect(() => {
+    const params = new URLSearchParams({ brand_id: brandId, limit: '200' });
+    if (dateFilter.month) params.set('month', String(dateFilter.month));
+    if (dateFilter.year) params.set('year', String(dateFilter.year));
+    if (dateFilter.date_field) params.set('date_field', dateFilter.date_field);
+
     Promise.all([
-      api(`/api/agency/tasks?brand_id=${brandId}&limit=200`),
+      api(`/api/agency/tasks?${params}`),
       api(`/api/agency/brands/${brandId}/team`),
       stratApi.list({ brand_id: brandId, status: 'active', limit: '10' }),
       goalsApi.list({ brand_id: brandId, status: 'active', limit: '20' }),
@@ -125,7 +144,7 @@ export default function BrandTasksPage() {
       setStrats(sr.data ?? []);
       setGoals(gr.data ?? []);
     }).catch(() => { }).finally(() => setLoading(false));
-  }, [brandId]);
+  }, [brandId, dateFilter.month, dateFilter.year, dateFilter.date_field]);
 
   function openEditModal(t: ITT) {
     setEditingTask(t);
@@ -368,7 +387,7 @@ export default function BrandTasksPage() {
       </div >
 
       {/* Filters */}
-      <div className="flex items-center gap-3 mb-5" >
+      <div className="flex items-center gap-3 mb-5 flex-wrap" >
         {perms.canManage ? (
           <select
             className="sabi-input w-44 text-sm"
@@ -385,6 +404,21 @@ export default function BrandTasksPage() {
             {teamMembers.find(m => m.id === user?.id)?.full_name ?? user?.full_name ?? 'You'}
           </div>
         )}
+
+        <TaskDateFilter value={dateFilter} onChange={setDateFilter} />
+
+        <div style={{ marginLeft: 'auto', display: 'flex', gap: '3px', background: 'rgba(255,255,255,0.03)', borderRadius: '7px', padding: '3px' }}>
+          {(['list', 'grouped'] as const).map(mode => (
+            <button key={mode} onClick={() => toggleView(mode)} style={{
+              padding: '5px 12px', borderRadius: '5px', cursor: 'pointer',
+              fontSize: '12px', fontWeight: 600, border: 'none',
+              background: viewMode === mode ? 'rgba(109,40,217,0.25)' : 'transparent',
+              color: viewMode === mode ? '#c4b5fd' : '#64748b',
+            }}>
+              {mode === 'list' ? '≡ List' : '⊞ Grouped'}
+            </button>
+          ))}
+        </div>
       </div>
 
       {/* Create task modal */}
@@ -478,6 +512,20 @@ export default function BrandTasksPage() {
         )
       }
 
+      {viewMode === 'grouped' ? (
+        <TaskGroupedView
+          brandId={brandId}
+          userRole={user?.role ?? ''}
+          filters={{
+            month: dateFilter.month,
+            year: dateFilter.year,
+            date_field: dateFilter.date_field,
+            status: undefined,
+          }}
+          onOpenTask={id => setOpenTaskId(id)}
+        />
+      ) : (
+        <>
       {/* ── KANBAN VIEW ────────────────────────────────────────── */}
       {
         view === 'kanban' && (
@@ -686,6 +734,8 @@ export default function BrandTasksPage() {
           )
         )
       }
+      </>
+      )}
       {/* ── REJECT MODAL ───────────────────────────────────────── */}
       {
         rejectingId && (
@@ -910,6 +960,70 @@ export default function BrandTasksPage() {
           </div>
         </div>
       )}
+
+      {/* ── TASK DETAIL SLIDE-OVER ─────────────────────────────── */}
+      {openTaskId && (() => {
+        const t = tasks.find(x => x.id === openTaskId);
+        if (!t) return null;
+        const assignee = teamMembers.find(m => m.id === t.assignee_id);
+        const pri = PRIORITY_META[t.priority ?? 'medium'];
+        return (
+          <div className="fixed inset-0 bg-black/60 z-50" onClick={() => setOpenTaskId(null)}>
+            <div
+              className="absolute right-0 top-0 h-full w-full max-w-2xl bg-[#0f0f13] border-l border-white/10 flex flex-col"
+              onClick={e => e.stopPropagation()}
+            >
+              <div className="flex items-center justify-between px-5 py-4 border-b border-white/10">
+                <div className="flex items-center gap-2">
+                  <div className={`w-2 h-2 rounded-full flex-shrink-0 ${pri.dot}`} />
+                  <h2 className="text-sm font-semibold text-white">{t.title}</h2>
+                </div>
+                <div className="flex items-center gap-2">
+                  {perms.canManage && (
+                    <button
+                      onClick={() => { openEditModal(t); setOpenTaskId(null); }}
+                      className="text-xs text-white/50 hover:text-white px-3 py-1.5 rounded-md hover:bg-white/5 transition-all"
+                    >
+                      Edit
+                    </button>
+                  )}
+                  <button onClick={() => setOpenTaskId(null)} className="text-white/40 hover:text-white"><X className="w-4 h-4" /></button>
+                </div>
+              </div>
+
+              <div className="flex-1 overflow-y-auto p-5 space-y-4">
+                <div className="flex items-center gap-2 flex-wrap text-xs">
+                  <span className={`px-2 py-1 rounded-md font-medium ${pri.color}`}>{pri.label} priority</span>
+                  <span className="px-2 py-1 bg-white/5 rounded-md text-white/50 capitalize">{t.status?.replace(/_/g, ' ')}</span>
+                  {t.due_date && (
+                    <span className="px-2 py-1 bg-white/5 rounded-md text-white/50 flex items-center gap-1">
+                      <Clock className="w-3 h-3" />{new Date(t.due_date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
+                    </span>
+                  )}
+                  {assignee && (
+                    <span className="px-2 py-1 bg-purple-500/10 border border-purple-500/20 rounded-md text-purple-300 flex items-center gap-1.5">
+                      <div className="w-4 h-4 rounded-full bg-purple-500/30 flex items-center justify-center text-[9px] font-bold text-purple-300">{assignee.full_name?.[0]}</div>
+                      {assignee.full_name}
+                    </span>
+                  )}
+                </div>
+
+                {t.description ? (
+                  <p className="text-sm text-white/70 leading-relaxed whitespace-pre-wrap">{t.description}</p>
+                ) : (
+                  <p className="text-xs text-white/25">No description.</p>
+                )}
+
+                <TaskCommentThread
+                  taskId={openTaskId}
+                  brandId={brandId}
+                  currentUser={{ id: user?.id ?? '', name: user?.full_name ?? '', role: user?.role ?? '' }}
+                />
+              </div>
+            </div>
+          </div>
+        );
+      })()}
     </div>
   );
 }

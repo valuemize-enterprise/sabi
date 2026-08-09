@@ -41,7 +41,7 @@ const labelStyle: React.CSSProperties = {
   marginBottom: '6px',
 };
 
-const ACTIVE_STAGES = STAGE_ORDER.filter(s => s !== 'won' && s !== 'lost_paused');
+const ACTIVE_STAGES = STAGE_ORDER.filter(s => s !== 'agreement' && s !== 'onboarded' && s !== 'lost_paused');
 const SERVICE_TYPES = Object.keys(SERVICE_TYPE_LABELS) as ServiceType[];
 const SOURCES = Object.keys(SOURCE_LABELS) as OpportunitySource[];
 

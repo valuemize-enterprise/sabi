@@ -8,19 +8,14 @@ const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000/api";
 // ── Types ─────────────────────────────────────────────────────────
 
 export type PipelineStage =
-  | "in_progress"
-  | "proposal_sent"
-  | "under_review"
-  | "negotiating"
-  | "won"
-  | "lost_paused"
-  | "introduction"
-  | "proposal"
-  | "pitch"
-  | "second_pitch"
-  | "decision"
-  | "agreement"
-  | "onboarded";
+  | 'introduction'
+  | 'proposal'
+  | 'pitch'
+  | 'second_pitch'
+  | 'decision'
+  | 'agreement'
+  | 'onboarded'
+  | 'lost_paused';
 
 export type ServiceType =
   | "digital"
@@ -304,111 +299,36 @@ export const pipelineApi = {
 // ── Display helpers ───────────────────────────────────────────────
 
 export const STAGE_LABELS: Record<PipelineStage, string> = {
-  introduction: "Introduction",
-  in_progress: "In Progress",
-  proposal_sent: "Proposal Sent",
-  under_review: "Under Review",
-  negotiating: "Negotiating",
-  won: "Won",
-  lost_paused: "Lost / Paused",
-  proposal: "Proposal",
-  pitch: "Pitch",
-  second_pitch: "Second Pitch",
-  decision: "Decision",
-  agreement: "Agreement",
-  onboarded: "Onboarded",
+  introduction: 'Introduction',
+  proposal:     'Proposal',
+  pitch:        'Pitch',
+  second_pitch: 'Second Pitch',
+  decision:     'Decision',
+  agreement:    'Agreement',
+  onboarded:    'Onboarded',
+  lost_paused:  'Lost / Paused',
 };
 
 export const STAGE_ORDER: PipelineStage[] = [
-  "introduction",
-  "in_progress",
-  "proposal_sent",
-  "under_review",
-  "negotiating",
-  "won",
-  "lost_paused",
-  "proposal",
-  "pitch",
-  "second_pitch",
-  "decision",
-  "agreement",
-  "onboarded",
+  'introduction',
+  'proposal',
+  'pitch',
+  'second_pitch',
+  'decision',
+  'agreement',
+  'onboarded',
+  'lost_paused',
 ];
 
-export const STAGE_COLOURS: Record<
-  PipelineStage,
-  { bg: string; text: string; border: string }
-> = {
-  // identified: {
-  //   bg: "rgba(100,116,139,0.12)",
-  //   text: "#94a3b8",
-  //   border: "rgba(100,116,139,0.25)",
-  // },
-  in_progress: {
-    bg: "rgba(59,130,246,0.12)",
-    text: "#60a5fa",
-    border: "rgba(59,130,246,0.25)",
-  },
-  proposal_sent: {
-    bg: "rgba(168,85,247,0.12)",
-    text: "#c084fc",
-    border: "rgba(168,85,247,0.25)",
-  },
-  under_review: {
-    bg: "rgba(245,158,11,0.12)",
-    text: "#fbbf24",
-    border: "rgba(245,158,11,0.25)",
-  },
-  negotiating: {
-    bg: "rgba(16,185,129,0.12)",
-    text: "#34d399",
-    border: "rgba(16,185,129,0.25)",
-  },
-  won: {
-    bg: "rgba(52,211,153,0.15)",
-    text: "#10b981",
-    border: "rgba(16,185,129,0.4)",
-  },
-  lost_paused: {
-    bg: "rgba(239,68,68,0.08)",
-    text: "#f87171",
-    border: "rgba(239,68,68,0.2)",
-  },
-  introduction: {
-    bg: "rgba(148,163,184,0.12)",
-    text: "#94a3b8",
-    border: "rgba(148,163,184,0.25)",
-  },
-  proposal: {
-    bg: "rgba(59,130,246,0.12)",
-    text: "#60a5fa",
-    border: "rgba(59,130,246,0.25)",
-  },
-  pitch: {
-    bg: "rgba(168,85,247,0.12)",
-    text: "#c084fc",
-    border: "rgba(168,85,247,0.25)",
-  },
-  second_pitch: {
-    bg: "rgba(245,158,11,0.12)",
-    text: "#fbbf24",
-    border: "rgba(245,158,11,0.25)",
-  },
-  decision: {
-    bg: "rgba(16,185,129,0.12)",
-    text: "#34d399",
-    border: "rgba(16,185,129,0.25)",
-  },
-  agreement: {
-    bg: "rgba(52,211,153,0.15)",
-    text: "#10b981",
-    border: "rgba(16,185,129,0.4)",
-  },
-  onboarded: {
-    bg: "rgba(20,184,166,0.12)",
-    text: "#2dd4bf",
-    border: "rgba(20,184,166,0.35)",
-  },
+export const STAGE_COLOURS: Record<PipelineStage, { bg: string; text: string; border: string }> = {
+  introduction: { bg: 'rgba(148,163,184,0.12)', text: '#94a3b8',  border: 'rgba(148,163,184,0.25)' },
+  proposal:     { bg: 'rgba(59,130,246,0.12)',  text: '#60a5fa',  border: 'rgba(59,130,246,0.25)'  },
+  pitch:        { bg: 'rgba(168,85,247,0.12)',  text: '#c084fc',  border: 'rgba(168,85,247,0.25)'  },
+  second_pitch: { bg: 'rgba(245,158,11,0.12)',  text: '#fbbf24',  border: 'rgba(245,158,11,0.25)'  },
+  decision:     { bg: 'rgba(16,185,129,0.12)',  text: '#34d399',  border: 'rgba(16,185,129,0.25)'  },
+  agreement:    { bg: 'rgba(52,211,153,0.15)',  text: '#10b981',  border: 'rgba(16,185,129,0.4)'   },
+  onboarded:    { bg: 'rgba(20,184,166,0.12)',  text: '#2dd4bf',  border: 'rgba(20,184,166,0.35)'  },
+  lost_paused:  { bg: 'rgba(239,68,68,0.08)',   text: '#f87171',  border: 'rgba(239,68,68,0.2)'    },
 };
 
 export const STALENESS_COLOURS: Record<Staleness, string> = {

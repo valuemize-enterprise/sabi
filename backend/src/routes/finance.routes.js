@@ -28,7 +28,7 @@ const { authenticate }    = require('../middleware/auth.middleware');
 const { sendSuccess, sendError } = require('');
 const inv           = require('../services/invoice.service');
 const finEmail      = require('../services/finance-email.service');
-const { supabase }  = require('../config/supabase');
+const  supabase   = require('../config/supabase');
 
 const FINANCE_ROLES = inv.FINANCE_ROLES;
 
@@ -36,21 +36,13 @@ function canAccess(req) {
   return FINANCE_ROLES.has(req.user?.role);
 }
 
+
 // ── GET /api/finance/summary ─────────────────────────────────────────────────
 router.get('/summary', authenticate, async (req, res, next) => {
   try {
     if (!canAccess(req)) return sendError(res, 403, 'Finance access required');
     const summary = await inv.getSummary();
     sendSuccess(res, { summary });
-  } catch (err) { next(err); }
-});
-
-// ── GET /api/finance/brands ──────────────────────────────────────────────────
-router.get('/brands', authenticate, async (req, res, next) => {
-  try {
-    if (!canAccess(req)) return sendError(res, 403, 'Finance access required');
-    const brands = await inv.getBrands();
-    sendSuccess(res, { brands });
   } catch (err) { next(err); }
 });
 

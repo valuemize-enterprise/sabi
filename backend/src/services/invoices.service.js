@@ -16,7 +16,7 @@
 
 'use strict';
 
-const { supabase } = require('../config/supabase');
+const supabase  = require('../config/supabase');
 
 // ── Finance roles ─────────────────────────────────────────────────────────────
 const FINANCE_ROLES = new Set(['super_admin', 'admin', 'md', 'accountant']);
@@ -379,27 +379,26 @@ async function getBrandFinancialSummary(brandId) {
 // ── AGENCY FINANCIAL SUMMARY (for /finance overview stats) ────────────────────
 async function getAgencyFinancialSummary() {
   const now        = new Date();
+  const today      = now.toISOString().slice(0, 10);
   const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().slice(0, 10);
 
   const { data, error } = await supabase
     .from('invoices')
-    .select('status, total_amount, amount_paid, due_date, issued_date')
+    .select('status, amount, due_date, paid_date, issued_date')
     .not('status', 'in', '("draft","cancelled")');
 
   if (error) throw new Error(error.message);
 
-  const allInvoices = data || [];
-  const outstanding = allInvoices
-    .filter(i => !['paid'].includes(i.status))
-    .reduce((sum, i) => sum + (parseFloat(i.total_amount) - parseFloat(i.amount_paid)), 0);
+  const all = data || [];
+  const sum = (arr) => arr.reduce((s, i) => s + Number(i.amount || 0), 0);
 
-  const receivedMtd = allInvoices
-    .filter(i => i.issued_date >= monthStart && ['paid', 'partial'].includes(i.status))
-    .reduce((sum, i) => sum + parseFloat(i.amount_paid), 0);
+  const isOverdue = (i) =>
+    i.status === 'overdue' ||
+    (i.status !== 'paid' && i.due_date && i.due_date < today);
 
-  const overdueCount = allInvoices.filter(i =>
-    i.status === 'overdue' || (i.status !== 'paid' && new Date(i.due_date) < now)
-  ).length;
+  const outstanding  = sum(all.filter(i => i.status !== 'paid'));
+  const receivedMtd  = sum(all.filter(i => i.status === 'paid' && i.paid_date >= monthStart));
+  const overdueCount = all.filter(isOverdue).length;
 
   const { count: draftsCount } = await supabase
     .from('invoices')
@@ -407,8 +406,8 @@ async function getAgencyFinancialSummary() {
     .eq('status', 'draft');
 
   return {
-    outstanding:   Math.round(outstanding * 100) / 100,
-    received_mtd:  Math.round(receivedMtd * 100) / 100,
+    outstanding:   Math.round(outstanding  * 100) / 100,
+    received_mtd:  Math.round(receivedMtd  * 100) / 100,
     overdue_count: overdueCount,
     drafts_count:  draftsCount || 0,
   };

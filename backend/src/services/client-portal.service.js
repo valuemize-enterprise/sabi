@@ -15,7 +15,7 @@
 
 const crypto = require('crypto');
 const jwt    = require('jsonwebtoken');
-const { supabase } = require('../config/supabase');
+const supabase = require('../config/supabase');
 const { sendRawEmail } = require('./email.service');
 
 const PORTAL_SECRET = process.env.PORTAL_JWT_SECRET || process.env.JWT_SECRET || 'sabi-portal-secret';

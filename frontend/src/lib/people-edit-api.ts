@@ -234,6 +234,7 @@ export const FIELD_LABELS: Record<string, string> = {
   personal_phone:      'Personal Phone',
   date_of_birth:       'Date of Birth',
   emergency_contact:   'Emergency Contact',
+  emergency_contact_phone:   'Emergency Contact Phone',
   comp_band:           'Salary Band',
   hr_notes:            'HR Notes',
   tp_cohort:           'Tomorrow\'s People Cohort',

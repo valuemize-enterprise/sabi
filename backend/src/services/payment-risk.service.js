@@ -18,7 +18,7 @@
 
 'use strict';
 
-const { supabase } = require('../config/supabase');
+const  supabase  = require('../config/supabase');
 
 const ANTHROPIC_API = 'https://api.anthropic.com/v1/messages';
 const CLAUDE_MODEL  = 'claude-sonnet-4-6'; // Sonnet is fast enough for this analysis

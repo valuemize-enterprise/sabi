@@ -43,7 +43,7 @@ export default function PnLPage() {
       else if (tab==='annual') res = await apiFetch('/api/finance/reports/pnl/annual');
       else if (tab==='brands') res = await apiFetch(`/api/finance/reports/pnl/brands?year=${year}`);
       else res = await apiFetch(`/api/finance/reports/vat?year=${year}&quarter=${quarter}`);
-      setData(res);
+      setData(res.data);
     } catch(e:any) { setError(e.message); }
     finally { setLoading(false); }
   }, [tab, year, quarter]);

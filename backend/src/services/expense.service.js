@@ -11,7 +11,7 @@
 
 'use strict';
 
-const { supabase } = require('../config/supabase');
+const supabase  = require('../config/supabase');
 
 const FINANCE_ROLES = new Set(['super_admin', 'admin', 'md', 'accountant']);
 

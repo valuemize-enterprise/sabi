@@ -41,8 +41,9 @@ const pnl      = require('../services/pnl-report.service');
 const vat      = require('../services/vat-report.service');
 const pdf      = require('../services/invoice-pdf.service');
 const portal   = require('../services/client-portal.service');
+const inv           = require('../services/invoice.service');
 const { getInvoice } = require('../services/invoice.service');
-const { supabase }   = require('../config/supabase');
+const  supabase    = require('../config/supabase');
 const { authenticate } = require('../middleware/auth.middleware');
 const { sendSuccess, sendError } = require('../utils/response.utils');
 
@@ -55,6 +56,41 @@ const canAccess = req => FINANCE_ROLES.has(req.user?.role);
 const financeRouter = express.Router();
 
 // ── Expenses ──────────────────────────────────────────────────────────────────
+
+
+// GET /api/finance/summary
+// financeRouter.get('/summary', async (req, res) => {
+//   try {
+//     const { data: invoices, error } = await supabase
+//       .from('invoices')
+//       .select('id, amount, status, due_date');
+
+//     if (error) throw new Error(error.message);
+
+//     const all     = invoices || [];
+//     const today   = new Date().toISOString().split('T')[0];
+//     const monthStart = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0];
+
+//     const counts = {
+//       draft:   all.filter(i => i.status === 'draft').length,
+//       sent:    all.filter(i => i.status === 'sent').length,
+//       overdue: all.filter(i => i.status === 'overdue' || (i.status === 'sent' && i.due_date < today)).length,
+//       paid:    all.filter(i => i.status === 'paid').length,
+//     };
+
+//     const sum = (arr) => arr.reduce((s, i) => s + Number(i.amount || 0), 0);
+
+//     res.json({
+//       counts,
+//       total_outstanding: sum(all.filter(i => ['sent', 'overdue'].includes(i.status))),
+//       total_paid_month:  sum(all.filter(i => i.status === 'paid' && i.due_date >= monthStart)),
+//       overdue_amount:    sum(all.filter(i => i.status === 'overdue' || (i.status === 'sent' && i.due_date < today))),
+//       total_invoices:    all.length,
+//     });
+//   } catch (err) {
+//     res.status(500).json({ error: err.message });
+//   }
+// });
 
 financeRouter.get('/expenses/summary', authenticate, async (req, res, next) => {
   try {
@@ -77,6 +113,15 @@ financeRouter.post('/expenses', authenticate, async (req, res, next) => {
     if (!canAccess(req)) return sendError(res, 403, 'Finance access required');
     const expense = await exp.createExpense(req.body, req.user.id);
     sendSuccess(res, { expense }, 'Expense recorded', 201);
+  } catch (err) { next(err); }
+});
+
+// ── GET /api/finance/brands ──────────────────────────────────────────────────
+financeRouter.get('/brands', authenticate, async (req, res, next) => {
+  try {
+    if (!canAccess(req)) return sendError(res, 403, 'Finance access required');
+    const brands = await inv.getBrands();
+    sendSuccess(res, { brands });
   } catch (err) { next(err); }
 });
 

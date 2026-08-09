@@ -1,5 +1,15 @@
+let isRefreshing = false;
+
 export function registerServiceWorker() {
   if (typeof window !== 'undefined' && 'serviceWorker' in navigator) {
+    // When the new service worker takes control, reload once so the latest
+    // deploy is picked up automatically — no user action needed.
+    navigator.serviceWorker.addEventListener('controllerchange', () => {
+      if (isRefreshing) return;
+      isRefreshing = true;
+      window.location.reload();
+    });
+
     window.addEventListener('load', () => {
       navigator.serviceWorker
         .register('/sw.js')
@@ -11,13 +21,12 @@ export function registerServiceWorker() {
             const newWorker = registration.installing;
             if (newWorker) {
               newWorker.addEventListener('statechange', () => {
-                if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-                  // New service worker available, show update notification
-                  console.log('New content available; please refresh.');
-                  
-                  // Optional: Auto-reload or show update prompt
-                  if (confirm('New version available! Reload to update?')) {
-                    window.location.reload();
+                if (newWorker.state === 'installed') {
+                  // Ask the new worker to activate immediately (skip waiting)
+                  // so the controllerchange handler above can reload the app
+                  // with the latest code.
+                  if (navigator.serviceWorker.controller) {
+                    newWorker.postMessage({ type: 'SKIP_WAITING' });
                   }
                 }
               });

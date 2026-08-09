@@ -12,7 +12,7 @@
 
 'use strict';
 
-const { supabase } = require('../config/supabase');
+const supabase  = require('../config/supabase');
 
 const FINANCE_ROLES = new Set(['super_admin', 'admin', 'md', 'accountant']);
 
@@ -409,11 +409,12 @@ async function getBrandFinancials(brandId) {
 
 // ── Get all brands list (for dropdowns) ──────────────────────────────────────
 async function getBrands() {
-  const { data } = await supabase
+  const { data, error: brandError } = await supabase
     .from('brands')
-    .select('id, name, retainer_amount, payment_terms, billing_contact_email, billing_contact_name, status')
+    .select('id, name, industry, status, retainer_billing_day, payment_terms, billing_contact_name, billing_contact_email, account_manager_id, clarity_score')
     .eq('status', 'active')
     .order('name');
+  if (brandError) throw new Error(brandError.message);
   return data || [];
 }
 

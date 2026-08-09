@@ -18,7 +18,7 @@
 
 'use strict';
 
-const { supabase }    = require('../config/supabase');
+const supabase     = require('../config/supabase');
 const { getSummary }  = require('./invoice.service');
 
 const ANTHROPIC_API   = 'https://api.anthropic.com/v1/messages';
