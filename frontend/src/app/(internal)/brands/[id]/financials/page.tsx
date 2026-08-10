@@ -21,8 +21,9 @@ import { LoadingPage, Badge } from '@/components/ui';
 // ── Types ─────────────────────────────────────────────────────────────────────
 
 interface Invoice {
-  id: string; invoice_number: string; type: string; status: string;
-  total_amount: number; amount_paid: number; due_date: string; issued_date: string;
+  id: string; invoice_number: string; status: string;
+  amount: number; amount_paid: number; due_date: string; issued_date: string;
+  reference: string; invoice_type: string;
 }
 interface BrandSummary {
   state: string; overdue_amount: number; overdue_days: number;
@@ -49,7 +50,7 @@ const STATUS_COLOR: Record<string, string> = { draft: 'gray', sent: 'blue', part
 // ── Record Payment Modal ──────────────────────────────────────────────────────
 
 function RecordPaymentModal({ invoice, onClose, onRecorded }: { invoice: Invoice; onClose: () => void; onRecorded: () => void; }) {
-  const balance = invoice.total_amount - invoice.amount_paid;
+  const balance = invoice.amount - invoice.amount_paid;
   const [form, setForm] = useState({ amount: String(balance.toFixed(2)), payment_date: new Date().toISOString().slice(0, 10), payment_method: 'bank_transfer', reference: '', notes: '' });
   const [saving, setSaving] = useState(false);
   const [error, setError]   = useState<string | null>(null);
@@ -183,7 +184,7 @@ function CreateInvoiceDrawer({ brandId, brandName, onClose, onCreated }: { brand
 // ── Main page ─────────────────────────────────────────────────────────────────
 
 export default function BrandFinancialsPage() {
-  const { Id: brandId }         = useParams<{ Id: string }>();
+  const { id: brandId } = useParams<{ id: string }>();
   const router                   = useRouter();
   const { user }                 = useAgencyStore();
   const [brand,    setBrand]     = useState<any>(null);
@@ -206,8 +207,8 @@ export default function BrandFinancialsPage() {
         apiFetch(`/api/finance/invoices?brand_id=${brandId}&limit=50`),
       ]);
       setBrand(brandRes.data?.brand || brandRes.brand);
-      setSummary(sumRes.summary);
-      setInvoices(invRes.invoices || []);
+      setSummary(sumRes.data?.summary);
+      setInvoices(invRes.data?.invoices || []);
     } catch (e: any) { setError(e.message); }
     finally { setLoading(false); }
   }, [brandId]);
@@ -236,7 +237,7 @@ export default function BrandFinancialsPage() {
           <p className="text-sm text-white/40 mt-0.5">Invoices, payments, and outstanding balance</p>
         </div>
         {isFinance && (
-          <button onClick={() => setShowCreate(true)} className="sabi-btn-primary flex items-center gap-2 text-sm">
+          <button onClick={() => setShowCreate(true)} className="sabi-btn-primary p-2 flex items-center gap-2 text-sm">
             <Plus className="w-4 h-4" /> Create invoice
           </button>
         )}
@@ -281,26 +282,26 @@ export default function BrandFinancialsPage() {
         <div className="sabi-card p-10 text-center">
           <FileText className="w-8 h-8 text-white/20 mx-auto mb-3" />
           <p className="text-sm text-white/40 mb-4">No invoices yet for this brand</p>
-          {isFinance && <button onClick={() => setShowCreate(true)} className="sabi-btn-primary text-sm">Create first invoice</button>}
+          {isFinance && <button onClick={() => setShowCreate(true)} className="sabi-btn-primary text-sm p-2">Create first invoice</button>}
         </div>
       ) : (
         <div className="space-y-3">
           {invoices.map(inv => {
-            const balance = inv.total_amount - inv.amount_paid;
+            const balance = inv.amount - inv.amount_paid;
             return (
               <div key={inv.id} className="sabi-card p-4 flex flex-col sm:flex-row sm:items-center gap-3">
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 flex-wrap mb-1">
-                    <p className="font-semibold text-white text-sm">{inv.invoice_number}</p>
+                    <p className="font-semibold text-white text-sm">{inv.reference}</p>
                     <Badge label={inv.status} color={STATUS_COLOR[inv.status] ?? 'gray'} />
-                    <span className="text-[10px] text-white/30 border border-white/10 rounded px-1.5 py-0.5 capitalize">{inv.type}</span>
+                    <span className="text-[10px] text-white/30 border border-white/10 rounded px-1.5 py-0.5 capitalize">{inv.invoice_type}</span>
                   </div>
                   <p className="text-xs text-white/40">Issued {inv.issued_date} · Due {inv.due_date}</p>
                 </div>
                 <div className="flex items-center gap-4 sm:gap-6">
                   <div className="text-right">
-                    <p className="font-bold text-white text-sm">{fmtNGN(inv.total_amount)}</p>
-                    {balance > 0 && balance < inv.total_amount && <p className="text-xs text-amber-400">{fmtNGN(balance)} left</p>}
+                    <p className="font-bold text-white text-sm">{fmtNGN(inv.amount)}</p>
+                    {balance > 0 && balance < inv.amount && <p className="text-xs text-amber-400">{fmtNGN(balance)} left</p>}
                     {inv.status === 'paid' && <p className="text-xs text-green-400">Fully paid</p>}
                   </div>
                   {isFinance && (

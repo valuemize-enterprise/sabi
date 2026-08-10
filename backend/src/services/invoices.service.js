@@ -319,7 +319,7 @@ async function getBrandFinancialSummary(brandId) {
 
   const { data: invoices, error } = await supabase
     .from('invoices')
-    .select('id, invoice_number, status, total_amount, amount_paid, due_date, issued_date')
+    .select('id, reference, invoice_type, status, amount, due_date, paid_date, issued_date, brand_id, created_at')
     .eq('brand_id', brandId)
     .not('status', 'in', '("draft","cancelled")');
 
@@ -339,7 +339,7 @@ async function getBrandFinancialSummary(brandId) {
   ));
 
   const overdueAmount = overdueList.reduce((sum, i) =>
-    sum + (parseFloat(i.total_amount) - parseFloat(i.amount_paid)), 0
+    sum + (parseFloat(i.amount) - parseFloat(i.amount_paid)), 0
   );
 
   const overdueDays = overdueList.length > 0
@@ -348,7 +348,7 @@ async function getBrandFinancialSummary(brandId) {
 
   const invoicedMtd = invoices
     .filter(i => i.issued_date >= monthStart)
-    .reduce((sum, i) => sum + parseFloat(i.total_amount), 0);
+    .reduce((sum, i) => sum + parseFloat(i.amount), 0);
 
   let state = 'green';
   if (overdueAmount > 0)         state = 'red';
@@ -369,8 +369,8 @@ async function getBrandFinancialSummary(brandId) {
     overdue_days:     overdueDays,
     invoiced_mtd:     Math.round(invoicedMtd * 100) / 100,
     overdue_invoices: overdueList.slice(0, 4).map(i => ({
-      reference:    i.invoice_number,
-      amount:       fmtNaira(parseFloat(i.total_amount) - parseFloat(i.amount_paid)),
+      reference:    i.reference,
+      amount:       fmtNaira(parseFloat(i.amount) - parseFloat(i.amount_paid)),
       days_overdue: Math.floor((now - new Date(i.due_date)) / 86_400_000),
     })),
   };

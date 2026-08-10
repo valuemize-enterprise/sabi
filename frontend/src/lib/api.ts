@@ -197,6 +197,8 @@ export const goalGeneratorApi = {
     agencyFetch('/api/goals/change-requests/mine'),
   decideChangeRequest: (requestId: string, approve: boolean, denialReason?: string) =>
     agencyFetch(`/api/goals/change-requests/${requestId}/decide`, { method: 'PATCH', body: JSON.stringify({ approve, denial_reason: denialReason }) }),
+  updateGoal: (id: string, payload: any) =>
+  agencyFetch(`/api/goals/${id}`, { method: 'PATCH', body: JSON.stringify(payload) }),
 };
 
 // ─────────────────────────────────────────────────────────────

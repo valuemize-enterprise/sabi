@@ -112,6 +112,7 @@ const pipelineRouter = require("./routes/pipeline.routes");
 const commandCentreRouter = require("./routes/command-centre.routes");
 const weeklyReportRouter = require("./routes/weekly-report.routes");
 const pipelinePhase3Router = require("./routes/pipeline-phase3.routes");
+const strategiesRouter = require("./routes/strategies-generate.route");
 // platform connect routes
 
 const platformRouter = require("./routes/platform-connect.routes");
@@ -348,7 +349,7 @@ app.use("/api/agency/scores", authenticate, scoresRouter);
 app.use("/api/notifications", authenticate, notifRouter);
 app.use("/api/finance", authenticate, Invoices);
 app.use("/api/task-groups", authenticate, taskGroupsRouter);
-
+app.use('/api/agency/strategies', authenticate, strategiesRouter);
 // Tasks (group move + nested comments) — Frontend components hit /api/tasks/...
 const taskRouter = require("express").Router();
 taskRouter.patch("/:id", async (req, res, next) => {

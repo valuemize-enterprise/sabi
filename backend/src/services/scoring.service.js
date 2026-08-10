@@ -36,8 +36,23 @@ function lastCompletedWeekStart() {
 }
 
 async function getConfig() {
-  const { data } = await supabase.from('scoring_config').select('*').eq('id', 1).single();
-  return data;
+  const { data } = await supabase
+    .from('scoring_config')
+    .select('*')
+    .eq('id', 1)
+    .single();
+
+  // Fallback defaults if table is empty
+  return data ?? {
+    staff_satisfaction_weight:       30,
+    staff_task_weight:               30,
+    staff_manager_rating_weight:     25,
+    staff_contribution_weight:       15,
+    brand_admin_clarity_weight:      35,
+    brand_admin_task_weight:         25,
+    brand_admin_rating_weight:       25,
+    brand_admin_contribution_weight: 15,
+  };
 }
 
 // ── Compute a single staff member's score for one week ─────────
@@ -46,15 +61,23 @@ async function computeStaffScore(userId, weekStartDate, config) {
   const weekEnd   = toDateStr(new Date(weekStartDate.getTime() + 7 * 86400000));
 
   // Skip if on leave that week
-  const { data: leave } = await supabase.from('staff_leave').select('id').eq('staff_id', userId).eq('week_start', weekStart).single();
+  const { data: leave } = await supabase.from('staff_leave').select('id').eq('staff_id', userId).eq('week_start', weekStart).maybeSingle();
   if (leave) {
     return { excluded: true, components: { reason: 'on_leave' }, total: 0 };
   }
 
   // Skip if too new (< 2 full weeks since joining)
-  const { data: user } = await supabase.from('users').select('created_at, role').eq('id', userId).single();
-  if (!user) return null;
-  const weeksSinceJoin = (weekStartDate.getTime() - new Date(user.created_at).getTime()) / (7 * 86400000);
+const { data: user } = await supabase
+  .from('users').select('role, created_at').eq('id', userId).single();
+if (!user) return null;
+
+const { data: record } = await supabase
+  .from('people_records').select('start_date').eq('user_id', userId).single()
+
+const joinDate = record.start_date ? new Date(record.start_date) : new Date(user.created_at);
+// console.log('user', user, 'joinDate', joinDate, 'weekStartDate', weekStartDate);
+
+const weeksSinceJoin = (weekStartDate.getTime() - joinDate.getTime()) / (7 * 86400000);
   if (weeksSinceJoin < 2) {
     return { excluded: true, components: { reason: 'new_staff' }, total: 0 };
   }
@@ -62,6 +85,7 @@ async function computeStaffScore(userId, weekStartDate, config) {
   // Which brands is this person on?
   const { data: assignments } = await supabase.from('staff_brand_assignments').select('brand_id').eq('staff_id', userId);
   const brandIds = (assignments ?? []).map(a => a.brand_id);
+  // console.log('user', userId, 'brandIds', brandIds);
   const hasClientBrands = brandIds.length > 0;
 
   // ── 1. Client Satisfaction ──────────────────────────────────
@@ -90,10 +114,14 @@ async function computeStaffScore(userId, weekStartDate, config) {
     .eq('assignee_id', userId)
     .lte('due_date', weekEnd).gte('due_date', weekStart);
 
+ 
+
   let taskRate = null; // null = no tasks assigned → neutral score
   if (assignedTasks && assignedTasks.length > 0) {
     const verified = assignedTasks.filter(t => t.status === 'verified').length;
+      //  console.log('user', userId, 'verified', verified);
     taskRate = verified / assignedTasks.length;
+    // console.log('user', userId, 'taskRate', taskRate, 'assignedTasks', assignedTasks.length);
   }
 
   // ── 3. Manager Quality Rating ────────────────────────────────
@@ -102,7 +130,10 @@ async function computeStaffScore(userId, weekStartDate, config) {
   const managerRatingRaw = mgrRatings?.length
     ? mgrRatings.reduce((s, r) => s + r.score, 0) / mgrRatings.length
     : 3; // missing rating defaults to neutral 3, never zero
+
+    // console.log('user', userId, 'managerRatingRaw', managerRatingRaw, 'mgrRatings', mgrRatings?.length);
   const isCreativeOfWeek = (mgrRatings ?? []).some(r => r.is_creative_of_week);
+  // console.log('user', userId, 'isCreativeOfWeek', isCreativeOfWeek);
 
   // ── 4. Verified Contributions ────────────────────────────────
   const { data: claims } = await supabase
@@ -152,7 +183,7 @@ async function computeBrandAdminScore(userId, brandId, weekStartDate, config) {
   const weekStart = toDateStr(weekStartDate);
   const weekEnd   = toDateStr(new Date(weekStartDate.getTime() + 7 * 86400000));
 
-  const { data: leave } = await supabase.from('staff_leave').select('id').eq('staff_id', userId).eq('week_start', weekStart).single();
+  const { data: leave } = await supabase.from('staff_leave').select('id').eq('staff_id', userId).eq('week_start', weekStart).maybeSingle();
   if (leave) return { excluded: true, components: { reason: 'on_leave' }, total: 0 };
 
   // 1. Client Satisfaction (this brand)
@@ -237,8 +268,8 @@ async function computeMissingScores() {
   // Staff scores
   const { data: staff } = await supabase.from('users').select('id').eq('is_active', true);
   for (const s of (staff ?? [])) {
-    const { data: existing } = await supabase.from('weekly_scores').select('id').eq('user_id', s.id).eq('score_type','staff').eq('week_start', targetWeekStr).single();
-    if (existing) continue;
+    const { data: existing } = await supabase.from('weekly_scores').select('id').eq('user_id', s.id).eq('score_type','staff').eq('week_start', targetWeekStr).maybeSingle();
+    if (existing && !existing.excluded) continue;// Skip if already computed
     const result = await computeStaffScore(s.id, targetWeek, config);
     if (!result) continue;
     await supabase.from('weekly_scores').upsert({
@@ -254,9 +285,10 @@ async function computeMissingScores() {
   // Brand Admin scores (one per brand_admin assignment — a person can be BA of multiple brands)
   const { data: brandAdmins } = await supabase.from('staff_brand_assignments').select('staff_id, brand_id, roles_on_brand').contains('roles_on_brand', ['brand_admin']);
   for (const ba of (brandAdmins ?? [])) {
-    const { data: existing } = await supabase.from('weekly_scores').select('id').eq('user_id', ba.staff_id).eq('score_type','brand_admin').eq('week_start', targetWeekStr).single();
-    if (existing) continue; // Note: if BA of multiple brands, first-computed brand wins for now — acceptable v1 simplification
+    const { data: existing } = await supabase.from('weekly_scores').select('id').eq('user_id', ba.staff_id).eq('score_type','brand_admin').eq('week_start', targetWeekStr).maybeSingle();
+    if (existing && !existing.excluded) continue;// Note: if BA of multiple brands, first-computed brand wins for now — acceptable v1 simplification
     const result = await computeBrandAdminScore(ba.staff_id, ba.brand_id, targetWeek, config);
+    // console.log('computeBrandAdminScore', 'user', ba.staff_id, 'brand', ba.brand_id, 'week', targetWeekStr, 'result', result);
     if (!result) continue;
     await supabase.from('weekly_scores').upsert({
       user_id: ba.staff_id, score_type: 'brand_admin', week_start: targetWeekStr,
@@ -276,10 +308,11 @@ async function computeMissingScores() {
 // ── Rolling 4-week average for a user ────────────────────────────
 async function getRollingAverage(userId, scoreType, windowSize = 4, offsetWeeks = 0) {
   const limit = windowSize + offsetWeeks + 2; // extra buffer
+  const ADMIN_ROLES = ['super_admin','ceo','managing_director','strategy_director','account_director'];
   const { data } = await supabase
     .from('weekly_scores')
     .select('total, week_start, excluded')
-    .eq('user_id', userId).eq('score_type', scoreType)
+    .eq('user_id', userId).eq('score_type', ADMIN_ROLES.includes(scoreType) ? 'brand_admin' : 'staff')
     .order('week_start', { ascending: false })
     .limit(limit);
 
