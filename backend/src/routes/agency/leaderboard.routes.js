@@ -56,6 +56,17 @@ router.get("/", authenticate, async (req, res, next) => {
     }
     // period === 'all' → no date filter, use rolling average per user instead
 
+    // Brand Admins are ranked under type=brand_admin, never in the staff
+    // leaderboard — exclude anyone listed as brand_admin on any brand.
+    let brandAdminIds = new Set();
+    if (type === "staff") {
+      const { data: ba } = await supabase
+        .from("staff_brand_assignments")
+        .select("staff_id")
+        .contains("roles_on_brand", ["brand_admin"]);
+      brandAdminIds = new Set((ba ?? []).map((r) => r.staff_id));
+    }
+
     let entries = [];
 
     if (period === "all") {
@@ -71,7 +82,9 @@ router.get("/", authenticate, async (req, res, next) => {
       if (error) throw error;
 
       const field = type === "brand_admin" ? "staff_id" : "id";
-      const userIds = [...new Set((data ?? []).map((r) => r[field]))];
+      const userIds = [...new Set((data ?? []).map((r) => r[field]))].filter(
+        (id) => !brandAdminIds.has(id),
+      );
       // console.log("roleFilter", userIds);
 
       entries = await Promise.all(
@@ -102,9 +115,11 @@ router.get("/", authenticate, async (req, res, next) => {
         query = query.eq("week_start", weekFilter.week_start);
       if (weekFilter.gte_week_start)
         query = query.gte("week_start", weekFilter.gte_week_start);
-      const { data, error } = await query;
+      const { data: raw, error } = await query;
       // console.log("entries all time", entries);
       if (error) throw error;
+      // Drop brand admins from the staff rolling-score queries too
+      const data = (raw ?? []).filter((r) => !brandAdminIds.has(r.user_id));
 
       // Fetch previous period scores for trend
       let prevQuery = supabase
@@ -131,7 +146,8 @@ router.get("/", authenticate, async (req, res, next) => {
           .lt("week_start", prevMonthEnd);
       }
 
-      const { data: prevData } = await prevQuery;
+      const { data: rawPrev } = await prevQuery;
+      const prevData = (rawPrev ?? []).filter((r) => !brandAdminIds.has(r.user_id));
 
       if (period === "month") {
         // Average across the period's weeks per user

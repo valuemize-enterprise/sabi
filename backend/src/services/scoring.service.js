@@ -306,17 +306,23 @@ async function computeMissingScores() {
 }
 
 // ── Rolling 4-week average for a user ────────────────────────────
+// Windows are calendar-based: the window is sliced from the ordered
+// week list FIRST (so `offsetWeeks` truly means "N weeks ago"), then
+// excluded weeks (leave / new starter) are dropped from the average
+// WITHOUT shifting the window. Filtering first meant a single excluded
+// week silently dragged older scores into the "current" average, which
+// corrupted rankings and trend comparisons.
 async function getRollingAverage(userId, scoreType, windowSize = 4, offsetWeeks = 0) {
-  const limit = windowSize + offsetWeeks + 2; // extra buffer
-  const ADMIN_ROLES = ['super_admin','ceo','managing_director','strategy_director','account_director'];
+  const limit = offsetWeeks + windowSize + 2; // extra buffer
+  const tableScoreType = scoreType === 'brand_admin' ? 'brand_admin' : 'staff';
   const { data } = await supabase
     .from('weekly_scores')
     .select('total, week_start, excluded')
-    .eq('user_id', userId).eq('score_type', ADMIN_ROLES.includes(scoreType) ? 'brand_admin' : 'staff')
+    .eq('user_id', userId).eq('score_type', 'staff')
     .order('week_start', { ascending: false })
     .limit(limit);
 
-  const usable = (data ?? []).filter(s => !s.excluded).slice(offsetWeeks, offsetWeeks + windowSize);
+  const usable = (data ?? []).slice(offsetWeeks, offsetWeeks + windowSize).filter(s => !s.excluded);
   if (usable.length === 0) return null;
   const avg = usable.reduce((s, w) => s + Number(w.total), 0) / usable.length;
   return Math.round(avg * 100) / 100;
