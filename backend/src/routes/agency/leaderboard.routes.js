@@ -54,10 +54,7 @@ router.get("/", authenticate, async (req, res, next) => {
       );
       weekFilter = { gte_week_start: monthAgo };
     }
-    // period === 'all' → no date filter, use rolling average per user instead
 
-    // Brand Admins are ranked under type=brand_admin, never in the staff
-    // leaderboard — exclude anyone listed as brand_admin on any brand.
     let brandAdminIds = new Set();
     if (type === "staff") {
       const { data: ba } = await supabase
@@ -147,7 +144,9 @@ router.get("/", authenticate, async (req, res, next) => {
       }
 
       const { data: rawPrev } = await prevQuery;
-      const prevData = (rawPrev ?? []).filter((r) => !brandAdminIds.has(r.user_id));
+      const prevData = (rawPrev ?? []).filter(
+        (r) => !brandAdminIds.has(r.user_id),
+      );
 
       if (period === "month") {
         // Average across the period's weeks per user
@@ -226,10 +225,9 @@ router.get("/", authenticate, async (req, res, next) => {
         isCreativeOfWeek: creativeOfWeekIds.has(e.user.id),
         isSelf: e.user.id === req.user.id,
         trend,
-        // Full numeric score visible to leadership and to the person themselves
         fullScore:
           showFullScore || e.user.id === req.user.id
-            ? Math.round(e.score * 10) / 10
+            ? Math.round(e.score * 100) / 100 // ← 2 decimal places
             : undefined,
       };
     });
@@ -242,6 +240,40 @@ router.get("/", authenticate, async (req, res, next) => {
     });
   } catch (err) {
     next(err);
+  }
+});
+
+
+router.get('/debug-score/:userId', authenticate, async (req, res) => {
+  try {
+    const config   = await scoringService.getConfig();
+    const week     = scoringService.lastCompletedWeekStart();
+    const weekStr  = scoringService.toDateStr(week);
+
+    console.log('=== SCORE DEBUG ===');
+    console.log('config:', JSON.stringify(config));
+    console.log('week:', weekStr);
+
+    // Check weekly_scores table
+    const { data: existing } = await supabase
+      .from('weekly_scores')
+      .select('*')
+      .eq('user_id', req.params.userId)
+      .order('week_start', { ascending: false })
+      .limit(5);
+
+    console.log('existing rows:', JSON.stringify(existing));
+
+    // Try computing fresh
+    const result = await scoringService.computeStaffScore(
+      req.params.userId, week, config
+    );
+    console.log('computed result:', JSON.stringify(result));
+
+    res.json({ config, week: weekStr, existing, result });
+  } catch (err) {
+    console.error('debug error:', err);
+    res.status(500).json({ error: err.message, stack: err.stack });
   }
 });
 

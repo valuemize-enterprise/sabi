@@ -79,7 +79,7 @@ export default function MyScorePage() {
           {/* Rolling average headline */}
           <div className="sabi-card p-6 mb-5 text-center" style={{ background:'linear-gradient(135deg, rgba(109,40,217,0.12) 0%, rgba(13,13,26,1) 70%)' }}>
             <p className="text-xs text-purple-400/70 uppercase tracking-widest font-semibold mb-2">4-Week Rolling Average</p>
-            <p className="text-5xl font-black text-white mb-2">{data.rollingAverage ?? '—'}</p>
+            <p className="text-5xl font-black text-white mb-2">{data.rollingAverage != null ? Number(data.rollingAverage).toFixed(2) : '—'}</p>
             <div className="flex items-center justify-center gap-1.5">
               {trend > 0 && <><TrendingUp className="w-4 h-4 text-green-400"/><span className="text-sm text-green-400">+{trend.toFixed(1)} from last week</span></>}
               {trend < 0 && <><TrendingDown className="w-4 h-4 text-red-400"/><span className="text-sm text-red-400">{trend.toFixed(1)} from last week</span></>}

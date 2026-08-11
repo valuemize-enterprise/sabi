@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Trophy, Award, TrendingUp, TrendingDown, Minus } from 'lucide-react';
+import { Trophy, Award, TrendingUp, TrendingDown, Minus, AlertCircle } from 'lucide-react';
 import { AgencyTopNav } from '@/components/internal/AgencyTopNav';
 import { LoadingPage, EmptyState } from '@/components/ui';
 
@@ -25,6 +25,7 @@ export default function LeaderboardPage() {
   const [period, setPeriod] = useState<'week'|'month'|'all'>('week');
   const [data, setData]     = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [isComing, setIsComimg] = useState(true);
 
   useEffect(() => {
     setLoading(true);
@@ -35,6 +36,15 @@ export default function LeaderboardPage() {
   }, [type, period]);
 
   const list = data?.leaderboard ?? [];
+
+   if (isComing) return (
+    <div className="p-4 sm:p-6 max-w-2xl mx-auto">
+      <div className="sabi-card p-10 text-center">
+        <AlertCircle className="w-8 h-8 text-red-400/50 mx-auto mb-3"/>
+        <p className="text-white/40 text-sm">{'Leaderboard coming soon — stay tuned! ...'}</p>
+      </div>
+    </div>
+  );
 
   return (
     <div className="p-4 sm:p-6 max-w-2xl mx-auto">
