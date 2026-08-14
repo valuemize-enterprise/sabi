@@ -164,7 +164,7 @@ const getGroupedTasks = async (brandId, filters = {}) => {
 
   let taskQuery = supabase
     .from('tasks')
-    .select('id, title, description, status, due_date, group_id, assigned_to, created_at')
+    .select('id, title, description, status, due_date, group_id, assignee_id, created_at')
     .eq('brand_id', brandId)
     .order('created_at', { ascending: true });
 

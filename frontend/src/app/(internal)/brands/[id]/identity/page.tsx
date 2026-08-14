@@ -40,6 +40,7 @@ export default function BrandIdentityPage() {
   const { id: brandId } = useParams<{ id: string }>();
   const perms = useBrandPermissions(brandId);
 
+
   const [identity, setIdentity] = useState<any>({});
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);

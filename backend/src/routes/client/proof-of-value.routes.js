@@ -20,7 +20,7 @@ router.get('/', authenticateClient, async (req, res, next) => {
         id, title, description, status, priority,
         completed_at, proof_of_value_data,
         goals ( id, title, metric_type, unit ),
-        users!assigned_to ( id, full_name, role )
+        users!assignee_id ( id, full_name, role )
       `)
       .eq('brand_id', req.client.brand_id)
       .eq('status', 'done')

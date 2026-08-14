@@ -17,7 +17,7 @@ const { authenticate } = require('../../middleware/auth.middleware');
 const { sendSuccess, sendError } = require('../../utils/response.utils');
 const notify = require('../../services/notification-triggers.service');
 
-const GLOBAL_ADMIN_ROLES = ['super_admin','ceo','managing_director','creative_director','strategy_director','account_director'];
+const GLOBAL_ADMIN_ROLES = ['super_admin','ceo','managing_director','strategy_director','account_director'];
 const isGlobalAdmin = (role) => GLOBAL_ADMIN_ROLES.includes(role);
 
 async function canVerify(userId, userRole, brandId) {
@@ -136,7 +136,7 @@ router.get('/pending', authenticate, async (req, res, next) => {
     } else {
       const { data: assignments } = await supabase
         .from('staff_brand_assignments').select('brand_id, roles_on_brand').eq('staff_id', req.user.id);
-      brandIds = (assignments ?? []).filter(a => (a.roles_on_brand??[]).includes('brand_admin')).map(a => a.brand_id);
+      brandIds = (assignments ?? []).filter(a => (a.roles_on_brand??[].includes('brand_admin'))).map(a => a.brand_id);
     }
 
     if (brandIds.length === 0) return sendSuccess(res, { claims: [] });

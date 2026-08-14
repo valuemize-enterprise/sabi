@@ -43,7 +43,7 @@ const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 5 *
 
 router.patch('/', authenticate, upload.single('logo'), async (req, res, next) => {
   try {
-    const ADMIN_ROLES = ['super_admin','ceo','managing_director','creative_director','strategy_director','account_director'];
+    const ADMIN_ROLES = ['super_admin','ceo','managing_director','strategy_director','account_director'];
 
     let canEdit = ADMIN_ROLES.includes(req.user.role);
     if (!canEdit) {

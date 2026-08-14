@@ -21,29 +21,97 @@ const notify = require('../../services/notification-triggers.service');
 // ── GET /api/agency/scores/mine ────────────────────────────────
 router.get('/mine', authenticate, async (req, res, next) => {
   try {
-    // Lazy compute: cheap idempotent check, only does work if a week is missing
-    await scoringService.computeMissingScores().catch(err => console.error('Score computation error:', err.message));
-
-    const isBrandAdmin = await supabase
-      .from('staff_brand_assignments').select('roles_on_brand')
-      .eq('staff_id', req.user.id).contains('roles_on_brand', ['brand_admin']).limit(1);
-    const scoreType = (isBrandAdmin.data?.length ?? 0) > 0 ? 'brand_admin' : 'staff';
-
+    // Lazy compute — catches up last 8 weeks
+    await scoringService.computeMissingScores(8).catch(
+      err => console.error('Score computation error:', err.message)
+    );
+ 
+    // Determine score type
+    const { data: baCheck } = await supabase
+      .from('staff_brand_assignments')
+      .select('roles_on_brand')
+      .eq('staff_id', req.user.id)
+      .contains('roles_on_brand', ['brand_admin'])
+      .limit(1);
+ 
+    const scoreType = (baCheck?.length ?? 0) > 0 ? 'brand_admin' : 'staff';
+ 
+    // Fetch history
     const { data: history } = await supabase
-      .from('weekly_scores').select('*')
-      .eq('user_id', req.user.id).eq('score_type', scoreType)
+      .from('weekly_scores')
+      .select('*')
+      .eq('user_id', req.user.id)
+      .eq('score_type', scoreType)
       .order('week_start', { ascending: false })
       .limit(12);
-
+ 
     const rollingAvg = await scoringService.getRollingAverage(req.user.id, scoreType);
-
+ 
+    const latest = history?.[0] ?? null;
+ 
+    // Build human-readable component breakdown
+    let breakdown = null;
+    if (latest && !latest.excluded && latest.components) {
+      const c = latest.components;
+      breakdown = {
+        tasks: {
+          label:       'Verified Tasks',
+          points:      c.tasks?.points ?? 0,
+          max:         c.tasks?.weight ?? 0,
+          detail:      c.tasks?.raw != null
+            ? `${c.tasks.verified ?? 0} verified out of ${c.tasks.assigned ?? 0} assigned`
+            : 'No tasks assigned this week',
+        },
+        satisfaction: {
+          label:       'Client Satisfaction',
+          points:      c.satisfaction?.points ?? 0,
+          max:         c.satisfaction?.weight ?? 0,
+          detail:      c.satisfaction?.raw != null
+            ? `Average NPS: ${c.satisfaction.raw.toFixed(1)}/10`
+            : 'No client ratings this week',
+        },
+        contributions: {
+          label:       'Contributions',
+          points:      c.contributions?.points ?? 0,
+          max:         c.contributions?.weight ?? 0,
+          detail:      `${c.contributions?.raw ?? 0} verified contribution points`,
+        },
+        managerRating: {
+          label:       'Manager Rating',
+          points:      c.managerRating?.points ?? 0,
+          max:         c.managerRating?.weight ?? 0,
+          detail:      c.managerRating?.wasDefaulted
+            ? 'No rating submitted — defaulted to neutral'
+            : `Rated ${c.managerRating?.raw?.toFixed(1) ?? 0}/5`,
+        },
+        creativeBonus: {
+          label:       'Creative of the Week',
+          points:      c.creativeBonus?.points ?? 0,
+          max:         5,
+          detail:      c.creativeBonus?.isCreativeOfWeek
+            ? '🏆 You were creative of the week!'
+            : 'Not awarded this week',
+        },
+      };
+    }
+ 
     sendSuccess(res, {
       scoreType,
-      rollingAverage: rollingAvg,
-      latestWeek: history?.[0] ?? null,
-      history: history ?? [],
+      rollingAverage: rollingAvg != null
+        ? Math.round(rollingAvg * 100) / 100
+        : null,
+      latestWeek:  latest,
+      breakdown,
+      history:     (history ?? []).map(w => ({
+        week_start:  w.week_start,
+        total:       Math.round(Number(w.total) * 100) / 100,
+        excluded:    w.excluded,
+        reason:      w.excluded ? w.components?.reason : null,
+      })),
     });
-  } catch (err) { next(err); }
+  } catch (err) {
+    next(err);
+  }
 });
 
 // ── GET /api/agency/scores/config ──────────────────────────────

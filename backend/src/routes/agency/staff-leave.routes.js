@@ -14,7 +14,7 @@ const supabase = require('../../config/supabase');
 const { authenticate } = require('../../middleware/auth.middleware');
 const { sendSuccess, sendError } = require('../../utils/response.utils');
 
-const GLOBAL_ADMIN_ROLES = ['super_admin','ceo','managing_director','creative_director','strategy_director','account_director'];
+const GLOBAL_ADMIN_ROLES = ['super_admin','ceo','managing_director','strategy_director','account_director'];
 const isGlobalAdmin = (role) => GLOBAL_ADMIN_ROLES.includes(role);
 
 // Brand Admins can mark leave for their own team; global admins for anyone

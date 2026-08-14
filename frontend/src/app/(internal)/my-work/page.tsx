@@ -359,18 +359,21 @@ export default function MyWorkPage() {
               </select>
               <select
                 className="sabi-input"
-                value={claimForm.title}
+                value={claimForm.beneficiary}
                 onChange={e => setClaimForm(p => ({ ...p, beneficiary: e.target.value }))}
                 disabled={!selectedBrandId}
               >
                 <option className="bg-black" disabled value="">
                   {selectedBrandId ? 'Who did you help' : 'Select a brand first'}
                 </option>
-                {teamList.map((b: any) => (
-                  <option className="bg-black" key={b.staff_id} value={b.staff_id}>
-                    {b.users?.full_name ?? 'Unknown'}
-                  </option>))}
-              </select>
+                {teamList.map((b: any) => {
+                  const users = b.users ? (Array.isArray(b.users) ? b.users : [b.users]) : [];
+                  return users.map((u: any) => (
+                    <option className="bg-black" key={u.staff_id ?? b.staff_id} value={u.staff_id ?? b.staff_id}>
+                      {u.full_name ?? 'Unknown'}
+                    </option>
+                  ));
+                })}</select>
 
               {/* What did you do */}
               <div>
@@ -481,7 +484,7 @@ export default function MyWorkPage() {
               <div key={c.id} className="flex items-center justify-between p-3 bg-white/3 border border-white/6 rounded-xl">
                 <div>
                   <p className="text-sm text-white">{c.title}</p>
-                  <p className="text-sm text-white">Who did you help : {c.beneficiary_user.full_name ?? ""}</p>
+                  {/* <p className="text-sm text-white">Who did you help : {c.beneficiary_user.full_name ?? ""}</p> */}
                   <p className="text-xs text-white/30">{c.brands?.name} · {c.week_start}</p>
                 </div>
                 {c.status === 'pending' && <Badge label="Pending" color="amber" />}

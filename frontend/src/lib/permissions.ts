@@ -291,11 +291,18 @@ async function getRoleOnBrand(brandId: string): Promise<string | null> {
       `${process.env.NEXT_PUBLIC_API_URL}/api/agency/staff/me/brands`,
       { headers: { Authorization: `Bearer ${token}` } },
     );
-    const json = await res.json(); // ← this is what you are missing
-    const assignment = (json.data  ?? []).find(
+    const json = await res.json();
+
+    const assignment = (json.data ?? []).find(
       (a: any) => a.brand_id === brandId,
     );
+
+    
+
+    console.log("assignment", assignment);
+
     return assignment?.role_on_brand ?? null;
+    // return assignment?.role_on_brand ?? null;
   } catch {
     return null;
   }
