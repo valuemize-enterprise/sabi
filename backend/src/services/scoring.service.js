@@ -99,7 +99,7 @@ async function getRollingAverage(
     .from("weekly_scores")
     .select("total, week_start, excluded")
     .eq("user_id", userId)
-    .eq("score_type", "staff")
+    .eq("score_type", scoreType)
     .order("week_start", { ascending: false })
     .limit(limit);
 
@@ -279,7 +279,7 @@ async function computeStaffScore(userId, weekStartDate, config) {
   const managerPoints = (managerRatingRaw / 5) * wMgr;
   const contribPoints = Math.min(
     contributionPoints,
-    wContrib > 15 ? wContrib : 15,
+    wContrib,
   );
   const creativeBonus = isCreativeOfWeek ? 5 : 0;
 
@@ -293,7 +293,12 @@ async function computeStaffScore(userId, weekStartDate, config) {
         100,
     ) / 100; // FIX 5: 2 decimal places
 
-  // console.log(`[score] ${userId} week=${weekStart} total=${total} tasks=${assignedTasks?.length ?? 0} taskRate=${taskRate} mgr=${managerRatingRaw}`);
+  console.log(`[score] ${userId} week=${weekStart} total=${total}
+satisfaction: raw=${satisfactionRaw} points=${Math.round(satisfactionPoints * 100) / 100} weight=${wSat}
+tasks: raw=${taskRate} verified=${assignedTasks?.filter((t) => t.status === "verified").length ?? 0} assigned=${assignedTasks?.length ?? 0} points=${Math.round(taskPoints * 100) / 100} weight=${wTask}
+managerRating: raw=${managerRatingRaw} points=${Math.round(managerPoints * 100) / 100} weight=${wMgr}
+contributions: raw=${contributionPoints} points=${Math.round(contribPoints * 100) / 100} weight=${wContrib}
+creativeBonus: ${isCreativeOfWeek ? 5 : 0}`)
 
   return {
     excluded: false,
@@ -391,7 +396,7 @@ async function computeBrandAdminScore(userId, brandId, weekStartDate, config) {
   const { data: allTasks } = await supabase
     .from("tasks")
     .select("id, status, updated_at")
-    .eq("assignee_id", userId);
+    eq("assignee_id", userId);
 
   // Verified this week specifically
   const verifiedThisWeek = (allTasks ?? []).filter(
@@ -452,13 +457,19 @@ async function computeBrandAdminScore(userId, brandId, weekStartDate, config) {
   const managerPoints = (managerRatingRaw / 5) * wMgr;
   const contribPoints = Math.min(
     contributionPoints,
-    wContrib > 15 ? wContrib : 15,
+    wContrib,
   );
 
   const total =
     Math.round(
       (satisfactionPoints + taskPoints + managerPoints + contribPoints) * 100,
     ) / 100;
+
+  console.log(`[brand_admin_score] total=${total}
+satisfaction: raw=${satisfactionRaw} points=${Math.round(satisfactionPoints * 100) / 100} weight=${wSat}
+tasks: raw=${taskRate} assigned=${assignedTasks?.length ?? 0} points=${Math.round(taskPoints * 100) / 100} weight=${wTask}
+managerRating: raw=${managerRatingRaw} points=${Math.round(managerPoints * 100) / 100} weight=${wMgr}
+contributions: raw=${contributionPoints} points=${Math.round(contribPoints * 100) / 100} weight=${wContrib}`);
 
   return {
     excluded: false,

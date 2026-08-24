@@ -33,8 +33,14 @@ export default function MyScorePage() {
 
   useEffect(() => {
     api('/api/agency/scores/mine')
-      .then((r: any) => setData(r.data))
-      .catch(err => setError(err.message))
+      .then((r: any) => {
+        setData(r.data);
+        console.log('[my-score] API response data:', r.data);
+      })
+      .catch(err => {
+        setError(err.message);
+        console.error('[my-score] API error:', err);
+      })
       .finally(() => setLoading(false));
   }, []);
 
@@ -100,20 +106,21 @@ export default function MyScorePage() {
                 if (key === 'creativeBonus' && !comp.isCreativeOfWeek) return null;
                 const meta = COMPONENT_META[key];
                 if (!meta) return null;
-                const pct = comp.weight > 0 ? Math.round((comp.points / comp.weight) * 100) : 0;
+                const safeWeight = comp.weight != null ? comp.weight : 0;
+                const pct = safeWeight > 0 ? Math.round((comp.points ?? 0) / safeWeight * 100) : 0;
                 return (
                   <div key={key}>
                     <div className="flex items-center justify-between mb-1">
                       <span className="text-xs text-white/60 flex items-center gap-1.5">
                         <span>{meta.icon}</span>{meta.label}
                       </span>
-                      <span className="text-xs text-white font-medium">{comp.points}/{comp.weight}</span>
+                      <span className="text-xs text-white font-medium">{comp.points ?? 0}/{safeWeight}</span>
                     </div>
                     <div className="w-full bg-white/8 rounded-full h-1.5">
                       <div className={`h-1.5 rounded-full ${pct >= 70 ? 'bg-green-500' : pct >= 40 ? 'bg-amber-500' : 'bg-red-500'}`} style={{ width:`${Math.min(pct,100)}%` }}/>
                     </div>
                     <p className="text-[10px] text-white/20 mt-1">{meta.desc}</p>
-                    {key === 'managerRating' && comp.wasDefaulted && (
+                    {key === 'managerRating' && (comp.wasDefaulted ?? false) && (
                       <p className="text-[10px] text-amber-400/60 mt-0.5">No rating submitted — defaulted to neutral</p>
                     )}
                   </div>
