@@ -58,9 +58,9 @@ export default function LeaderboardPage() {
 
       {/* Period */}
       <div className="flex items-center gap-1 p-1 bg-white/3 rounded-xl border border-white/5 mb-6 w-fit">
-        {(['week','month','all'] as const).map(p => (
+        {(['week','all'] as const).map(p => (
           <button key={p} onClick={() => setPeriod(p)} className={`px-3 py-1.5 text-xs rounded-lg transition-all ${period===p?'bg-purple-600 text-white':'text-white/40 hover:text-white'}`}>
-            {p==='week'?'This Week':p==='month'?'This Month':'All Time'}
+            {p==='week'?'This Week':'All Time'}
           </button>
         ))}
       </div>

@@ -36,6 +36,7 @@ function scoreBand(score) {
 }
 
 router.get("/", authenticate, async (req, res, next) => {
+  console.log("leaderboard query", req.query, "user", req.user);
   try {
     const type = req.query.type === "brand_admin" ? "brand_admin" : "staff";
     const period = ["week", "month", "all"].includes(req.query.period)
