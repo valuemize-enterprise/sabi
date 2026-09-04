@@ -193,6 +193,7 @@ export function InternalSidebar() {
               <p className="text-[10px] text-white/20 font-semibold uppercase tracking-widest px-3">HR</p>
             </div>
             <NavLink href="/people" label="People" icon={Users} />
+            <NavLink href="/leaderboard" label="Leaderboard" icon={Trophy} />
           </>
         )}
 

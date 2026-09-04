@@ -13,7 +13,7 @@ const express = require('express');
 const router  = express.Router();
 const svc     = require('../../services/agency-goals.service');
 
-const LEADERSHIP  = ['super_admin', 'md', 'admin'];
+const LEADERSHIP  = ['super_admin', 'md', 'admin', 'hr'];
 const SUPER_ADMIN = ['super_admin'];
 
 const requireRoles = (...roles) => (req, res, next) => {
