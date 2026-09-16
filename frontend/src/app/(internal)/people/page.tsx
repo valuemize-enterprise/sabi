@@ -937,7 +937,9 @@ export default function PeoplePage() {
             </h1>
           </div>
           {isHR && (
-            <button style={{
+            <button
+              onClick={() => router.push('/staff/new')}
+             style={{
               padding: '8px 16px', borderRadius: '8px', background: '#6d28d9',
               border: 'none', color: 'white', fontSize: '13px', fontWeight: 700,
               cursor: 'pointer', fontFamily: 'Space Grotesk, sans-serif',

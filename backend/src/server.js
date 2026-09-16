@@ -89,6 +89,7 @@ const scoringRoutes = require("./routes/agency/scoring.routes");
 const agencyTargetsRoutes = require("./routes/agency/agency-targets.routes");
 const pulseRoutes = require("./routes/agency/pulse.routes");
 const leaderboardRoutes = require("./routes/agency/leaderboard.routes");
+const monthlyLeaderboardRoutes = require("./routes/agency/monthly-leaderboard.routes");
 const analyticsRouter = require("./routes/pipeline-analytics.routes");
 
 const financeP2 = require("./routes/finance-phase2.routes");
@@ -269,6 +270,7 @@ app.use("/api/agency/scores", scoringRoutes);
 app.use("/api/agency/targets", agencyTargetsRoutes);
 app.use("/api/agency/pulse", pulseRoutes);
 app.use("/api/agency/leaderboard", leaderboardRoutes);
+app.use("/api/agency/monthly-leaderboard", monthlyLeaderboardRoutes);
 
 // Phase 4 — People OS
 

@@ -194,6 +194,7 @@ export function InternalSidebar() {
             </div>
             <NavLink href="/people" label="People" icon={Users} />
             <NavLink href="/leaderboard" label="Leaderboard" icon={Trophy} />
+            <NavLink href="/staff" label="Staff" icon={Users} />
           </>
         )}
 
