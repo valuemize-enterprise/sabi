@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation';
 import { useAgencyStore } from '@/lib/store';
 import { agencyAuth } from '@/lib/api';
 import { ChevronRight, Eye, EyeOff, Loader2, Shield } from 'lucide-react';
+import { speakWelcome } from '@/lib/speak';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -22,6 +23,7 @@ export default function LoginPage() {
       const res: any = await agencyAuth.login(email, password);
       localStorage.setItem('sabi_token', res.data.token);
       setAuth(res.data.token, res.data.user);
+      speakWelcome(res.data.user.full_name ?? res.data.user.email ?? 'back');
       const LANDING: Record<string, string> = {
         super_admin: '/command',
         admin: '/command',
