@@ -6,6 +6,7 @@
 'use strict';
 
 const ROLES = {
+  SUPER_ADMIN:                  'super_admin',
   CEO:                          'ceo',
   MANAGING_DIRECTOR:            'managing_director',
   ACCOUNT_DIRECTOR:             'account_director',
@@ -30,13 +31,13 @@ const ROLES = {
   WEBMASTER:                    'webmaster',
   INFLUENCER_MARKETING_EXPERT:  'influencer_marketing_expert',
   OTHER:                        'other',
-  SUPER_ADMIN:                  'super_admin',
   CLIENT:                       'client',
   HUMAN_RESOURCE:               'hr',
   BRAND_ADMIN:                   'brand_admin'
 }
 
 const ROLE_HIERARCHY = [
+  ROLES.SUPER_ADMIN,
   ROLES.CEO,
   ROLES.MANAGING_DIRECTOR,
   ROLES.ACCOUNT_DIRECTOR,

@@ -1,51 +1,79 @@
 'use client';
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { UserCheck, Plus, Search, ChevronRight, UserX } from 'lucide-react';
+import { UserCheck, Plus, Search, ChevronRight, UserX, Loader2 } from 'lucide-react';
 import { staff as staffApi } from '@/lib/api';
 import { AgencyTopNav } from '@/components/internal/AgencyTopNav';
 import { PageHeader, LoadingPage, EmptyState, Badge } from '@/components/ui';
 
-const ROLE_COLORS: Record<string,string> = { ceo:'purple',managing_director:'purple',account_director:'blue',account_manager:'teal',senior_strategist:'green',strategist:'green',copywriter:'amber',social_media_manager:'pink',analytics_specialist:'blue',creative_lead:'orange' };
+const ROLE_COLORS: Record<string, string> = { ceo: 'purple', managing_director: 'purple', account_director: 'blue', account_manager: 'teal', senior_strategist: 'green', strategist: 'green', copywriter: 'amber', social_media_manager: 'pink', analytics_specialist: 'blue', creative_lead: 'orange' };
 
 export default function StaffListPage() {
-  const [items, setItems]   = useState<any[]>([]);
+  const [items, setItems] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [search, setSearch]   = useState('');
-  const [role, setRole]       = useState('');
+  const [search, setSearch] = useState('');
+  const [role, setRole] = useState('');
+  const [error, setError] = useState('')
+  const [deactivatingId, setDeactivatingId] = useState<string | null>(null);
 
   useEffect(() => {
-    const p: Record<string,string> = { limit:'100' };
+    const p: Record<string, string> = { limit: '100' };
     if (role) p.role = role;
-    staffApi.list(p).then((r:any) => setItems(r.data??[])).finally(()=>setLoading(false));
+    staffApi.list(p).then((r: any) => setItems(r.data ?? [])).finally(() => setLoading(false));
   }, [role]);
 
-  const filtered = search ? items.filter(u=>u.full_name.toLowerCase().includes(search.toLowerCase())||u.email.toLowerCase().includes(search.toLowerCase())) : items;
+  const filtered = search ? items.filter(u => u.full_name.toLowerCase().includes(search.toLowerCase()) || u.email.toLowerCase().includes(search.toLowerCase())) : items;
+
 
   const deactivate = async (id: string) => {
-    if(!confirm('Deactivate this staff member?')) return;
-    await staffApi.deactivate(id);
-    setItems(p=>p.map(u=>u.id===id?{...u,is_active:false}:u));
+    if (!confirm('Deactivate this staff member?')) return;
+
+    setError('');
+    setDeactivatingId(id);
+    try {
+      await staffApi.deactivate(id);
+      setItems(prev => prev.map(u => (u.id === id ? { ...u, is_active: false } : u)));
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Could not deactivate this user');
+    } finally {
+      setDeactivatingId(null);
+    }
   };
 
   return (
     <div className="p-4 sm:p-6 max-w-6xl mx-auto">
-      <AgencyTopNav title="Staff" subtitle="Agency team members"/>
-      <PageHeader title="Staff" subtitle={`${items.length} team member${items.length!==1?'s':''}`}/>
+      <AgencyTopNav title="Staff" subtitle="Agency team members" />
+      <PageHeader title="Staff" subtitle={`${items.length} team member${items.length !== 1 ? 's' : ''}`} />
 
       <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 mb-5 sm:mb-6">
-        <div className="relative flex-1 max-w-xs"><Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/30"/><input className="sabi-input pl-9 text-sm" placeholder="Search staff…" value={search} onChange={e=>setSearch(e.target.value)}/></div>
-        <select className="sabi-input w-44 text-sm" value={role} onChange={e=>setRole(e.target.value)}>
+        <div className="relative flex-1 max-w-xs"><Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/30" /><input className="sabi-input pl-9 text-sm" placeholder="Search staff…" value={search} onChange={e => setSearch(e.target.value)} /></div>
+        <select className="sabi-input w-44 text-sm" value={role} onChange={e => setRole(e.target.value)}>
           <option className='bg-black' value="">All roles</option>
-          {['account_manager','senior_strategist','strategist','copywriter','social_media_manager','analytics_specialist'].map(r=>(
-            <option className='bg-black' key={r} value={r}>{r.replace(/_/g,' ')}</option>
+          {['account_manager', 'senior_strategist', 'strategist', 'copywriter', 'social_media_manager', 'analytics_specialist'].map(r => (
+            <option className='bg-black' key={r} value={r}>{r.replace(/_/g, ' ')}</option>
           ))}
         </select>
       </div>
+      {error && (
+        <div
+          role="alert"
+          className="flex items-center justify-between gap-4 bg-red-600 text-white px-4 py-2 my-2 rounded"
+        >
+          <p className="text-sm">{error}</p>
+          <button
+            type="button"
+            onClick={() => setError('')}
+            aria-label="Dismiss error"
+            className="font-bold leading-none"
+          >
+            ×
+          </button>
+        </div>
+      )}
 
-      {loading?<LoadingPage/>:filtered.length===0?<EmptyState icon={UserCheck} title="No staff found"/>:(
+      {loading ? <LoadingPage /> : filtered.length === 0 ? <EmptyState icon={UserCheck} title="No staff found" /> : (
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-          {filtered.map(u=>(
+          {filtered.map(u => (
             <div key={u.id} className="sabi-card p-5 hover:border-purple-500/20 transition-all group">
               <div className="flex items-center gap-3 mb-4">
                 <div className="w-10 h-10 rounded-full bg-purple-500/20 border border-purple-500/30 flex items-center justify-center text-sm font-bold text-purple-300 flex-shrink-0">
@@ -55,16 +83,30 @@ export default function StaffListPage() {
                   <p className="font-medium text-white truncate">{u.full_name}</p>
                   <p className="text-xs text-white/40 truncate">{u.email}</p>
                 </div>
-                <Badge label={u.is_active?'Active':'Inactive'} color={u.is_active?'green':'gray'}/>
+                <Badge label={u.is_active ? 'Active' : 'Inactive'} color={u.is_active ? 'green' : 'gray'} />
               </div>
               <div className="flex items-center justify-between">
-                <Badge label={u.role.replace(/_/g,' ')} color={ROLE_COLORS[u.role]??'gray'}/>
+                <Badge label={u.role.replace(/_/g, ' ')} color={ROLE_COLORS[u.role] ?? 'gray'} />
                 <div className="flex items-center gap-2">
-                  {u.is_active&&<button onClick={()=>deactivate(u.id)} className="text-xs text-white/20 hover:text-red-400 transition-colors"><UserX className="w-4 h-4"/></button>}
-                  <Link href={`/staff/${u.id}`} className="text-white/20 hover:text-purple-400 transition-colors"><ChevronRight className="w-4 h-4"/></Link>
+                  {u.is_active && (
+                    <button
+                      onClick={() => deactivate(u.id)}
+                      disabled={deactivatingId !== null}
+                      aria-label="Deactivate user"
+                      aria-busy={deactivatingId === u.id}
+                      className="text-xs text-white/20 hover:text-red-400 transition-colors disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      {deactivatingId === u.id ? (
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                      ) : (
+                        <UserX className="w-4 h-4" />
+                      )}
+                    </button>
+                  )}
+                  <Link href={`/staff/${u.id}`} className="text-white/20 hover:text-purple-400 transition-colors"><ChevronRight className="w-4 h-4" /></Link>
                 </div>
               </div>
-              {u.last_login&&<p className="text-xs text-white/20 mt-3">Last login: {new Date(u.last_login).toLocaleDateString()}</p>}
+              {u.last_login && <p className="text-xs text-white/20 mt-3">Last login: {new Date(u.last_login).toLocaleDateString()}</p>}
             </div>
           ))}
         </div>
